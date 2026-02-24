@@ -1,10 +1,15 @@
 import { For, JSX } from 'solid-js'
 import {
+  IconBrandGithub,
+  IconBrandPatreon,
+  IconCoffee,
   IconChecklist,
   IconCpu,
   IconDeviceGamepad2,
   IconFlask,
   IconInnerShadowTop,
+  IconLanguage,
+  IconSunMoon,
   IconSettings,
   IconTool,
   IconGauge
@@ -26,6 +31,11 @@ type AppSidebarProps = {
   onTabChange: (tab: CreatorTab) => void
   tabLabel: (tab: CreatorTab) => string
   appName: string
+  localeLabel: string
+  themeLabel: string
+  onCycleLocale: () => void
+  onCycleTheme: () => void
+  class?: string
 }
 
 type NavEntry = {
@@ -45,7 +55,7 @@ const navMain: NavEntry[] = [
 
 export function AppSidebar(props: AppSidebarProps) {
   return (
-    <Sidebar collapsible="offcanvas">
+    <Sidebar collapsible="offcanvas" class={props.class}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -77,8 +87,50 @@ export function AppSidebar(props: AppSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter>
-        <div class="rounded-md border border-dashed px-2.5 py-2 text-xs text-muted-foreground">
-          Creator UI · shadcn pattern
+        <div class="grid gap-3">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={props.onCycleLocale}>
+                <IconLanguage class="size-4 shrink-0" />
+                <span class="truncate">{props.localeLabel}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={props.onCycleTheme}>
+                <IconSunMoon class="size-4 shrink-0" />
+                <span class="truncate">{props.themeLabel}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+
+          <div class="rounded-md border border-dashed border-sidebar-border/80 px-2.5 py-2">
+            <div class="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                title="GitHub"
+                aria-label="GitHub"
+              >
+                <IconBrandGithub class="size-4" />
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                title="Patreon"
+                aria-label="Patreon"
+              >
+                <IconBrandPatreon class="size-4" />
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                title="Ko-fi"
+                aria-label="Ko-fi"
+              >
+                <IconCoffee class="size-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

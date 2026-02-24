@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, For, JSX, Show } from 'solid-js'
-import { IconAlertCircle, IconChevronDown, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
+import { IconAlertCircle, IconChevronDown, IconMenu2, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 import { Toaster, toast } from 'solid-sonner'
 
 import { invokeCommand } from '../../api/tauri'
@@ -16,7 +16,7 @@ import {
 } from '../../components/form/FormControls'
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { useTheme } from '../../components/theme-provider'
 import {
   Dialog,
@@ -34,8 +34,6 @@ import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { Textarea } from '../../components/ui/textarea'
-import type { Theme } from '../../components/theme-provider'
-import { Locale } from '../../i18n'
 import { CreatorTab, FeatureState, RuntimePreference } from '../../models/config'
 import {
   AudioDriverOption,
@@ -225,6 +223,7 @@ export default function CreatorPage() {
     setLocale,
     activeTab,
     setActiveTab,
+    tabs,
     gameRoot,
     setGameRoot,
     gameRootManualOverride,
@@ -346,6 +345,7 @@ export default function CreatorPage() {
     'graphics' | 'desktop' | 'drives' | 'audio' | null
   >(null)
   const [lastStatusToastMessage, setLastStatusToastMessage] = createSignal('')
+  const [mobileSidebarOpen, setMobileSidebarOpen] = createSignal(false)
 
   const wineWindowsVersionOptions = [
     { value: '__default__', label: tx('Padrão do runtime (não alterar)', 'Runtime default (do not override)') },
@@ -656,6 +656,57 @@ export default function CreatorPage() {
     return relative ?? ''
   })
 
+  const cycleLocale = () => {
+    setLocale(locale() === 'pt-BR' ? 'en-US' : 'pt-BR')
+  }
+
+  const cycleTheme = () => {
+    const current = theme()
+    if (current === 'dark') {
+      setTheme('light')
+      return
+    }
+    if (current === 'light') {
+      setTheme('system')
+      return
+    }
+    setTheme('dark')
+  }
+
+  const sidebarLocaleLabel = createMemo(() => `${tx('Idioma', 'Language')}: ${locale()}`)
+
+  const sidebarThemeLabel = createMemo(() => {
+    const current = theme()
+    const label =
+      current === 'dark'
+        ? tx('Escuro', 'Dark')
+        : current === 'light'
+          ? tx('Claro', 'Light')
+          : tx('Sistema', 'System')
+    return `${tx('Tema', 'Theme')}: ${label}`
+  })
+
+  const tabIndex = createMemo(() => tabs.indexOf(activeTab()))
+  const canGoPrevTab = createMemo(() => tabIndex() > 0)
+  const canGoNextTab = createMemo(() => tabIndex() >= 0 && tabIndex() < tabs.length - 1)
+
+  const goPrevTab = () => {
+    const index = tabIndex()
+    if (index <= 0) return
+    setActiveTab(tabs[index - 1])
+  }
+
+  const goNextTab = () => {
+    const index = tabIndex()
+    if (index < 0 || index >= tabs.length - 1) return
+    setActiveTab(tabs[index + 1])
+  }
+
+  const handleSidebarTabChange = (tab: CreatorTab) => {
+    setActiveTab(tab)
+    setMobileSidebarOpen(false)
+  }
+
   createEffect(() => {
     const message = statusMessage().trim()
     if (!message) return
@@ -679,55 +730,72 @@ export default function CreatorPage() {
 
   return (
     <div class="creator-page">
-      <Card>
-        <CardHeader class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div class="space-y-2">
-            <p class="text-xs font-semibold uppercase tracking-[0.09em] text-primary">Game Orchestrator Creator</p>
-            <CardTitle class="text-2xl">
-              {tx('Editor de Orquestrador', 'Orchestrator Editor')}
-            </CardTitle>
-            <CardDescription>
-              {tx(
-                'Interface refeita em componentes shadcn para fluxo direto: escolha do .exe, ajuste por abas e geração.',
-                'Interface rebuilt with shadcn components for a direct flow: pick .exe, tune by tabs and generate.'
-              )}
-            </CardDescription>
-          </div>
-
-          <div class="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
-            <div class="w-full sm:min-w-[150px]">
-              <label class="mb-1 block text-xs font-medium text-muted-foreground">{t('language')}</label>
-              <Select value={locale()} onInput={(e) => setLocale(e.currentTarget.value as Locale)}>
-                <option value="pt-BR">pt-BR</option>
-                <option value="en-US">en-US</option>
-              </Select>
-            </div>
-            <div class="w-full sm:min-w-[150px]">
-              <label class="mb-1 block text-xs font-medium text-muted-foreground">
-                {tx('Tema', 'Theme')}
-              </label>
-              <Select value={theme()} onInput={(e) => setTheme(e.currentTarget.value as Theme)}>
-                <option value="dark">{tx('Escuro', 'Dark')}</option>
-                <option value="light">{tx('Claro', 'Light')}</option>
-                <option value="system">{tx('Sistema', 'System')}</option>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div class="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <div class="h-fit lg:sticky lg:top-4">
+      <div class="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <div class="hidden h-fit lg:sticky lg:top-4 lg:block">
           <AppSidebar
             appName="Game Orchestrator"
             activeTab={activeTab()}
-            onTabChange={setActiveTab}
+            onTabChange={handleSidebarTabChange}
             tabLabel={(tab) => tabLabel(tab, controller)}
+            localeLabel={sidebarLocaleLabel()}
+            themeLabel={sidebarThemeLabel()}
+            onCycleLocale={cycleLocale}
+            onCycleTheme={cycleTheme}
           />
         </div>
 
+        <Show when={mobileSidebarOpen()}>
+          <div
+            class="fixed inset-0 z-40 bg-black/60 backdrop-blur-[1px] lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div class="fixed inset-y-0 left-0 z-50 w-[min(88vw,320px)] p-3 lg:hidden">
+            <AppSidebar
+              class="h-full min-h-0 max-w-none"
+              appName="Game Orchestrator"
+              activeTab={activeTab()}
+              onTabChange={handleSidebarTabChange}
+              tabLabel={(tab) => tabLabel(tab, controller)}
+              localeLabel={sidebarLocaleLabel()}
+              themeLabel={sidebarThemeLabel()}
+              onCycleLocale={cycleLocale}
+              onCycleTheme={cycleTheme}
+            />
+          </div>
+        </Show>
+
         <Card>
           <CardContent class="pt-5">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex min-w-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              class="lg:hidden"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label={tx('Abrir menu', 'Open menu')}
+              title={tx('Abrir menu', 'Open menu')}
+            >
+              <IconMenu2 class="size-4" />
+            </Button>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold">{tabLabel(activeTab(), controller)}</p>
+              <p class="text-xs text-muted-foreground">
+                {tx('Etapa', 'Step')} {Math.max(tabIndex(), 0) + 1}/{tabs.length}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={goPrevTab} disabled={!canGoPrevTab()}>
+              {tx('Retornar', 'Back')}
+            </Button>
+            <Button type="button" onClick={goNextTab} disabled={!canGoNextTab()}>
+              {tx('Avançar', 'Next')}
+            </Button>
+          </div>
+        </div>
         <Show when={activeTab() === 'game'}>
           <section class="stack">
             <TextInputField

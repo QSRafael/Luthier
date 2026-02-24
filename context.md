@@ -1822,6 +1822,28 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 59
+Escopo implementado:
+- Layout geral do Creator (UI):
+  - header superior removido;
+  - tela agora usa apenas `sidebar` + bloco principal de conteudo.
+- Sidebar:
+  - manteve nome do app no topo e abas de navegacao;
+  - footer ganhou itens para alternar idioma e tema (via botoes com icones);
+  - footer ganhou icones de redes/apoio (GitHub, Patreon, Ko-fi) como placeholders sem links.
+- Responsividade (mobile):
+  - sidebar desktop fica oculta em telas pequenas;
+  - adicionado menu hamburguer para abrir sidebar em modo drawer/offcanvas com overlay;
+  - ao selecionar uma aba no drawer mobile, ele fecha automaticamente.
+- Bloco principal de conteudo:
+  - adicionada barra superior de navegacao da etapa com:
+    - botao de menu (mobile),
+    - nome da aba atual + contador de etapa,
+    - botoes `Retornar` e `Avançar` para navegar entre abas.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 58
 Escopo implementado:
 - Aba `Jogo`:
