@@ -1,5 +1,11 @@
 import type { OpenDialogOptions } from '@tauri-apps/api/dialog'
 
+function isTauriRuntime(): boolean {
+  if (typeof window === 'undefined') return false
+  const w = window as unknown as Record<string, unknown>
+  return typeof w.__TAURI_IPC__ !== 'undefined' || typeof w.__TAURI__ !== 'undefined'
+}
+
 export async function invokeCommand<T>(command: string, input?: unknown): Promise<T> {
   const tauri = await import('@tauri-apps/api/tauri')
   if (typeof input === 'undefined') {
@@ -13,7 +19,10 @@ export async function pickFile(options: OpenDialogOptions = {}): Promise<string 
     const dialog = await import('@tauri-apps/api/dialog')
     const selection = await dialog.open({ multiple: false, ...options })
     return typeof selection === 'string' ? selection : null
-  } catch {
+  } catch (error) {
+    if (isTauriRuntime()) {
+      throw error
+    }
     return browserPickFile(options)
   }
 }
@@ -23,7 +32,10 @@ export async function pickFolder(options: OpenDialogOptions = {}): Promise<strin
     const dialog = await import('@tauri-apps/api/dialog')
     const selection = await dialog.open({ multiple: false, directory: true, ...options })
     return typeof selection === 'string' ? selection : null
-  } catch {
+  } catch (error) {
+    if (isTauriRuntime()) {
+      throw error
+    }
     return browserPickFolder(options)
   }
 }

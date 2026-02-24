@@ -2009,6 +2009,23 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
 
+### 2026-02-24 - Checkpoint 36
+Escopo implementado:
+- Correcao de integracao Tauri para seletores de arquivo/pasta:
+  - habilitado `tauri.allowlist.dialog.open` no `tauri.conf.json` (Tauri v1);
+  - sem isso, `@tauri-apps/api/dialog.open()` falhava e a UI caia no fallback web (browser).
+- `pickFile` / `pickFolder` (frontend):
+  - fallback web agora so acontece quando realmente nao estiver em runtime Tauri;
+  - se o app estiver rodando em Tauri e o dialog nativo falhar, o erro eh propagado (nao mascarado como comportamento de navegador/LAN).
+
+Impacto esperado:
+- Picker nativo volta a retornar caminho absoluto no executavel Tauri;
+- `breadcrumb` da pasta raiz e mini navegador de pastas montadas passam a funcionar no app desktop;
+- mensagens de "modo navegador (LAN)" deixam de aparecer indevidamente no executavel Tauri.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 50
 Escopo implementado:
 - `Winetricks` (aba `Prefix`) consolidado em um unico item:
