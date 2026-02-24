@@ -1,9 +1,10 @@
 use std::collections::BTreeSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
-use orchestrator_core::{doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig};
+use orchestrator_core::{doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig, RegistryKey};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -50,6 +51,17 @@ pub struct TestConfigurationOutput {
 pub struct WinetricksAvailableOutput {
     pub source: String,
     pub components: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ImportRegistryFileInput {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ImportRegistryFileOutput {
+    pub entries: Vec<RegistryKey>,
+    pub warnings: Vec<String>,
 }
 
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
@@ -149,6 +161,18 @@ pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
         source: "winetricks".to_string(),
         components: parsed,
     })
+}
+
+pub fn import_registry_file(input: ImportRegistryFileInput) -> Result<ImportRegistryFileOutput, String> {
+    let bytes = fs::read(&input.path).map_err(|err| format!("failed to read .reg file: {err}"))?;
+    let raw = decode_reg_file_text(&bytes)?;
+    let (entries, warnings) = parse_reg_file_entries(&raw);
+
+    if entries.is_empty() {
+        return Err("no importable registry entries found in .reg file".to_string());
+    }
+
+    Ok(ImportRegistryFileOutput { entries, warnings })
 }
 
 fn collect_missing_files(config: &GameConfig, game_root: &Path) -> Result<Vec<String>, String> {
@@ -264,6 +288,186 @@ fn fallback_winetricks_components() -> Vec<String> {
     .iter()
     .map(|item| item.to_string())
     .collect()
+}
+
+fn decode_reg_file_text(bytes: &[u8]) -> Result<String, String> {
+    if bytes.starts_with(&[0xFF, 0xFE]) {
+        let mut units = Vec::new();
+        let mut iter = bytes[2..].chunks_exact(2);
+        for chunk in &mut iter {
+            units.push(u16::from_le_bytes([chunk[0], chunk[1]]));
+        }
+        return String::from_utf16(&units).map_err(|err| format!("invalid UTF-16LE .reg file: {err}"));
+    }
+
+    if bytes.starts_with(&[0xFE, 0xFF]) {
+        return Err("UTF-16BE .reg files are not supported".to_string());
+    }
+
+    let text = String::from_utf8(bytes.to_vec()).map_err(|err| format!("invalid UTF-8 .reg file: {err}"))?;
+    Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_string())
+}
+
+fn parse_reg_file_entries(raw: &str) -> (Vec<RegistryKey>, Vec<String>) {
+    let mut entries = Vec::new();
+    let mut warnings = Vec::new();
+    let mut current_path: Option<String> = None;
+
+    for line in fold_reg_continuations(raw).lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with(';') || trimmed.starts_with('#') {
+            continue;
+        }
+
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            current_path = Some(trimmed[1..trimmed.len() - 1].trim().to_string());
+            continue;
+        }
+
+        if trimmed.eq_ignore_ascii_case("windows registry editor version 5.00")
+            || trimmed.eq_ignore_ascii_case("regedit4")
+        {
+            continue;
+        }
+
+        let Some(path) = current_path.clone() else {
+            warnings.push(format!("ignored line outside registry key section: {trimmed}"));
+            continue;
+        };
+
+        let Some((name_raw, value_raw)) = trimmed.split_once('=') else {
+            warnings.push(format!("ignored unparsable registry line: {trimmed}"));
+            continue;
+        };
+
+        let name = match parse_reg_value_name(name_raw.trim()) {
+            Some(name) => name,
+            None => {
+                warnings.push(format!("ignored registry value with unsupported name syntax: {trimmed}"));
+                continue;
+            }
+        };
+
+        let value_token = value_raw.trim();
+        if value_token == "-" {
+            warnings.push(format!(
+                "ignored deletion entry (unsupported in key list model): {}={}",
+                name_raw.trim(),
+                value_token
+            ));
+            continue;
+        }
+
+        let (value_type, value) = parse_reg_data(value_token);
+        entries.push(RegistryKey {
+            path,
+            name,
+            value_type,
+            value,
+        });
+    }
+
+    (entries, warnings)
+}
+
+fn fold_reg_continuations(raw: &str) -> String {
+    let normalized = raw.replace("\r\n", "\n").replace('\r', "\n");
+    let mut out = Vec::new();
+    let mut acc = String::new();
+
+    for line in normalized.lines() {
+        let trimmed_end = line.trim_end();
+        if acc.is_empty() {
+            acc.push_str(trimmed_end);
+        } else {
+            acc.push_str(trimmed_end.trim_start());
+        }
+
+        if acc.ends_with('\\') {
+            acc.pop();
+            continue;
+        }
+
+        out.push(std::mem::take(&mut acc));
+    }
+
+    if !acc.is_empty() {
+        out.push(acc);
+    }
+
+    out.join("\n")
+}
+
+fn parse_reg_value_name(raw: &str) -> Option<String> {
+    if raw == "@" {
+        return Some("@".to_string());
+    }
+    if raw.starts_with('"') && raw.ends_with('"') && raw.len() >= 2 {
+        return Some(unescape_reg_string(&raw[1..raw.len() - 1]));
+    }
+    None
+}
+
+fn parse_reg_data(raw: &str) -> (String, String) {
+    let lower = raw.to_ascii_lowercase();
+
+    if raw.starts_with('"') && raw.ends_with('"') && raw.len() >= 2 {
+        return ("REG_SZ".to_string(), unescape_reg_string(&raw[1..raw.len() - 1]));
+    }
+
+    if let Some(value) = raw.strip_prefix("dword:") {
+        return ("REG_DWORD".to_string(), value.trim().to_string());
+    }
+
+    if lower.starts_with("hex(b):") {
+        return ("REG_QWORD".to_string(), raw[7..].trim().to_string());
+    }
+
+    if lower.starts_with("hex(2):") {
+        return ("REG_EXPAND_SZ".to_string(), raw[7..].trim().to_string());
+    }
+
+    if lower.starts_with("hex(7):") {
+        return ("REG_MULTI_SZ".to_string(), raw[7..].trim().to_string());
+    }
+
+    if let Some(value) = lower.strip_prefix("hex:") {
+        let original = &raw[4..];
+        let _ = value; // keep pattern explicit for readability
+        return ("REG_BINARY".to_string(), original.trim().to_string());
+    }
+
+    if lower.starts_with("hex(") {
+        let type_end = raw.find("):").unwrap_or(raw.len());
+        let suffix = if type_end + 2 <= raw.len() { &raw[type_end + 2..] } else { "" };
+        return ("REG_BINARY".to_string(), suffix.trim().to_string());
+    }
+
+    ("REG_SZ".to_string(), raw.trim().to_string())
+}
+
+fn unescape_reg_string(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut chars = raw.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            if let Some(next) = chars.next() {
+                out.push(match next {
+                    '\\' => '\\',
+                    '"' => '"',
+                    'n' => '\n',
+                    'r' => '\r',
+                    't' => '\t',
+                    other => other,
+                });
+            } else {
+                out.push('\\');
+            }
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }
 
 #[cfg(test)]

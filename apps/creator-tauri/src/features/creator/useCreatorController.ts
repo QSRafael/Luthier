@@ -490,8 +490,9 @@ export function useCreatorController() {
       title: tx('Selecionar arquivo .reg', 'Select .reg file'),
       filters: [{ name: 'Registry file', extensions: ['reg'] }]
     })
-    if (!selected) return
+    if (!selected) return null
     setRegistryImportPath(selected)
+    return selected
   }
 
   const pickGameRootOverride = async () => {

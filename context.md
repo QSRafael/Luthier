@@ -2037,6 +2037,26 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 52
+Escopo implementado:
+- `Chaves de registro`:
+  - adicionado botao `Adicionar de arquivo (.reg)` ao lado de `Adicionar chave`;
+  - fluxo usa picker de arquivo `.reg` e importa entradas diretamente para `registry_keys` (em vez de apenas guardar caminho do arquivo).
+- Importacao `.reg` (backend Tauri):
+  - novo comando `cmd_import_registry_file`;
+  - parser em Rust para arquivos `.reg` com suporte a UTF-8 (com/sem BOM) e UTF-16LE;
+  - extrai secoes `[HK...]` e valores para a lista `registry_keys`;
+  - ignora entradas de exclusao (`=-`) e linhas nao suportadas, retornando avisos.
+- UI:
+  - entradas importadas sao mescladas na lista atual de chaves de registro;
+  - deduplicacao por assinatura (`path`, `name`, `value_type`, `value`);
+  - status informa quantidade importada e numero de avisos.
+- Item separado `Import de .reg` removido da aba `Prefix` (fluxo absorvido por `Chaves de registro`).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo build --workspace`
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

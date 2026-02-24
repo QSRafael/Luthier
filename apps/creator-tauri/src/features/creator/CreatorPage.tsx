@@ -1,6 +1,7 @@
 import { createMemo, createSignal, For, Show } from 'solid-js'
 import { IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
+import { invokeCommand } from '../../api/tauri'
 import {
   FeatureStateField,
   FieldShell,
@@ -94,6 +95,11 @@ function SwitchChoiceCard(props: SwitchChoiceCardProps) {
       </Switch>
     </div>
   )
+}
+
+type ImportRegistryFileOutput = {
+  entries: Array<{ path: string; name: string; value_type: string; value: string }>
+  warnings: string[]
 }
 
 export default function CreatorPage() {
@@ -300,6 +306,59 @@ export default function CreatorPage() {
         }
       }
     })
+  }
+
+  const importRegistryKeysFromRegFile = async () => {
+    try {
+      const selected = await pickRegistryFile()
+      if (!selected) return
+
+      const result = await invokeCommand<ImportRegistryFileOutput>('cmd_import_registry_file', {
+        path: selected
+      })
+
+      const existingKeys = new Set(
+        config().registry_keys.map((item) =>
+          [item.path, item.name, item.value_type, item.value].join('\u0000')
+        )
+      )
+
+      const deduped = result.entries.filter((item) => {
+        const signature = [item.path, item.name, item.value_type, item.value].join('\u0000')
+        if (existingKeys.has(signature)) return false
+        existingKeys.add(signature)
+        return true
+      })
+
+      if (deduped.length > 0) {
+        patchConfig((prev) => ({
+          ...prev,
+          registry_keys: [...prev.registry_keys, ...deduped]
+        }))
+      }
+
+      const warningSuffix =
+        result.warnings.length > 0
+          ? tx(
+              ` (${result.warnings.length} aviso(s) ao importar)`,
+              ` (${result.warnings.length} warning(s) while importing)`
+            )
+          : ''
+
+      setStatusMessage(
+        tx(
+          `Importadas ${deduped.length} chave(s) de registro do arquivo .reg${warningSuffix}.`,
+          `Imported ${deduped.length} registry key(s) from .reg file${warningSuffix}.`
+        )
+      )
+    } catch (error) {
+      setStatusMessage(
+        tx(
+          `Falha ao importar arquivo .reg: ${String(error)}`,
+          `Failed to import .reg file: ${String(error)}`
+        )
+      )
+    }
   }
 
   return (
@@ -1384,7 +1443,7 @@ export default function CreatorPage() {
             <FieldShell
               label={tx('Chaves de registro', 'Registry keys')}
               help={tx('Tabela de chaves aplicadas no prefixo após bootstrap.', 'Table of keys applied to prefix after bootstrap.')}
-              controlClass="flex justify-end"
+              controlClass="flex flex-wrap justify-end gap-2"
               footer={
                 <div class="grid gap-2">
                   <Show
@@ -1505,18 +1564,17 @@ export default function CreatorPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            </FieldShell>
 
-            <FieldShell
-              label={tx('Import de .reg', '.reg import')}
-              help={tx('Selecione um arquivo .reg para importação futura no setup.', 'Select a .reg file for future setup import.')}
-            >
-              <div class="picker-row">
-                <Input value={registryImportPath()} placeholder="./patches/game.reg" onInput={(e) => setRegistryImportPath(e.currentTarget.value)} />
-                <Button type="button" class="btn-secondary" onClick={pickRegistryFile}>
-                  {tx('Selecionar arquivo', 'Select file')}
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                class="inline-flex items-center gap-1.5"
+                onClick={importRegistryKeysFromRegFile}
+              >
+                <IconPlus class="size-4" />
+                {tx('Adicionar de arquivo (.reg)', 'Add from file (.reg)')}
+              </Button>
             </FieldShell>
 
             <FieldShell

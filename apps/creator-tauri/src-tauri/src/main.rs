@@ -1,9 +1,10 @@
 #[cfg(feature = "tauri-commands")]
 fn main() {
     use creator_tauri_backend::{
-        create_executable, hash_executable, test_configuration, winetricks_available,
+        create_executable, hash_executable, import_registry_file, test_configuration, winetricks_available,
         CreateExecutableInput, CreateExecutableOutput, HashExeInput, HashExeOutput,
-        TestConfigurationInput, TestConfigurationOutput, WinetricksAvailableOutput,
+        ImportRegistryFileInput, ImportRegistryFileOutput, TestConfigurationInput,
+        TestConfigurationOutput, WinetricksAvailableOutput,
     };
 
     #[tauri::command]
@@ -30,12 +31,18 @@ fn main() {
         winetricks_available()
     }
 
+    #[tauri::command]
+    fn cmd_import_registry_file(input: ImportRegistryFileInput) -> Result<ImportRegistryFileOutput, String> {
+        import_registry_file(input)
+    }
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             cmd_create_executable,
             cmd_hash_executable,
             cmd_test_configuration,
-            cmd_winetricks_available
+            cmd_winetricks_available,
+            cmd_import_registry_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running creator tauri backend");
