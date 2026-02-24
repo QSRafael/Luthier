@@ -1978,6 +1978,16 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 48
+Escopo implementado:
+- `HDR` na aba `Performance`:
+  - deixou de ser um item solto;
+  - agora aparece somente quando `Wine-Wayland` estiver em estado ativado (`OptionalOn` ou `MandatoryOn`);
+  - o controle de `HDR` foi movido para dentro do rodape do item `Wine-Wayland`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

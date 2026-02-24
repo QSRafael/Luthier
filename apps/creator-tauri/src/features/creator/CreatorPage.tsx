@@ -262,6 +262,11 @@ export default function CreatorPage() {
       !config().environment.gamescope.output_height.trim()
   )
 
+  const wineWaylandEnabled = createMemo(() => {
+    const state = config().compatibility.wine_wayland
+    return state === 'MandatoryOn' || state === 'OptionalOn'
+  })
+
   const setGamescopeOutputWidth = (value: string) => {
     patchConfig((prev) => {
       const nextHeight = prev.environment.gamescope.output_height
@@ -1146,20 +1151,23 @@ export default function CreatorPage() {
                   }
                 }))
               }
-            />
-
-            <FeatureStateField
-              label="HDR"
-              help={tx('Política para HDR (depende de Wine-Wayland).', 'Policy for HDR (depends on Wine-Wayland).')}
-              value={config().compatibility.hdr}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  compatibility: {
-                    ...prev.compatibility,
-                    hdr: value
-                  }
-                }))
+              footer={
+                <Show when={wineWaylandEnabled()}>
+                  <FeatureStateField
+                    label="HDR"
+                    help={tx('Política para HDR (depende de Wine-Wayland).', 'Policy for HDR (depends on Wine-Wayland).')}
+                    value={config().compatibility.hdr}
+                    onChange={(value) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        compatibility: {
+                          ...prev.compatibility,
+                          hdr: value
+                        }
+                      }))
+                    }
+                  />
+                </Show>
               }
             />
 
