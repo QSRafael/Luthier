@@ -5,6 +5,31 @@ import type { SelectOption } from '../../components/form/FormControls'
 import { detectLocale, Locale, translate } from '../../i18n'
 import { creatorFormat, creatorTranslate, type CreatorCopyKey } from './creator-copy'
 import {
+  AUDIO_DRIVERS,
+  basename,
+  DLL_MODES,
+  dirname,
+  formatRelativeDirDisplay,
+  hasWindowsLauncherExtension,
+  isFeatureEnabled,
+  isLikelyAbsolutePath,
+  joinCommaList,
+  ORCHESTRATOR_BASE_PATH,
+  relativeFromRoot,
+  relativePathBetween,
+  removeAt,
+  replaceAt,
+  RUNTIME_CANDIDATES,
+  RUNTIME_PREFERENCES,
+  splitCommaList,
+  stripLauncherExtension,
+  UPSCALE_METHODS,
+  WINDOW_TYPES,
+  type AudioDriverOption,
+  type GamescopeWindowType,
+  type UpscaleMethod
+} from './creator-controller-utils'
+import {
   CreatorTab,
   defaultGameConfig,
   FeatureState,
@@ -13,132 +38,12 @@ import {
   RuntimePrimary
 } from '../../models/config'
 
-const ORCHESTRATOR_BASE_PATH = './target/debug/orchestrator'
-
-const RUNTIME_CANDIDATES: RuntimePrimary[] = ['ProtonUmu', 'ProtonNative', 'Wine']
-const RUNTIME_PREFERENCES: RuntimePreference[] = ['Auto', 'Proton', 'Wine']
-const DLL_MODES = ['builtin', 'native', 'builtin,native', 'native,builtin', 'disabled'] as const
-const AUDIO_DRIVERS = ['__none__', 'pipewire', 'pulseaudio', 'alsa'] as const
-const UPSCALE_METHODS = ['fsr', 'nis', 'integer', 'stretch'] as const
-const WINDOW_TYPES = ['fullscreen', 'borderless', 'windowed'] as const
-
-type AudioDriverOption = (typeof AUDIO_DRIVERS)[number]
-type UpscaleMethod = (typeof UPSCALE_METHODS)[number]
-type GamescopeWindowType = (typeof WINDOW_TYPES)[number]
-
 type WinetricksAvailableOutput = {
   source: string
   components: string[]
 }
 
 type StatusTone = 'info' | 'success' | 'error'
-
-function replaceAt<T>(items: T[], index: number, next: T): T[] {
-  return items.map((item, current) => (current === index ? next : item))
-}
-
-function removeAt<T>(items: T[], index: number): T[] {
-  return items.filter((_, current) => current !== index)
-}
-
-function splitCommaList(raw: string): string[] {
-  return raw
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-function joinCommaList(items: string[]): string {
-  return items.join(', ')
-}
-
-function normalizePath(raw: string): string {
-  return raw.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/\/$/, '')
-}
-
-function dirname(raw: string): string {
-  const normalized = normalizePath(raw)
-  const index = normalized.lastIndexOf('/')
-  if (index <= 0) return normalized
-  return normalized.slice(0, index)
-}
-
-function basename(raw: string): string {
-  const normalized = normalizePath(raw)
-  const index = normalized.lastIndexOf('/')
-  if (index < 0) return normalized
-  return normalized.slice(index + 1)
-}
-
-function stripLauncherExtension(raw: string): string {
-  return raw.replace(/\.(exe|bat|cmd|com)$/i, '')
-}
-
-function relativeFromRoot(root: string, path: string): string | null {
-  const normalizedRoot = normalizePath(root)
-  const normalizedPath = normalizePath(path)
-
-  if (!normalizedRoot || !normalizedPath) return null
-  if (normalizedPath === normalizedRoot) return '.'
-  if (normalizedPath.startsWith(`${normalizedRoot}/`)) {
-    return normalizedPath.slice(normalizedRoot.length + 1)
-  }
-
-  return null
-}
-
-function isFeatureEnabled(state: FeatureState): boolean {
-  return state === 'MandatoryOn' || state === 'OptionalOn'
-}
-
-function splitPathSegments(raw: string): string[] {
-  return normalizePath(raw)
-    .split('/')
-    .filter(Boolean)
-}
-
-function pathPrefix(raw: string): string {
-  const normalized = normalizePath(raw)
-  if (normalized.startsWith('/')) return '/'
-  const driveMatch = normalized.match(/^[a-zA-Z]:/)
-  return driveMatch?.[0].toLowerCase() ?? ''
-}
-
-function relativePathBetween(fromPath: string, toPath: string): string | null {
-  const fromNormalized = normalizePath(fromPath)
-  const toNormalized = normalizePath(toPath)
-
-  if (!fromNormalized || !toNormalized) return null
-  if (pathPrefix(fromNormalized) !== pathPrefix(toNormalized)) return null
-
-  const fromParts = splitPathSegments(fromNormalized)
-  const toParts = splitPathSegments(toNormalized)
-
-  let shared = 0
-  while (shared < fromParts.length && shared < toParts.length && fromParts[shared] === toParts[shared]) {
-    shared += 1
-  }
-
-  const up = Array.from({ length: fromParts.length - shared }, () => '..')
-  const down = toParts.slice(shared)
-  const parts = [...up, ...down]
-  return parts.length ? parts.join('/') : '.'
-}
-
-function formatRelativeDirDisplay(relative: string | null): string {
-  if (!relative || relative === '.') return './'
-  return relative.endsWith('/') ? relative : `${relative}/`
-}
-
-function isLikelyAbsolutePath(path: string): boolean {
-  const trimmed = path.trim()
-  return trimmed.startsWith('/') || /^[A-Za-z]:[\\/]/.test(trimmed)
-}
-
-function hasWindowsLauncherExtension(path: string): boolean {
-  const lower = basename(path).toLowerCase()
-  return ['.exe', '.bat', '.cmd', '.com'].some((ext) => lower.endsWith(ext))
-}
 
 export function useCreatorController() {
   const initialLocale = detectLocale()

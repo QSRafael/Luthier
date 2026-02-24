@@ -1,0 +1,429 @@
+import { For, Show } from 'solid-js'
+import { IconAlertCircle, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
+
+import {
+  FeatureStateField,
+  FieldShell,
+  KeyValueListField,
+  SegmentedField,
+  SelectField,
+  StringListField,
+  TextInputField,
+  ToggleField,
+  WinecfgFeatureStateField
+} from '../../../components/form/FormControls'
+import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert'
+import { Button } from '../../../components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
+import { Input } from '../../../components/ui/input'
+import { Select } from '../../../components/ui/select'
+import { Spinner } from '../../../components/ui/spinner'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
+import { Textarea } from '../../../components/ui/textarea'
+import type { RuntimePreference } from '../../../models/config'
+import type { AudioDriverOption, GamescopeWindowType, UpscaleMethod } from '../useCreatorController'
+import {
+  AccordionSection,
+  basenamePath,
+  buildFeatureState,
+  featureStateEnabled,
+  featureStateMandatory,
+  posixDirname,
+  relativeInsideBase,
+  SwitchChoiceCard,
+  type CreatorPageSectionProps
+} from '../creator-page-shared'
+
+export function PerformanceTabSection(props: CreatorPageSectionProps) {
+    const {
+    config,
+    patchConfig,
+    ct,
+    upscaleMethodOptions,
+    windowTypeOptions,
+    gamescopeEnabled,
+    setGamescopeState,
+    setGamemodeState,
+    setMangohudState,
+    gamescopeAdditionalOptionsList,
+    setGamescopeAdditionalOptionsList,
+    gamescopeUsesMonitorResolution,
+    wineWaylandEnabled,
+    setGamescopeOutputWidth,
+    setGamescopeOutputHeight,
+  } = props.view as any
+
+  return (
+          <section class="stack">
+            <FeatureStateField
+              label="Gamescope"
+              help={ct('creator_defines_gamescope_policy_and_syncs_with_requirements_gam')}
+              value={config().environment.gamescope.state}
+              onChange={setGamescopeState}
+              footer={
+                <Show
+                  when={gamescopeEnabled()}
+                  fallback={
+                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      {ct('creator_gamescope_is_disabled_enable_it_to_configure_resolution')}
+                    </div>
+                  }
+                >
+                  <div class="grid gap-3">
+                    <div class="grid gap-3 md:grid-cols-2">
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{ct('creator_upscale_method')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {ct('creator_method_used_by_gamescope_for_upscaling')}
+                          </p>
+                        </div>
+                        <Tabs
+                          value={config().environment.gamescope.upscale_method}
+                          onChange={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  upscale_method: value as UpscaleMethod,
+                                  fsr: value === 'fsr'
+                                }
+                              }
+                            }))
+                          }
+                          class="mt-3"
+                        >
+                          <TabsList class="grid h-auto w-full grid-cols-4 gap-1">
+                            <For each={upscaleMethodOptions()}>
+                              {(option) => (
+                                <TabsTrigger
+                                  value={option.value}
+                                  class="h-auto w-full whitespace-normal px-2 py-2 text-center leading-tight"
+                                >
+                                  {option.label}
+                                </TabsTrigger>
+                              )}
+                            </For>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{ct('creator_window_type')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {ct('creator_defines_gamescope_window_behavior')}
+                          </p>
+                        </div>
+                        <Tabs
+                          value={config().environment.gamescope.window_type}
+                          onChange={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  window_type: value as GamescopeWindowType
+                                }
+                              }
+                            }))
+                          }
+                          class="mt-3"
+                        >
+                          <TabsList class="grid h-auto w-full grid-cols-3 gap-1">
+                            <For each={windowTypeOptions()}>
+                              {(option) => (
+                                <TabsTrigger
+                                  value={option.value}
+                                  class="h-auto w-full whitespace-normal px-2 py-2 text-center leading-tight"
+                                >
+                                  {option.label}
+                                </TabsTrigger>
+                              )}
+                            </For>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                    </div>
+
+                    <div class="grid gap-3 md:grid-cols-2">
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{ct('creator_game_resolution')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {ct('creator_game_render_resolution_width_x_height')}
+                          </p>
+                        </div>
+                        <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                          <Input
+                            value={config().environment.gamescope.game_width}
+                            placeholder="1080"
+                            onInput={(e) =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                environment: {
+                                  ...prev.environment,
+                                  gamescope: {
+                                    ...prev.environment.gamescope,
+                                    game_width: e.currentTarget.value
+                                  }
+                                }
+                              }))
+                            }
+                          />
+                          <span class="text-sm font-semibold text-muted-foreground">x</span>
+                          <Input
+                            value={config().environment.gamescope.game_height}
+                            placeholder="720"
+                            onInput={(e) =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                environment: {
+                                  ...prev.environment,
+                                  gamescope: {
+                                    ...prev.environment.gamescope,
+                                    game_height: e.currentTarget.value
+                                  }
+                                }
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{ct('creator_display_resolution')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {ct('creator_final_gamescope_output_resolution_width_x_height')}
+                          </p>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                          <Input
+                            value={config().environment.gamescope.output_width}
+                            placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1920'}
+                            disabled={gamescopeUsesMonitorResolution()}
+                            onInput={(e) => setGamescopeOutputWidth(e.currentTarget.value)}
+                          />
+                          <span class="text-sm font-semibold text-muted-foreground">x</span>
+                          <Input
+                            value={config().environment.gamescope.output_height}
+                            placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1080'}
+                            disabled={gamescopeUsesMonitorResolution()}
+                            onInput={(e) => setGamescopeOutputHeight(e.currentTarget.value)}
+                          />
+                        </div>
+
+                        <div class="mt-3">
+                          <SwitchChoiceCard
+                            title={ct('creator_use_monitor_resolution')}
+                            checked={gamescopeUsesMonitorResolution()}
+                            onChange={(checked) => {
+                              if (!checked) return
+                              patchConfig((prev) => ({
+                                ...prev,
+                                environment: {
+                                  ...prev.environment,
+                                  gamescope: {
+                                    ...prev.environment.gamescope,
+                                    output_width: '',
+                                    output_height: '',
+                                    resolution: null
+                                  }
+                                }
+                              }))
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="grid gap-3 md:grid-cols-2">
+                      <SwitchChoiceCard
+                        title={ct('creator_enable_fps_limiter')}
+                        description={ct('creator_enables_gamescope_fps_limiter')}
+                        checked={config().environment.gamescope.enable_limiter}
+                        onChange={(checked) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            environment: {
+                              ...prev.environment,
+                              gamescope: {
+                                ...prev.environment.gamescope,
+                                enable_limiter: checked
+                              }
+                            }
+                          }))
+                        }
+                      />
+
+                      <SwitchChoiceCard
+                        title={ct('creator_force_grab_cursor')}
+                        description={ct('creator_forces_relative_mouse_mode_to_avoid_focus_loss')}
+                        checked={config().environment.gamescope.force_grab_cursor}
+                        onChange={(checked) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            environment: {
+                              ...prev.environment,
+                              gamescope: {
+                                ...prev.environment.gamescope,
+                                force_grab_cursor: checked
+                              }
+                            }
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <Show when={config().environment.gamescope.enable_limiter}>
+                      <div class="table-grid table-grid-two">
+                        <TextInputField
+                          label={ct('creator_fps_limit')}
+                          help={ct('creator_fps_limit_when_game_is_focused')}
+                          value={config().environment.gamescope.fps_limiter}
+                          onInput={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  fps_limiter: value
+                                }
+                              }
+                            }))
+                          }
+                        />
+
+                        <TextInputField
+                          label={ct('creator_fps_limit_without_focus')}
+                          help={ct('creator_fps_limit_when_game_loses_focus')}
+                          value={config().environment.gamescope.fps_limiter_no_focus}
+                          onInput={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  fps_limiter_no_focus: value
+                                }
+                              }
+                            }))
+                          }
+                        />
+                      </div>
+                    </Show>
+
+                    <StringListField
+                      label={ct('creator_gamescope_additional_options')}
+                      help={ct('creator_add_extra_flags_that_will_be_appended_to_the_gamescope_c')}
+                      items={gamescopeAdditionalOptionsList()}
+                      onChange={setGamescopeAdditionalOptionsList}
+                      placeholder={ct('creator_prefer_vk_device_1002_73bf')}
+                      addLabel={ct('creator_add_option')}
+                    />
+                  </div>
+                </Show>
+              }
+            />
+
+            <FeatureStateField
+              label="Gamemode"
+              help={ct('creator_defines_gamemode_policy')}
+              value={config().environment.gamemode}
+              onChange={setGamemodeState}
+            />
+
+            <FeatureStateField
+              label="MangoHud"
+              help={ct('creator_defines_mangohud_policy')}
+              value={config().environment.mangohud}
+              onChange={setMangohudState}
+            />
+
+            <FeatureStateField
+              label="Wine-Wayland"
+              help={ct('creator_policy_for_enabling_wine_wayland')}
+              value={config().compatibility.wine_wayland}
+              onChange={(value) =>
+                patchConfig((prev) => ({
+                  ...prev,
+                  compatibility: {
+                    ...prev.compatibility,
+                    wine_wayland: value
+                  }
+                }))
+              }
+              footer={
+                wineWaylandEnabled() ? (
+                  <FeatureStateField
+                    label="HDR"
+                    help={ct('creator_policy_for_hdr_depends_on_wine_wayland')}
+                    value={config().compatibility.hdr}
+                    onChange={(value) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        compatibility: {
+                          ...prev.compatibility,
+                          hdr: value
+                        }
+                      }))
+                    }
+                  />
+                ) : undefined
+              }
+            />
+
+            <FeatureStateField
+              label="Auto DXVK-NVAPI"
+              help={ct('creator_controls_automatic_dxvk_nvapi_setup')}
+              value={config().compatibility.auto_dxvk_nvapi}
+              onChange={(value) =>
+                patchConfig((prev) => ({
+                  ...prev,
+                  compatibility: {
+                    ...prev.compatibility,
+                    auto_dxvk_nvapi: value
+                  }
+                }))
+              }
+            />
+
+            <FeatureStateField
+              label="Staging"
+              help={ct('creator_controls_mandatory_usage_of_wine_staging_runtime')}
+              value={config().compatibility.staging}
+              onChange={(value) =>
+                patchConfig((prev) => ({
+                  ...prev,
+                  compatibility: {
+                    ...prev.compatibility,
+                    staging: value
+                  }
+                }))
+              }
+            />
+
+            <FeatureStateField
+              label={ct('creator_use_dedicated_gpu')}
+              help={ct('creator_exports_prime_render_offload_variables_to_try_using_the')}
+              value={config().environment.prime_offload}
+              onChange={(value) =>
+                patchConfig((prev) => ({
+                  ...prev,
+                  environment: {
+                    ...prev.environment,
+                    prime_offload: value
+                  }
+                }))
+              }
+            />
+          </section>
+  )
+}

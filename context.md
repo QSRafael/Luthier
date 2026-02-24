@@ -2121,6 +2121,34 @@ Observacao de arquitetura:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 41
+Escopo implementado:
+- Super refatoracao estrutural da tela principal do Creator (`CreatorPage`), sem mudar comportamento:
+  - extracao dos helpers/componentes locais para `apps/creator-tauri/src/features/creator/creator-page-shared.tsx`;
+  - extracao das abas em arquivos dedicados dentro de `apps/creator-tauri/src/features/creator/sections/`:
+    - `game-tab.tsx`
+    - `runtime-tab.tsx`
+    - `performance-tab.tsx`
+    - `dependencies-tab.tsx`
+    - `winecfg-tab.tsx`
+    - `launch-environment-tab.tsx`
+    - `review-tab.tsx`
+- `CreatorPage.tsx` ficou focado em:
+  - composicao de layout geral (sidebar + card principal);
+  - estados locais/dialogos/sinais;
+  - handlers de alto nivel;
+  - montagem do `sectionView` compartilhado para as abas.
+- Reducao de complexidade do arquivo principal:
+  - `CreatorPage.tsx` caiu de ~3500 linhas para ~760 linhas (aprox.).
+- Limpeza de imports residuais no `CreatorPage` apos extracao, melhorando legibilidade humana.
+
+Observacao de arquitetura:
+- As abas recebem um objeto `view` compartilhado (`sectionView`) para preservar comportamento sem reescrever toda a logica em hooks menores nesta etapa.
+- Proxima rodada de refino (futuro): tipar mais fortemente `sectionView` e quebrar `winecfg-tab.tsx` (ainda o maior arquivo da UI).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 36
 Escopo implementado:
 - Padronizacao visual de botoes secundarios no Creator UI:
@@ -2633,3 +2661,22 @@ Observacao importante (UX/arquitetura):
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
+
+### 2026-02-24 - Checkpoint 42
+Escopo implementado:
+- Super refatoracao estrutural do Creator UI (sem mudanca funcional):
+  - `CreatorPage.tsx` foi reduzido e dividido por abas em `src/features/creator/sections/` (`game`, `runtime`, `performance`, `dependencies`, `winecfg`, `launch-environment`, `review`);
+  - helpers/estruturas compartilhadas da tela foram extraidos para `creator-page-shared.tsx`.
+- Refatoracao de componentes de formulario:
+  - `FormControls.tsx` virou um barrel pequeno que reexporta modulos menores;
+  - componentes foram divididos em `form-controls-core.tsx`, `form-controls-feature-state.tsx` e `form-controls-lists.tsx`.
+- Refatoracao do controller do Creator:
+  - constantes e utilitarios de path/lista/runtime foram extraidos de `useCreatorController.ts` para `creator-controller-utils.ts`.
+  - objetivo: reduzir ruido no hook e deixar a logica principal mais legivel.
+
+Observacoes de arquitetura:
+- A API publica dos componentes de formulario e do `useCreatorController` foi preservada para evitar regressao nas abas ja existentes.
+- Ainda existem alvos de refatoracao para uma proxima rodada (`winecfg-tab.tsx` e `creator-copy.ts`, ambos grandes), mas a leitura humana do fluxo principal melhorou significativamente nesta etapa.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
