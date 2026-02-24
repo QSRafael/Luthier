@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "apps/creator-tauri/src-tauri",
+  "bins/creator-cli",
   "crates/orchestrator-core",
   "crates/creator-core",
   "bins/orchestrator",

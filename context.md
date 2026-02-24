@@ -1499,3 +1499,16 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Internacionalizar mensagens retornadas pelo backend (`src-tauri`).
 - Expandir a UI para mais campos de configuracao por aba.
+
+### 2026-02-24 - Checkpoint 14
+Escopo implementado:
+- Novo utilitario `creator-cli` para testes via terminal:
+  - `hash`
+  - `test`
+  - `create`
+- Objetivo:
+  - permitir validar fluxo de hash/test/geracao sem depender de frontend/UI Tauri.
+
+Proximo checkpoint planejado:
+- Internacionalizar mensagens de backend (`src-tauri`).
+- Expandir a UI para mais campos e tabelas por aba.

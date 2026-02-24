@@ -175,4 +175,13 @@
   - labels e tooltips da UI mínima
   - mensagens de status dos fluxos (`hash`, `test`, `create`).
 - Próximo passo técnico:
-  - aplicar i18n no backend para mensagens retornadas por comandos.
+- aplicar i18n no backend para mensagens retornadas por comandos.
+
+## 2026-02-24 (checkpoint 14)
+- Novo binário `creator-cli` adicionado para testes por terminal:
+  - `creator-cli hash --exe <path>`
+  - `creator-cli test --config <config.json> --game-root <path>`
+  - `creator-cli create --base <orchestrator-base> --config <config.json> --output <path>`
+- Com isso, o fluxo de validação/geração pode ser testado sem frontend e sem runtime Tauri.
+- Próximo passo técnico:
+  - internacionalizar mensagens de erro/sucesso no backend (`src-tauri`).
