@@ -280,6 +280,7 @@ type StringListFieldProps = {
   addLabel?: string
   pickerLabel?: string
   onPickValue?: () => Promise<string | null>
+  emptyMessage?: string
 }
 
 export function StringListField(props: StringListFieldProps) {
@@ -327,6 +328,8 @@ export function StringListField(props: StringListFieldProps) {
               )}
             </For>
           </div>
+        ) : props.emptyMessage ? (
+          <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">{props.emptyMessage}</div>
         ) : undefined
       }
     >

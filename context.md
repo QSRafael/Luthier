@@ -2026,6 +2026,17 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 51
+Escopo implementado:
+- Estados vazios padronizados (estilo `Chaves de registro`) em itens de lista:
+  - `Argumentos de launch`
+  - `Arquivos obrigatorios`
+  - `Dependencias extras do sistema`
+- `StringListField` ganhou `emptyMessage` opcional para exibir mensagem de lista vazia com borda tracejada.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

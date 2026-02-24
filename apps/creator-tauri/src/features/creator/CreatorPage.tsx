@@ -457,6 +457,7 @@ export default function CreatorPage() {
               onChange={(items) => patchConfig((prev) => ({ ...prev, launch_args: items }))}
               placeholder={tx('-windowed', '-windowed')}
               addLabel={tx('Adicionar argumento', 'Add argument')}
+              emptyMessage={tx('Nenhum argumento adicionado.', 'No launch argument added.')}
             />
 
             <StringListField
@@ -468,6 +469,7 @@ export default function CreatorPage() {
               addLabel={tx('Adicionar arquivo', 'Add file')}
               pickerLabel={tx('Escolher arquivo na pasta do jogo', 'Pick file from game folder')}
               onPickValue={pickIntegrityFileRelative}
+              emptyMessage={tx('Nenhum arquivo adicionado.', 'No file added.')}
             />
           </section>
         </Show>
@@ -720,7 +722,11 @@ export default function CreatorPage() {
                       )}
                     </For>
                   </div>
-                ) : undefined
+                ) : (
+                  <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                    {tx('Nenhuma dependência extra adicionada.', 'No extra dependency added.')}
+                  </div>
+                )
               }
             >
               <Dialog open={extraDependencyDialogOpen()} onOpenChange={setExtraDependencyDialogOpen}>
