@@ -2076,6 +2076,25 @@ Testes adicionados (creator-tauri-backend):
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
+
+### 2026-02-24 - Checkpoint 54
+Escopo implementado:
+- Adicionados scripts de conveniencia na raiz do repositorio para evitar comandos manuais repetitivos:
+  - `build-creator-e-abrir.sh`
+    - compila o Creator via `npm run tauri:build`;
+    - ao final abre a pasta `apps/creator-tauri/src-tauri/target/release` no gerenciador de arquivos;
+    - lista executaveis encontrados na pasta `release`.
+  - `rodar-frontend-lan.sh`
+    - sobe o frontend Vite exposto na rede (`0.0.0.0`, porta padrao `1420`);
+    - imprime URL local e URL LAN (IP da maquina);
+    - verifica conflito de porta e informa processo ocupando a porta quando possivel.
+- Ambos:
+  - detectam `mise` automaticamente (PATH ou `~/.local/bin/mise`);
+  - adicionam `~/.cargo/bin` ao `PATH`;
+  - executam `npm install` automaticamente se `node_modules` nao existir.
+
+Validacao do checkpoint:
+- `bash -n ./build-creator-e-abrir.sh ./rodar-frontend-lan.sh`
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27
