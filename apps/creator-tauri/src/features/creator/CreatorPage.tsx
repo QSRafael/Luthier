@@ -366,7 +366,7 @@ export default function CreatorPage() {
             />
 
             <Item>
-              <ItemMain class="xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
+              <ItemMain>
                 <ItemContent class="space-y-3">
                   <div class="flex items-center gap-2">
                     <ItemTitle>{runtimeVersionFieldLabel()}</ItemTitle>
@@ -395,8 +395,8 @@ export default function CreatorPage() {
                   />
                 </ItemContent>
 
-                <ItemActions class="grid content-start gap-2.5 rounded-md border border-border/80 bg-muted/20 p-3">
-                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
+                <ItemActions class="grid content-start gap-3 sm:grid-cols-2">
+                  <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
                       <p class="text-sm font-medium">{tx('Versão obrigatória', 'Required version')}</p>
                       <p class="text-xs text-muted-foreground">
@@ -425,7 +425,7 @@ export default function CreatorPage() {
                     </Switch>
                   </div>
 
-                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
+                  <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
                       <p class="text-sm font-medium">{tx('Auto update', 'Auto update')}</p>
                       <p class="text-xs text-muted-foreground">
