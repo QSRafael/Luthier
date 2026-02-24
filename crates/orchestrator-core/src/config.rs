@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GameConfig {
@@ -37,7 +37,8 @@ pub struct EnvConfig {
     pub gamemode: FeatureState,
     pub gamescope: GamescopeConfig,
     pub mangohud: FeatureState,
-    pub prime_offload: bool,
+    #[serde(deserialize_with = "deserialize_feature_state_from_bool_or_enum")]
+    pub prime_offload: FeatureState,
     pub custom_vars: HashMap<String, String>,
 }
 
@@ -77,6 +78,16 @@ pub enum FeatureState {
     MandatoryOff,
     OptionalOn,
     OptionalOff,
+}
+
+impl FeatureState {
+    pub fn is_enabled(self) -> bool {
+        matches!(self, Self::MandatoryOn | Self::OptionalOn)
+    }
+
+    pub fn is_mandatory(self) -> bool {
+        matches!(self, Self::MandatoryOn | Self::MandatoryOff)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -172,6 +183,26 @@ pub struct SystemDependency {
     pub check_commands: Vec<String>,
     pub check_env_vars: Vec<String>,
     pub check_paths: Vec<String>,
+}
+
+fn deserialize_feature_state_from_bool_or_enum<'de, D>(
+    deserializer: D,
+) -> Result<FeatureState, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Compat {
+        Bool(bool),
+        State(FeatureState),
+    }
+
+    match Compat::deserialize(deserializer)? {
+        Compat::Bool(true) => Ok(FeatureState::OptionalOn),
+        Compat::Bool(false) => Ok(FeatureState::OptionalOff),
+        Compat::State(state) => Ok(state),
+    }
 }
 
 #[cfg(test)]

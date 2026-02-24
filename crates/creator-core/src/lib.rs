@@ -332,7 +332,7 @@ mod tests {
                     fsr: false,
                 },
                 mangohud: FeatureState::OptionalOff,
-                prime_offload: false,
+                prime_offload: FeatureState::OptionalOff,
                 custom_vars: HashMap::new(),
             },
             compatibility: CompatibilityConfig {

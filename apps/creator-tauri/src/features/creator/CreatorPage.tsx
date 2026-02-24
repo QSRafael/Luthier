@@ -1152,7 +1152,7 @@ export default function CreatorPage() {
                 }))
               }
               footer={
-                <Show when={wineWaylandEnabled()}>
+                wineWaylandEnabled() ? (
                   <FeatureStateField
                     label="HDR"
                     help={tx('Política para HDR (depende de Wine-Wayland).', 'Policy for HDR (depends on Wine-Wayland).')}
@@ -1167,7 +1167,7 @@ export default function CreatorPage() {
                       }))
                     }
                   />
-                </Show>
+                ) : undefined
               }
             />
 
@@ -1201,16 +1201,19 @@ export default function CreatorPage() {
               }
             />
 
-            <ToggleField
-              label={tx('Prime Offload', 'Prime Offload')}
-              help={tx('Ativa variáveis para offload de GPU dedicada.', 'Enables dedicated GPU offload variables.')}
-              checked={config().environment.prime_offload}
-              onChange={(checked) =>
+            <FeatureStateField
+              label={tx('Usar GPU dedicada', 'Use dedicated GPU')}
+              help={tx(
+                'Exporta variáveis de PRIME render offload para tentar usar a GPU dedicada em sistemas híbridos.',
+                'Exports PRIME render offload variables to try using the dedicated GPU on hybrid systems.'
+              )}
+              value={config().environment.prime_offload}
+              onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
                   environment: {
                     ...prev.environment,
-                    prime_offload: checked
+                    prime_offload: value
                   }
                 }))
               }

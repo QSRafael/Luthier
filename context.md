@@ -1988,6 +1988,26 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 49
+Escopo implementado:
+- `Prime Offload` migrado para politica `FeatureState` (UI + schema):
+  - na UI foi renomeado para `Usar GPU dedicada`;
+  - agora usa os dois cards `Ativado` + `Obrigatorio` (mesmo padrao das demais politicas).
+- `Wine-Wayland`:
+  - corrigido rodape/divisor vazio quando `HDR` nao esta visivel.
+
+Compatibilidade de payload / backend:
+- `environment.prime_offload` em `orchestrator-core` mudou de `bool` para `FeatureState`.
+- Mantida compatibilidade com configs antigos:
+  - o parser aceita tanto `bool` quanto `FeatureState` para `prime_offload`;
+  - `true` antigo vira `OptionalOn`;
+  - `false` antigo vira `OptionalOff`.
+- `launch` do orquestrador passou a aplicar variaveis de PRIME offload quando `prime_offload` estiver em estado ligado (`MandatoryOn`/`OptionalOn`).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo build --workspace`
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

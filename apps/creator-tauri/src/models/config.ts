@@ -47,7 +47,7 @@ export type GameConfig = {
       additional_options: string
     }
     mangohud: FeatureState
-    prime_offload: boolean
+    prime_offload: FeatureState
     custom_vars: Record<string, string>
   }
   compatibility: {
@@ -137,7 +137,7 @@ export function defaultGameConfig(): GameConfig {
         additional_options: ''
       },
       mangohud: 'OptionalOff',
-      prime_offload: false,
+      prime_offload: 'OptionalOff',
       custom_vars: {}
     },
     compatibility: {

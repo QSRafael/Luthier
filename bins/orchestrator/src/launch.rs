@@ -132,7 +132,7 @@ pub fn build_launch_command(
         }
     }
 
-    if config.environment.prime_offload {
+    if config.environment.prime_offload.is_enabled() {
         upsert_env(&mut env_pairs, "__NV_PRIME_RENDER_OFFLOAD", "1");
         upsert_env(&mut env_pairs, "__GLX_VENDOR_LIBRARY_NAME", "nvidia");
         upsert_env(&mut env_pairs, "DRI_PRIME", "1");
