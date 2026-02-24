@@ -2680,3 +2680,21 @@ Observacoes de arquitetura:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 43
+Escopo implementado:
+- Refatoracao do `winecfg-tab` em subcomponentes por responsabilidade:
+  - itens base (`DLL overrides`, `Versão do Windows`);
+  - secoes do acordeao (`Graphics`, `Desktop Integration`, `Drives`, `Audio`) em arquivos dedicados dentro de `sections/winecfg/`.
+- `winecfg-tab.tsx` virou arquivo orquestrador pequeno, com composicao das secoes e controle de abertura/fechamento.
+- Refatoracao do catalogo de i18n da feature Creator:
+  - `creator-copy.ts` agora eh apenas compositor/lookup/format;
+  - mensagens foram separadas por idioma em `creator-copy.pt-BR.ts` e `creator-copy.en-US.ts`.
+
+Boas praticas aplicadas nesta etapa:
+- separacao por responsabilidade (componentes por secao visual e dados por idioma);
+- manutencao da API publica existente (sem alterar chamadas de `ct(...)` / `creatorTranslate(...)`);
+- refatoracao incremental com validacao de build apos cada bloco.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
