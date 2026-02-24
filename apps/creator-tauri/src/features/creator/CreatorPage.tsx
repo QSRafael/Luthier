@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, JSX, Show } from 'solid-js'
-import { IconChevronDown, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
+import { IconAlertCircle, IconChevronDown, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
 import { invokeCommand } from '../../api/tauri'
 import {
@@ -14,6 +14,7 @@ import {
   ToggleField,
   WinecfgFeatureStateField
 } from '../../components/form/FormControls'
+import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { useTheme } from '../../components/theme-provider'
@@ -2350,6 +2351,17 @@ export default function CreatorPage() {
 
         <Show when={activeTab() === 'winecfg'}>
           <section class="stack">
+            <Alert variant="warning">
+              <IconAlertCircle />
+              <AlertTitle>{tx('Overrides do winecfg (não substituem tudo)', 'Winecfg overrides (do not replace everything)')}</AlertTitle>
+              <AlertDescription>
+                {tx(
+                  'As configurações desta aba são adicionais ao padrão do prefixo/Wine. Se você deixar em "Padrão do Wine", o orquestrador não força esse item.',
+                  'Settings in this tab are additive overrides on top of Wine/prefix defaults. If you keep "Wine default", the orchestrator does not force that item.'
+                )}
+              </AlertDescription>
+            </Alert>
+
             <FieldShell
               label={tx('Substituição de DLL', 'DLL overrides')}
               help={tx('Configura overrides por DLL como native/builtin.', 'Configures per-DLL overrides such as native/builtin.')}
@@ -2531,6 +2543,17 @@ export default function CreatorPage() {
                 )}
               >
                 <div class="grid gap-3">
+                  <Alert>
+                    <IconAlertCircle />
+                    <AlertTitle>{tx('Gráficos = ajustes incrementais', 'Graphics = incremental overrides')}</AlertTitle>
+                    <AlertDescription>
+                      {tx(
+                        'Esses itens não recriam o prefixo. Eles apenas adicionam overrides de comportamento do winecfg sobre o que já existe no prefixo atual.',
+                        'These items do not recreate the prefix. They only add winecfg behavior overrides on top of what already exists in the current prefix.'
+                      )}
+                    </AlertDescription>
+                  </Alert>
+
                   <WinecfgFeatureStateField
                     label={tx('Capturar o mouse automaticamente em janelas em tela cheia', 'Automatically capture mouse in fullscreen windows')}
                     help={tx('Equivalente à opção de captura automática do winecfg.', 'Equivalent to winecfg auto-capture mouse option.')}
@@ -2665,6 +2688,17 @@ export default function CreatorPage() {
                 )}
               >
                 <div class="grid gap-3">
+                  <Alert>
+                    <IconAlertCircle />
+                    <AlertTitle>{tx('Integração pode afetar o sistema do usuário', 'Integration can affect user system behavior')}</AlertTitle>
+                    <AlertDescription>
+                      {tx(
+                        'Associações MIME/protocolo e pastas especiais podem alterar integração com desktop. Prefira configurar apenas o necessário para o jogo.',
+                        'MIME/protocol associations and special folders can change desktop integration behavior. Configure only what the game needs.'
+                      )}
+                    </AlertDescription>
+                  </Alert>
+
                   <WinecfgFeatureStateField
                     label={tx('Integração com desktop (geral)', 'Desktop integration (general)')}
                     help={tx('Controla integração do Wine com shell/desktop do Linux.', 'Controls Wine integration with the Linux shell/desktop.')}
@@ -2850,6 +2884,17 @@ export default function CreatorPage() {
                 )}
               >
                 <div class="grid gap-3">
+                  <Alert variant="warning">
+                    <IconAlertCircle />
+                    <AlertTitle>{tx('Unidades do Wine exigem cuidado', 'Wine drives require care')}</AlertTitle>
+                    <AlertDescription>
+                      {tx(
+                        'C: e Z: normalmente já existem no prefixo padrão. Adicione novas unidades apenas quando o jogo realmente depender disso e prefira caminhos Linux genéricos.',
+                        'C: and Z: usually already exist in the default prefix. Add new drives only when the game really depends on it and prefer generic Linux paths.'
+                      )}
+                    </AlertDescription>
+                  </Alert>
+
                   <div class="rounded-md border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
                     <div class="grid gap-1">
                       <p>
@@ -3085,6 +3130,17 @@ export default function CreatorPage() {
                 )}
               >
                 <div class="grid gap-3">
+                  <Alert>
+                    <IconAlertCircle />
+                    <AlertTitle>{tx('Áudio: altere só se precisar', 'Audio: change only if needed')}</AlertTitle>
+                    <AlertDescription>
+                      {tx(
+                        'Forçar backend de áudio pode resolver compatibilidade, mas também pode piorar em outros hosts. O padrão do runtime costuma ser a opção mais portátil.',
+                        'Forcing an audio backend can fix compatibility, but may worsen behavior on other hosts. Runtime default is usually the most portable option.'
+                      )}
+                    </AlertDescription>
+                  </Alert>
+
                   <div class="rounded-md border border-border/60 bg-muted/20 p-3">
                     <div class="space-y-1.5">
                       <p class="text-sm font-medium">{tx('Driver de áudio', 'Audio driver')}</p>

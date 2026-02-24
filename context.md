@@ -1942,6 +1942,22 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
 
+### 2026-02-24 - Checkpoint 41
+Escopo implementado:
+- Adicionado componente UI `Alert` (estilo shadcn, Solid) para mensagens de aviso/risco/contexto.
+- Aplicados alertas na aba `winecfg` para orientar o usuario:
+  - alerta geral da aba (configuracoes sao overrides adicionais ao padrao do prefixo/Wine);
+  - `Graficos`: reforca que sao ajustes incrementais, nao recriacao de prefixo;
+  - `Integracao com area de trabalho`: alerta sobre impacto em associacoes MIME/protocolo e integracao de desktop;
+  - `Unidades`: alerta sobre cuidado com drives extras e preferencia por caminhos Linux genericos;
+  - `Audio`: alerta para alterar backend apenas quando necessario (portabilidade).
+
+Regra de UX:
+- Sempre que houver comportamento com risco de impacto no host/compatibilidade, incluir `Alert` explicito no fluxo.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
 - Layout do item `Versão de runtime` reorganizado:
