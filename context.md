@@ -1831,3 +1831,26 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 28
+Escopo implementado:
+- Base de componentes alinhada ao padrao solicitado (shadcn/radix-like):
+  - novo `ui/sidebar.tsx` com `Sidebar`, `SidebarHeader`, `SidebarContent`, `SidebarFooter`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`;
+  - novo `ui/item.tsx` com composicao de `Item`, `ItemMain`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemFooter`;
+  - novo `ui/dialog.tsx` para fluxo de criacao via modal.
+- Sidebar do Creator atualizada para estilo semelhante ao exemplo shadcn:
+  - novo `features/creator/AppSidebar.tsx` com icones Tabler e navegacao por abas.
+- `FormControls` refatorado para layout em 3 partes:
+  - esquerda (titulo/descricao), direita (controle/acao), baixo (linhas, quando aplicavel);
+  - `StringListField` e `KeyValueListField` migrados para fluxo “botao -> dialog -> linha adicionada abaixo com remover”.
+- Migracoes de itens para fluxo de dialog + linhas:
+  - `Hash SHA-256` (campo + acao no mesmo item);
+  - `Prefix path final` (campo + acao de copiar no mesmo item);
+  - `registry_keys`, `folder_mounts`, `dll_overrides`, `wrapper_commands` agora adicionados via `Dialog` e renderizados em linhas no rodape do item com icone de exclusao.
+- Suporte adicional:
+  - `@tabler/icons-solidjs` adicionado para icones de sidebar e acoes de lista;
+  - `useCreatorController` ganhou helper `pickMountSourceRelative` para uso em dialog de montagem.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`

@@ -432,6 +432,26 @@ export function useCreatorController() {
     }))
   }
 
+  const pickMountSourceRelative = async () => {
+    const selected = await pickFolder({
+      title: tx('Selecionar pasta para montar', 'Select folder to mount')
+    })
+    if (!selected) return null
+
+    const relative = relativeFromRoot(gameRoot(), selected)
+    if (!relative) {
+      setStatusMessage(
+        tx(
+          'A pasta selecionada precisa estar dentro da pasta raiz do jogo.',
+          'Selected folder must be inside game root folder.'
+        )
+      )
+      return null
+    }
+
+    return relative
+  }
+
   const applyIconExtractionPlaceholder = () => {
     setStatusMessage(
       tx(
@@ -667,6 +687,7 @@ export function useCreatorController() {
     pickExecutable,
     pickRegistryFile,
     pickMountFolder,
+    pickMountSourceRelative,
     applyIconExtractionPlaceholder,
     setGamescopeState,
     setGamemodeState,

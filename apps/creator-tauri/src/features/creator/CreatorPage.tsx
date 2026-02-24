@@ -1,4 +1,5 @@
-import { For, Show } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
+import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import {
   FieldShell,
@@ -11,6 +12,14 @@ import {
 } from '../../components/form/FormControls'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { Locale } from '../../i18n'
@@ -22,6 +31,7 @@ import {
   UpscaleMethod,
   useCreatorController
 } from './useCreatorController'
+import { AppSidebar } from './AppSidebar'
 
 function tabLabel(tab: CreatorTab, controller: CreatorController) {
   const tx = controller.tx
@@ -44,7 +54,6 @@ export default function CreatorPage() {
     setLocale,
     activeTab,
     setActiveTab,
-    tabs,
     outputPath,
     setOutputPath,
     gameRoot,
@@ -54,6 +63,7 @@ export default function CreatorPage() {
     setRegistryImportPath,
     iconPreviewPath,
     statusMessage,
+    setStatusMessage,
     resultJson,
     winetricksAvailable,
     winetricksLoading,
@@ -93,6 +103,7 @@ export default function CreatorPage() {
     pickExecutable,
     pickRegistryFile,
     pickMountFolder,
+    pickMountSourceRelative,
     applyIconExtractionPlaceholder,
     setGamescopeState,
     setGamemodeState,
@@ -106,6 +117,35 @@ export default function CreatorPage() {
     removeWinetricksVerb,
     addWinetricksFromSearch
   } = controller
+
+  const [registryDialogOpen, setRegistryDialogOpen] = createSignal(false)
+  const [registryDraft, setRegistryDraft] = createSignal({
+    path: '',
+    name: '',
+    value_type: 'REG_SZ',
+    value: ''
+  })
+
+  const [mountDialogOpen, setMountDialogOpen] = createSignal(false)
+  const [mountDraft, setMountDraft] = createSignal({
+    source_relative_path: '',
+    target_windows_path: '',
+    create_source_if_missing: true
+  })
+
+  const [dllDialogOpen, setDllDialogOpen] = createSignal(false)
+  const [dllDraft, setDllDraft] = createSignal({
+    dll: '',
+    mode: 'builtin'
+  })
+
+  const [wrapperDialogOpen, setWrapperDialogOpen] = createSignal(false)
+  const [wrapperDraft, setWrapperDraft] = createSignal({
+    state: 'OptionalOff' as FeatureState,
+    executable: '',
+    args: ''
+  })
+
   return (
     <div class="creator-page">
       <Card>
@@ -134,28 +174,14 @@ export default function CreatorPage() {
       </Card>
 
       <div class="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <Card class="h-fit lg:sticky lg:top-4">
-          <CardHeader>
-            <CardTitle class="text-sm uppercase tracking-[0.08em] text-muted-foreground">
-              {tx('Seções', 'Sections')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-2">
-            <For each={tabs}>
-              {(tab) => (
-                <Button
-                  class="w-full justify-start"
-                  variant={activeTab() === tab ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setActiveTab(tab)}
-                  type="button"
-                >
-                  {tabLabel(tab, controller)}
-                </Button>
-              )}
-            </For>
-          </CardContent>
-        </Card>
+        <div class="h-fit lg:sticky lg:top-4">
+          <AppSidebar
+            appName="Game Orchestrator"
+            activeTab={activeTab()}
+            onTabChange={setActiveTab}
+            tabLabel={(tab) => tabLabel(tab, controller)}
+          />
+        </div>
 
         <Card>
           <CardContent class="pt-5">
@@ -207,21 +233,28 @@ export default function CreatorPage() {
               onInput={(value) => patchConfig((prev) => ({ ...prev, relative_exe_path: value }))}
             />
 
-            <TextInputField
+            <FieldShell
               label={tx('Hash SHA-256', 'SHA-256 hash')}
               help={tx(
                 'Identificador principal para perfil e prefixo por jogo.',
                 'Main identifier for profile and per-game prefix.'
               )}
-              value={config().exe_hash}
-              onInput={(value) => patchConfig((prev) => ({ ...prev, exe_hash: value }))}
-            />
-
-            <div class="row-actions">
-              <Button type="button" class="btn-secondary" onClick={runHash}>
-                {t('hashButton')}
-              </Button>
-            </div>
+            >
+              <div class="picker-row">
+                <Input
+                  value={config().exe_hash}
+                  onInput={(e) =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      exe_hash: e.currentTarget.value
+                    }))
+                  }
+                />
+                <Button type="button" class="btn-secondary" onClick={runHash}>
+                  {t('hashButton')}
+                </Button>
+              </div>
+            </FieldShell>
 
             <FieldShell
               label={tx('Ícone extraído', 'Extracted icon')}
@@ -958,13 +991,31 @@ export default function CreatorPage() {
 
         <Show when={activeTab() === 'prefix'}>
           <section class="stack">
-            <TextInputField
+            <FieldShell
               label={tx('Prefix path final', 'Final prefix path')}
-              help={tx('Calculado automaticamente a partir do hash do executável.', 'Automatically calculated from executable hash.')}
-              value={prefixPathPreview()}
-              onInput={() => undefined}
-              readonly
-            />
+              help={tx(
+                'Calculado automaticamente a partir do hash do executável.',
+                'Automatically calculated from executable hash.'
+              )}
+            >
+              <div class="picker-row">
+                <Input value={prefixPathPreview()} readOnly class="readonly" />
+                <Button
+                  type="button"
+                  class="btn-secondary"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(prefixPathPreview())
+                      setStatusMessage(tx('Path do prefixo copiado.', 'Prefix path copied.'))
+                    } catch {
+                      setStatusMessage(tx('Falha ao copiar para área de transferência.', 'Failed to copy to clipboard.'))
+                    }
+                  }}
+                >
+                  {tx('Copiar', 'Copy')}
+                </Button>
+              </div>
+            </FieldShell>
 
             <FieldShell
               label="Winetricks"
@@ -1061,98 +1112,127 @@ export default function CreatorPage() {
             <FieldShell
               label={tx('Chaves de registro', 'Registry keys')}
               help={tx('Tabela de chaves aplicadas no prefixo após bootstrap.', 'Table of keys applied to prefix after bootstrap.')}
+              controlClass="flex justify-end"
+              footer={
+                <div class="grid gap-2">
+                  <Show
+                    when={config().registry_keys.length > 0}
+                    fallback={
+                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        {tx('Nenhuma chave adicionada.', 'No key added.')}
+                      </div>
+                    }
+                  >
+                    <For each={config().registry_keys}>
+                      {(item, index) => (
+                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_minmax(0,1fr)_auto]">
+                          <span class="truncate text-sm font-medium">{item.path}</span>
+                          <span class="truncate text-sm">{item.name}</span>
+                          <span class="truncate text-xs text-muted-foreground">{item.value_type}</span>
+                          <span class="truncate text-sm text-muted-foreground">{item.value}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                registry_keys: removeAt(prev.registry_keys, index())
+                              }))
+                            }
+                            title={tx('Remover chave', 'Remove key')}
+                          >
+                            <IconTrash class="size-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              }
             >
-              <div class="table-list">
-                <For each={config().registry_keys}>
-                  {(item, index) => (
-                    <div class="table-card">
-                      <div class="table-grid table-grid-two">
-                        <Input
-                          value={item.path}
-                          placeholder={tx('Path (HKCU\\...)', 'Path (HKCU\\...)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...prev.registry_keys[index()],
-                                path: e.currentTarget.value
-                              })
-                            }))
-                          }
-                        />
-                        <Input
-                          value={item.name}
-                          placeholder={tx('Nome da chave', 'Key name')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...prev.registry_keys[index()],
-                                name: e.currentTarget.value
-                              })
-                            }))
-                          }
-                        />
-                      </div>
+              <Dialog open={registryDialogOpen()} onOpenChange={setRegistryDialogOpen}>
+                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setRegistryDialogOpen(true)}>
+                  <IconPlus class="size-4" />
+                  {tx('Adicionar chave', 'Add key')}
+                </Button>
 
-                      <div class="table-grid table-grid-two">
-                        <Input
-                          value={item.value_type}
-                          placeholder={tx('Tipo (REG_SZ)', 'Type (REG_SZ)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...prev.registry_keys[index()],
-                                value_type: e.currentTarget.value
-                              })
-                            }))
-                          }
-                        />
-                        <Input
-                          value={item.value}
-                          placeholder={tx('Valor', 'Value')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...prev.registry_keys[index()],
-                                value: e.currentTarget.value
-                              })
-                            }))
-                          }
-                        />
-                      </div>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Adicionar chave de registro', 'Add registry key')}</DialogTitle>
+                    <DialogDescription>
+                      {tx('Preencha os campos e confirme para adicionar a linha.', 'Fill fields and confirm to add row.')}
+                    </DialogDescription>
+                  </DialogHeader>
 
-                      <Button
-                        type="button"
-                        class="btn-danger"
-                        onClick={() =>
-                          patchConfig((prev) => ({
+                  <div class="grid gap-2">
+                    <Input
+                      value={registryDraft().path}
+                      placeholder={tx('Path (HKCU\\...)', 'Path (HKCU\\...)')}
+                      onInput={(e) =>
+                        setRegistryDraft((prev) => ({
+                          ...prev,
+                          path: e.currentTarget.value
+                        }))
+                      }
+                    />
+                    <Input
+                      value={registryDraft().name}
+                      placeholder={tx('Nome da chave', 'Key name')}
+                      onInput={(e) =>
+                        setRegistryDraft((prev) => ({
+                          ...prev,
+                          name: e.currentTarget.value
+                        }))
+                      }
+                    />
+                    <div class="grid gap-2 md:grid-cols-2">
+                      <Input
+                        value={registryDraft().value_type}
+                        placeholder={tx('Tipo (REG_SZ)', 'Type (REG_SZ)')}
+                        onInput={(e) =>
+                          setRegistryDraft((prev) => ({
                             ...prev,
-                            registry_keys: removeAt(prev.registry_keys, index())
+                            value_type: e.currentTarget.value
                           }))
                         }
-                      >
-                        {tx('Remover chave', 'Remove key')}
-                      </Button>
+                      />
+                      <Input
+                        value={registryDraft().value}
+                        placeholder={tx('Valor', 'Value')}
+                        onInput={(e) =>
+                          setRegistryDraft((prev) => ({
+                            ...prev,
+                            value: e.currentTarget.value
+                          }))
+                        }
+                      />
                     </div>
-                  )}
-                </For>
+                  </div>
 
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={() =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      registry_keys: [...prev.registry_keys, { path: '', name: '', value_type: 'REG_SZ', value: '' }]
-                    }))
-                  }
-                >
-                  {tx('Adicionar chave de registro', 'Add registry key')}
-                </Button>
-              </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setRegistryDialogOpen(false)}>
+                      {tx('Cancelar', 'Cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={!registryDraft().path.trim() || !registryDraft().name.trim()}
+                      onClick={() => {
+                        const draft = registryDraft()
+                        if (!draft.path.trim() || !draft.name.trim()) return
+                        patchConfig((prev) => ({
+                          ...prev,
+                          registry_keys: [...prev.registry_keys, draft]
+                        }))
+                        setRegistryDraft({ path: '', name: '', value_type: 'REG_SZ', value: '' })
+                        setRegistryDialogOpen(false)
+                      }}
+                    >
+                      {tx('Confirmar', 'Confirm')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </FieldShell>
 
             <FieldShell
@@ -1170,97 +1250,156 @@ export default function CreatorPage() {
             <FieldShell
               label={tx('Pastas montadas (folder_mounts)', 'Mounted folders (folder_mounts)')}
               help={tx('Mapeia pasta relativa do jogo para destino Windows dentro do prefixo.', 'Maps game-relative folder to Windows target path inside prefix.')}
-            >
-              <div class="table-list">
-                <For each={config().folder_mounts}>
-                  {(item, index) => (
-                    <div class="table-card">
-                      <div class="table-grid table-grid-two">
-                        <div class="picker-row">
-                          <Input
-                            value={item.source_relative_path}
-                            placeholder={tx('Origem relativa (ex.: save)', 'Relative source (e.g. save)')}
-                            onInput={(e) =>
-                              patchConfig((prev) => ({
-                                ...prev,
-                                folder_mounts: replaceAt(prev.folder_mounts, index(), {
-                                  ...prev.folder_mounts[index()],
-                                  source_relative_path: e.currentTarget.value
-                                })
-                              }))
-                            }
-                          />
-                          <Button type="button" class="btn-secondary" onClick={() => void pickMountFolder(index())}>
-                            {tx('Escolher pasta', 'Choose folder')}
-                          </Button>
-                        </div>
-
-                        <Input
-                          value={item.target_windows_path}
-                          placeholder={tx('Destino Windows (C:\\users\\...)', 'Windows target (C:\\users\\...)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              folder_mounts: replaceAt(prev.folder_mounts, index(), {
-                                ...prev.folder_mounts[index()],
-                                target_windows_path: e.currentTarget.value
-                              })
-                            }))
-                          }
-                        />
+              controlClass="flex justify-end"
+              footer={
+                <div class="grid gap-2">
+                  <Show
+                    when={config().folder_mounts.length > 0}
+                    fallback={
+                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        {tx('Nenhuma montagem adicionada.', 'No mount added.')}
                       </div>
+                    }
+                  >
+                    <For each={config().folder_mounts}>
+                      {(item, index) => (
+                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px_auto]">
+                          <span class="truncate text-sm font-medium">{item.source_relative_path}</span>
+                          <span class="truncate text-sm text-muted-foreground">{item.target_windows_path}</span>
+                          <span class="text-xs text-muted-foreground">
+                            {item.create_source_if_missing
+                              ? tx('Criar origem: sim', 'Create source: yes')
+                              : tx('Criar origem: não', 'Create source: no')}
+                          </span>
+                          <div class="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              class="h-8 px-2 text-xs"
+                              onClick={() => void pickMountFolder(index())}
+                            >
+                              {tx('Pasta', 'Folder')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() =>
+                                patchConfig((prev) => ({
+                                  ...prev,
+                                  folder_mounts: removeAt(prev.folder_mounts, index())
+                                }))
+                              }
+                              title={tx('Remover montagem', 'Remove mount')}
+                            >
+                              <IconTrash class="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              }
+            >
+              <Dialog open={mountDialogOpen()} onOpenChange={setMountDialogOpen}>
+                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setMountDialogOpen(true)}>
+                  <IconPlus class="size-4" />
+                  {tx('Adicionar montagem', 'Add mount')}
+                </Button>
 
-                      <ToggleField
-                        label={tx('Criar origem se estiver ausente', 'Create source if missing')}
-                        help={tx('Se ativo, cria pasta de origem automaticamente.', 'When enabled, source folder is created automatically.')}
-                        checked={item.create_source_if_missing}
-                        onChange={(checked) =>
-                          patchConfig((prev) => ({
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Adicionar montagem', 'Add mount')}</DialogTitle>
+                    <DialogDescription>
+                      {tx(
+                        'Defina origem relativa e destino Windows para criar a montagem.',
+                        'Set relative source and Windows target to create the mount.'
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="grid gap-2">
+                    <div class="picker-row">
+                      <Input
+                        value={mountDraft().source_relative_path}
+                        placeholder={tx('Origem relativa (ex.: save)', 'Relative source (e.g. save)')}
+                        onInput={(e) =>
+                          setMountDraft((prev) => ({
                             ...prev,
-                            folder_mounts: replaceAt(prev.folder_mounts, index(), {
-                              ...prev.folder_mounts[index()],
-                              create_source_if_missing: checked
-                            })
+                            source_relative_path: e.currentTarget.value
                           }))
                         }
                       />
-
                       <Button
                         type="button"
-                        class="btn-danger"
-                        onClick={() =>
-                          patchConfig((prev) => ({
+                        variant="outline"
+                        onClick={async () => {
+                          const relative = await pickMountSourceRelative()
+                          if (!relative) return
+                          setMountDraft((prev) => ({
                             ...prev,
-                            folder_mounts: removeAt(prev.folder_mounts, index())
+                            source_relative_path: relative
                           }))
-                        }
+                        }}
                       >
-                        {tx('Remover montagem', 'Remove mount')}
+                        {tx('Escolher pasta', 'Choose folder')}
                       </Button>
                     </div>
-                  )}
-                </For>
 
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={() =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      folder_mounts: [
-                        ...prev.folder_mounts,
-                        {
+                    <Input
+                      value={mountDraft().target_windows_path}
+                      placeholder={tx('Destino Windows (C:\\users\\...)', 'Windows target (C:\\users\\...)')}
+                      onInput={(e) =>
+                        setMountDraft((prev) => ({
+                          ...prev,
+                          target_windows_path: e.currentTarget.value
+                        }))
+                      }
+                    />
+
+                    <label class="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={mountDraft().create_source_if_missing}
+                        onInput={(e) =>
+                          setMountDraft((prev) => ({
+                            ...prev,
+                            create_source_if_missing: e.currentTarget.checked
+                          }))
+                        }
+                      />
+                      {tx('Criar origem se estiver ausente', 'Create source if missing')}
+                    </label>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setMountDialogOpen(false)}>
+                      {tx('Cancelar', 'Cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={!mountDraft().source_relative_path.trim() || !mountDraft().target_windows_path.trim()}
+                      onClick={() => {
+                        const draft = mountDraft()
+                        if (!draft.source_relative_path.trim() || !draft.target_windows_path.trim()) return
+                        patchConfig((prev) => ({
+                          ...prev,
+                          folder_mounts: [...prev.folder_mounts, draft]
+                        }))
+                        setMountDraft({
                           source_relative_path: '',
                           target_windows_path: '',
                           create_source_if_missing: true
-                        }
-                      ]
-                    }))
-                  }
-                >
-                  {tx('Adicionar montagem', 'Add mount')}
-                </Button>
-              </div>
+                        })
+                        setMountDialogOpen(false)
+                      }}
+                    >
+                      {tx('Confirmar', 'Confirm')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </FieldShell>
           </section>
         </Show>
@@ -1270,79 +1409,110 @@ export default function CreatorPage() {
             <FieldShell
               label={tx('Substituição de DLL', 'DLL overrides')}
               help={tx('Configura overrides por DLL como native/builtin.', 'Configures per-DLL overrides such as native/builtin.')}
+              controlClass="flex justify-end"
+              footer={
+                <div class="grid gap-2">
+                  <Show
+                    when={config().winecfg.dll_overrides.length > 0}
+                    fallback={
+                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        {tx('Nenhum override adicionado.', 'No override added.')}
+                      </div>
+                    }
+                  >
+                    <For each={config().winecfg.dll_overrides}>
+                      {(item, index) => (
+                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+                          <span class="truncate text-sm font-medium">{item.dll}</span>
+                          <span class="truncate text-xs text-muted-foreground">{item.mode}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                winecfg: {
+                                  ...prev.winecfg,
+                                  dll_overrides: removeAt(prev.winecfg.dll_overrides, index())
+                                }
+                              }))
+                            }
+                            title={tx('Remover', 'Remove')}
+                          >
+                            <IconTrash class="size-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              }
             >
-              <div class="table-list">
-                <For each={config().winecfg.dll_overrides}>
-                  {(item, index) => (
-                    <div class="table-row table-row-two">
-                      <Input
-                        value={item.dll}
-                        placeholder="d3dcompiler_47"
-                        onInput={(e) =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            winecfg: {
-                              ...prev.winecfg,
-                              dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
-                                ...prev.winecfg.dll_overrides[index()],
-                                dll: e.currentTarget.value
-                              })
-                            }
-                          }))
-                        }
-                      />
-                      <Select
-                        value={item.mode}
-                        onInput={(e) =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            winecfg: {
-                              ...prev.winecfg,
-                              dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
-                                ...prev.winecfg.dll_overrides[index()],
-                                mode: e.currentTarget.value
-                              })
-                            }
-                          }))
-                        }
-                      >
-                        <For each={dllModeOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
-                      </Select>
-                      <Button
-                        type="button"
-                        class="btn-danger"
-                        onClick={() =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            winecfg: {
-                              ...prev.winecfg,
-                              dll_overrides: removeAt(prev.winecfg.dll_overrides, index())
-                            }
-                          }))
-                        }
-                      >
-                        {tx('Remover', 'Remove')}
-                      </Button>
-                    </div>
-                  )}
-                </For>
-
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={() =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      winecfg: {
-                        ...prev.winecfg,
-                        dll_overrides: [...prev.winecfg.dll_overrides, { dll: '', mode: 'builtin' }]
-                      }
-                    }))
-                  }
-                >
+              <Dialog open={dllDialogOpen()} onOpenChange={setDllDialogOpen}>
+                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setDllDialogOpen(true)}>
+                  <IconPlus class="size-4" />
                   {tx('Adicionar DLL override', 'Add DLL override')}
                 </Button>
-              </div>
+
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Adicionar DLL override', 'Add DLL override')}</DialogTitle>
+                    <DialogDescription>
+                      {tx('Defina o nome da DLL e o modo de substituição.', 'Set the DLL name and override mode.')}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="grid gap-2">
+                    <Input
+                      value={dllDraft().dll}
+                      placeholder="d3dcompiler_47"
+                      onInput={(e) =>
+                        setDllDraft((prev) => ({
+                          ...prev,
+                          dll: e.currentTarget.value
+                        }))
+                      }
+                    />
+                    <Select
+                      value={dllDraft().mode}
+                      onInput={(e) =>
+                        setDllDraft((prev) => ({
+                          ...prev,
+                          mode: e.currentTarget.value
+                        }))
+                      }
+                    >
+                      <For each={dllModeOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
+                    </Select>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setDllDialogOpen(false)}>
+                      {tx('Cancelar', 'Cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={!dllDraft().dll.trim()}
+                      onClick={() => {
+                        const draft = dllDraft()
+                        if (!draft.dll.trim()) return
+                        patchConfig((prev) => ({
+                          ...prev,
+                          winecfg: {
+                            ...prev.winecfg,
+                            dll_overrides: [...prev.winecfg.dll_overrides, draft]
+                          }
+                        }))
+                        setDllDraft({ dll: '', mode: 'builtin' })
+                        setDllDialogOpen(false)
+                      }}
+                    >
+                      {tx('Confirmar', 'Confirm')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </FieldShell>
 
             <SelectField<FeatureState>
@@ -1556,98 +1726,125 @@ export default function CreatorPage() {
             <FieldShell
               label={tx('Wrapper commands', 'Wrapper commands')}
               help={tx('Comandos extras de wrapper antes do runtime final.', 'Extra wrapper commands before final runtime.')}
-            >
-              <div class="table-list">
-                <For each={config().compatibility.wrapper_commands}>
-                  {(item, index) => (
-                    <div class="table-card">
-                      <div class="table-grid table-grid-three">
-                        <Select
-                          value={item.state}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              compatibility: {
-                                ...prev.compatibility,
-                                wrapper_commands: replaceAt(prev.compatibility.wrapper_commands, index(), {
-                                  ...prev.compatibility.wrapper_commands[index()],
-                                  state: e.currentTarget.value as FeatureState
-                                })
-                              }
-                            }))
-                          }
-                        >
-                          <For each={featureStateOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
-                        </Select>
-                        <Input
-                          value={item.executable}
-                          placeholder={tx('Executável (ex.: gamescope)', 'Executable (e.g. gamescope)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              compatibility: {
-                                ...prev.compatibility,
-                                wrapper_commands: replaceAt(prev.compatibility.wrapper_commands, index(), {
-                                  ...prev.compatibility.wrapper_commands[index()],
-                                  executable: e.currentTarget.value
-                                })
-                              }
-                            }))
-                          }
-                        />
-                        <Input
-                          value={item.args}
-                          placeholder={tx('Args (ex.: -w 1920 -h 1080)', 'Args (e.g. -w 1920 -h 1080)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              compatibility: {
-                                ...prev.compatibility,
-                                wrapper_commands: replaceAt(prev.compatibility.wrapper_commands, index(), {
-                                  ...prev.compatibility.wrapper_commands[index()],
-                                  args: e.currentTarget.value
-                                })
-                              }
-                            }))
-                          }
-                        />
+              controlClass="flex justify-end"
+              footer={
+                <div class="grid gap-2">
+                  <Show
+                    when={config().compatibility.wrapper_commands.length > 0}
+                    fallback={
+                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        {tx('Nenhum wrapper adicionado.', 'No wrapper added.')}
                       </div>
-
-                      <Button
-                        type="button"
-                        class="btn-danger"
-                        onClick={() =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            compatibility: {
-                              ...prev.compatibility,
-                              wrapper_commands: removeAt(prev.compatibility.wrapper_commands, index())
+                    }
+                  >
+                    <For each={config().compatibility.wrapper_commands}>
+                      {(item, index) => (
+                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                          <span class="truncate text-xs text-muted-foreground">{item.state}</span>
+                          <span class="truncate text-sm font-medium">{item.executable}</span>
+                          <span class="truncate text-sm text-muted-foreground">{item.args}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                compatibility: {
+                                  ...prev.compatibility,
+                                  wrapper_commands: removeAt(prev.compatibility.wrapper_commands, index())
+                                }
+                              }))
                             }
-                          }))
-                        }
-                      >
-                        {tx('Remover wrapper', 'Remove wrapper')}
-                      </Button>
-                    </div>
-                  )}
-                </For>
-
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={() =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      compatibility: {
-                        ...prev.compatibility,
-                        wrapper_commands: [...prev.compatibility.wrapper_commands, { state: 'OptionalOff', executable: '', args: '' }]
-                      }
-                    }))
-                  }
-                >
+                            title={tx('Remover wrapper', 'Remove wrapper')}
+                          >
+                            <IconTrash class="size-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              }
+            >
+              <Dialog open={wrapperDialogOpen()} onOpenChange={setWrapperDialogOpen}>
+                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setWrapperDialogOpen(true)}>
+                  <IconPlus class="size-4" />
                   {tx('Adicionar wrapper', 'Add wrapper')}
                 </Button>
-              </div>
+
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Adicionar wrapper', 'Add wrapper')}</DialogTitle>
+                    <DialogDescription>
+                      {tx('Defina política, executável e argumentos do wrapper.', 'Set policy, executable and wrapper arguments.')}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="grid gap-2">
+                    <Select
+                      value={wrapperDraft().state}
+                      onInput={(e) =>
+                        setWrapperDraft((prev) => ({
+                          ...prev,
+                          state: e.currentTarget.value as FeatureState
+                        }))
+                      }
+                    >
+                      <For each={featureStateOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
+                    </Select>
+                    <Input
+                      value={wrapperDraft().executable}
+                      placeholder={tx('Executável (ex.: gamescope)', 'Executable (e.g. gamescope)')}
+                      onInput={(e) =>
+                        setWrapperDraft((prev) => ({
+                          ...prev,
+                          executable: e.currentTarget.value
+                        }))
+                      }
+                    />
+                    <Input
+                      value={wrapperDraft().args}
+                      placeholder={tx('Args (ex.: -w 1920 -h 1080)', 'Args (e.g. -w 1920 -h 1080)')}
+                      onInput={(e) =>
+                        setWrapperDraft((prev) => ({
+                          ...prev,
+                          args: e.currentTarget.value
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setWrapperDialogOpen(false)}>
+                      {tx('Cancelar', 'Cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={!wrapperDraft().executable.trim()}
+                      onClick={() => {
+                        const draft = wrapperDraft()
+                        if (!draft.executable.trim()) return
+                        patchConfig((prev) => ({
+                          ...prev,
+                          compatibility: {
+                            ...prev.compatibility,
+                            wrapper_commands: [...prev.compatibility.wrapper_commands, draft]
+                          }
+                        }))
+                        setWrapperDraft({
+                          state: 'OptionalOff',
+                          executable: '',
+                          args: ''
+                        })
+                        setWrapperDialogOpen(false)
+                      }}
+                    >
+                      {tx('Confirmar', 'Confirm')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </FieldShell>
 
             <KeyValueListField
