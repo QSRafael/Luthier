@@ -1315,3 +1315,17 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Implementar setup inicial de prefix (fase 5), incluindo passos idempotentes e logs por etapa.
 - Integrar comando de injeção no backend Tauri do App Criador.
+
+### 2026-02-24 - Checkpoint 04
+Escopo implementado:
+- Fase 5 (parcial) no `orchestrator-core`:
+  - novo modulo `prefix` com:
+    - `prefix_path_for_hash(exe_hash)`;
+    - `build_prefix_setup_plan(config)` (wineboot/winetricks planejados);
+    - `base_env_for_prefix(...)` com variaveis protegidas de execucao.
+- `--doctor` atualizado no binario `orchestrator`:
+  - inclui `prefix_setup_plan` no JSON final quando ha config embutida.
+
+Proximo checkpoint planejado:
+- Executar plano de prefix (nao apenas planejar), com timeout e retorno estruturado por etapa.
+- Iniciar montagem do launch command final (wrappers + runtime + exe).

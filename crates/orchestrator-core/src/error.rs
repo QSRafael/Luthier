@@ -17,6 +17,9 @@ pub enum OrchestratorError {
     #[error("output path has no parent directory")]
     MissingOutputParent,
 
+    #[error("home directory is not available in environment")]
+    MissingHomeDir,
+
     #[error("post-injection verification failed")]
     VerificationFailed,
 

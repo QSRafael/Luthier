@@ -5,6 +5,7 @@ use clap::Parser;
 use orchestrator_core::{
     doctor::run_doctor,
     observability::{emit_ndjson, new_trace_id, LogEvent, LogLevel},
+    prefix::build_prefix_setup_plan,
     trailer::extract_config_json,
     GameConfig, OrchestratorError,
 };
@@ -118,6 +119,11 @@ fn show_embedded_config(trace_id: &str) -> anyhow::Result<()> {
 fn run_doctor_command(trace_id: &str) -> anyhow::Result<()> {
     let embedded_config =
         try_load_embedded_config().context("failed to inspect embedded config")?;
+    let prefix_plan = embedded_config
+        .as_ref()
+        .map(build_prefix_setup_plan)
+        .transpose()
+        .context("failed to build prefix setup plan")?;
 
     if embedded_config.is_none() {
         log_event(
@@ -144,8 +150,12 @@ fn run_doctor_command(trace_id: &str) -> anyhow::Result<()> {
         }),
     );
 
+    let output = serde_json::json!({
+        "doctor": report,
+        "prefix_setup_plan": prefix_plan,
+    });
     let pretty =
-        serde_json::to_string_pretty(&report).context("failed to serialize doctor report")?;
+        serde_json::to_string_pretty(&output).context("failed to serialize doctor report")?;
     println!("{pretty}");
 
     Ok(())

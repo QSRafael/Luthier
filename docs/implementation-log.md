@@ -50,4 +50,17 @@
   - imprime relatório JSON;
   - gera logs estruturados NDJSON (`GO-DR-*`).
 - Próximo passo técnico:
-  - iniciar setup de prefix (fase 5) e wiring do fluxo `--play`.
+- iniciar setup de prefix (fase 5) e wiring do fluxo `--play`.
+
+## 2026-02-24 (checkpoint 04)
+- Implementado módulo `prefix` em `orchestrator-core`:
+  - `prefix_path_for_hash(exe_hash)` -> `~/.local/share/GameOrchestrator/prefixes/<hash>`
+  - `build_prefix_setup_plan(config)` com comandos planejados e idempotência
+  - `base_env_for_prefix(...)` com `WINEPREFIX` + `PROTON_VERB=run`
+- `--doctor` atualizado:
+  - agora retorna JSON com dois blocos:
+    - `doctor`
+    - `prefix_setup_plan` (quando há config embutida)
+- Próximo passo técnico:
+  - executar de fato o plano do prefix com timeouts/erros estruturados;
+  - começar montagem de launch command (wrappers + runtime).
