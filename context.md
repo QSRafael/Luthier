@@ -2721,3 +2721,22 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npx tsc --noEmit` (frontend)
 - `/home/rafael/.cargo/bin/cargo clippy --workspace --all-targets -- -D warnings`
 - `/home/rafael/.cargo/bin/cargo fmt --all`
+
+### 2026-02-24 - Checkpoint 45
+Escopo implementado:
+- Scripts locais de qualidade adicionados na raiz do projeto (`scripts/`):
+  - `scripts/check-frontend-quality.sh` -> `typecheck + build` do Creator frontend;
+  - `scripts/check-rust-quality.sh` -> `cargo fmt --check + cargo clippy -D warnings` (com flags opcionais `--exclude-tauri` e `--with-tests`);
+  - `scripts/check-quality.sh` -> agregador frontend + Rust (usa `--exclude-tauri` por padrao para estabilidade).
+- Scripts do frontend (`apps/creator-tauri/package.json`):
+  - `typecheck`, `lint` (alias para typecheck) e `quality`.
+- CI do GitHub (`.github/workflows/ci.yml`) reestruturado:
+  - job `frontend` com `npm ci`, `npm run typecheck`, `npm run build`;
+  - job `rust-core` com `fmt`, `test` e `clippy` excluindo `creator-tauri-backend` (evita instabilidade por dependencias de sistema/GTK/WebKit do Tauri em runners padrao).
+- Scripts locais ficaram robustos ao ambiente do usuario:
+  - `check-frontend-quality.sh` detecta `mise` no PATH ou em `~/.local/bin/mise` automaticamente.
+
+Validacao do checkpoint:
+- `./scripts/check-frontend-quality.sh`
+- `./scripts/check-rust-quality.sh --exclude-tauri`
+- `./scripts/check-quality.sh`
