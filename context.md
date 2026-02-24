@@ -1571,3 +1571,25 @@ Validacao do checkpoint:
 - `cargo build --workspace`
 - `cargo test --workspace --all-targets`
 - `cargo clippy --workspace --all-targets -- -D warnings`
+
+### 2026-02-24 - Checkpoint 17
+Escopo implementado:
+- Integracao de `folder_mounts` no fluxo real do Orquestrador (`--play`), antes do pre-launch:
+  - validacao estrita de origem relativa dentro da pasta do jogo;
+  - validacao estrita de destino Windows (`X:\...`, sem `%VAR%`, sem UNC e sem traversal `..`);
+  - suporte a `create_source_if_missing`;
+  - montagem por symlink com comportamento idempotente (`mounted`/`unchanged`);
+  - deteccao de destinos duplicados no payload.
+- `--play` agora inclui o resultado de montagens no JSON final (`folder_mounts`).
+- Falha em montagem interrompe launch com erro acionavel e contexto no JSON.
+- Observabilidade:
+  - novo evento NDJSON `GO-MT-020` com contagem de montagens (`mounted`, `unchanged`, `planned`).
+- Testes:
+  - cobertura de parsing de destino Windows para `C:` e drives alternativos;
+  - rejeicao de `%ENV%`, UNC e traversal.
+
+Validacao do checkpoint:
+- `cargo fmt --all`
+- `cargo test -p orchestrator -- --nocapture`
+- `cargo build --workspace`
+- `cargo clippy -p orchestrator --all-targets -- -D warnings`

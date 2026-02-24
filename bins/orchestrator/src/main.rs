@@ -2,6 +2,7 @@ mod cli;
 mod commands;
 mod launch;
 mod logging;
+mod mounts;
 mod overrides;
 mod paths;
 mod payload;

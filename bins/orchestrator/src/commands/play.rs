@@ -16,6 +16,7 @@ use crate::{
         build_launch_command, dry_run_enabled, execute_script_if_present, validate_integrity,
     },
     logging::log_event,
+    mounts::{apply_folder_mounts, MountStatus},
     overrides::{apply_runtime_overrides, load_runtime_overrides},
     paths::resolve_game_root,
     payload::load_embedded_config_required,
@@ -145,6 +146,62 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
     }
 
     let prefix_path = PathBuf::from(&prefix_plan.prefix_path);
+    let mount_results = match apply_folder_mounts(&config, &game_root, &prefix_path, dry_run) {
+        Ok(results) => results,
+        Err(err) => {
+            let output = serde_json::json!({
+                "doctor": report,
+                "prefix_setup_plan": prefix_plan,
+                "prefix_setup_execution": setup_results,
+                "folder_mounts": {
+                    "status": "failed",
+                    "error": err.to_string(),
+                },
+                "launch": {
+                    "status": "aborted",
+                    "reason": "folder mount setup failed"
+                }
+            });
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .context("failed to serialize folder mount failure output")?
+            );
+
+            return Err(err).context("failed to apply folder mounts");
+        }
+    };
+
+    let mounted_count = mount_results
+        .iter()
+        .filter(|result| matches!(result.status, MountStatus::Mounted))
+        .count();
+    let unchanged_count = mount_results
+        .iter()
+        .filter(|result| matches!(result.status, MountStatus::Unchanged))
+        .count();
+    let planned_count = mount_results
+        .iter()
+        .filter(|result| matches!(result.status, MountStatus::Planned))
+        .count();
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "mounts",
+        "GO-MT-020",
+        "folder_mounts_applied",
+        serde_json::json!({
+            "configured": config.folder_mounts.len(),
+            "results": mount_results.len(),
+            "mounted": mounted_count,
+            "unchanged": unchanged_count,
+            "planned": planned_count,
+            "dry_run": dry_run,
+        }),
+    );
+
     let launch_plan = build_launch_command(&config, &report, &game_root, &prefix_path)
         .context("failed to build launch command")?;
 
@@ -178,6 +235,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
                 "doctor": report,
                 "prefix_setup_plan": prefix_plan,
                 "prefix_setup_execution": setup_results,
+                "folder_mounts": mount_results,
                 "pre_launch": result,
                 "launch": {
                     "status": "aborted",
@@ -256,6 +314,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
         "doctor": report,
         "prefix_setup_plan": prefix_plan,
         "prefix_setup_execution": setup_results,
+        "folder_mounts": mount_results,
         "launch_plan": launch_plan,
         "pre_launch": pre_script_result,
         "game_launch": game_result,
