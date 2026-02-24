@@ -1748,3 +1748,25 @@ Resultado operacional:
 Validacao do checkpoint:
 - `npm run tauri:build` (com `mise`, gerando binario release)
 - `cargo test -p creator-tauri-backend -- --nocapture`
+
+### 2026-02-24 - Checkpoint 24
+Escopo implementado:
+- Refatoracao completa de UX visual do App Criador (frontend):
+  - novo tema claro com contraste consistente e estilos globais para `input/select/textarea`;
+  - componentes e cards com hierarquia visual mais limpa e legivel;
+  - responsividade revisada para desktop/mobile.
+- Controles binarios atualizados:
+  - `ToggleField` passou de dois botoes (`Sim/Não`) para toggle unico clicavel, com estado textual.
+- Fluxo de pasta do jogo simplificado:
+  - pasta raiz agora e derivada automaticamente do caminho do `.exe`;
+  - campo da pasta raiz ficou somente leitura (sem picker/manual upload de pasta).
+- Winetricks com UX de busca progressiva (estilo autocomplete):
+  - nao renderiza lista completa para evitar travamento;
+  - busca so exibe resultados com 2+ caracteres;
+  - resultados limitados (top 24), com adicao por clique ou Enter.
+- Ajustes de comportamento:
+  - `relative_exe_path` passa a ser atualizado automaticamente ao mudar o caminho do executavel.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
+- `cargo test -p creator-tauri-backend -- --nocapture`

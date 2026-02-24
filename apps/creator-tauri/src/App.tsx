@@ -222,16 +222,48 @@ export default function App() {
     RUNTIME_CANDIDATES.filter((candidate) => candidate !== config().requirements.runtime.primary)
   )
 
+  const normalizedWinetricksSearch = createMemo(() => winetricksSearch().trim().toLowerCase())
+
   const winetricksCandidates = createMemo(() => {
-    const search = winetricksSearch().trim().toLowerCase()
+    const search = normalizedWinetricksSearch()
+    if (search.length < 2) return []
+
     return winetricksAvailable()
       .filter((verb) => !config().dependencies.includes(verb))
-      .filter((verb) => (!search ? true : verb.toLowerCase().includes(search)))
-      .slice(0, 120)
+      .filter((verb) => verb.toLowerCase().includes(search))
+      .slice(0, 24)
+  })
+
+  const winetricksExactMatch = createMemo(() => {
+    const search = normalizedWinetricksSearch()
+    if (!search) return null
+
+    const verb = winetricksAvailable().find((item) => item.toLowerCase() === search)
+    if (!verb) return null
+    if (config().dependencies.includes(verb)) return null
+    return verb
   })
 
   createEffect(() => {
     localStorage.setItem('creator.locale', locale())
+  })
+
+  createEffect(() => {
+    const currentExePath = exePath().trim()
+    if (!currentExePath) return
+
+    const detectedRoot = dirname(currentExePath)
+    if (!detectedRoot || detectedRoot === currentExePath) return
+
+    if (gameRoot() !== detectedRoot) {
+      setGameRoot(detectedRoot)
+    }
+
+    const relative = relativeFromRoot(detectedRoot, currentExePath)
+    const nextRelativePath = relative ? `./${relative}` : `./${basename(currentExePath)}`
+    if (config().relative_exe_path !== nextRelativePath) {
+      patchConfig((prev) => ({ ...prev, relative_exe_path: nextRelativePath }))
+    }
   })
 
   createEffect(() => {
@@ -336,25 +368,14 @@ export default function App() {
 
     setExePath(selected)
     const detectedRoot = dirname(selected)
-    if (!gameRoot().trim()) {
-      setGameRoot(detectedRoot)
-    }
+    setGameRoot(detectedRoot)
 
-    const rootToUse = gameRoot().trim() || detectedRoot
-    const relative = relativeFromRoot(rootToUse, selected)
+    const relative = relativeFromRoot(detectedRoot, selected)
 
     patchConfig((prev) => ({
       ...prev,
       relative_exe_path: relative ? `./${relative}` : `./${basename(selected)}`
     }))
-  }
-
-  const pickGameRootFolder = async () => {
-    const selected = await pickFolder({
-      title: tx('Selecionar pasta raiz do jogo', 'Select game root folder')
-    })
-    if (!selected) return
-    setGameRoot(selected)
   }
 
   const pickRegistryFile = async () => {
@@ -543,6 +564,22 @@ export default function App() {
     }))
   }
 
+  const addWinetricksFromSearch = () => {
+    const exact = winetricksExactMatch()
+    if (!exact) {
+      setStatusMessage(
+        tx(
+          'Digite ao menos 2 caracteres e selecione um verbo válido do catálogo.',
+          'Type at least 2 characters and select a valid catalog verb.'
+        )
+      )
+      return
+    }
+
+    addWinetricksVerb(exact)
+    setWinetricksSearch('')
+  }
+
   const payloadSummary = createMemo(() => ({
     launchArgs: config().launch_args.length,
     integrityFiles: config().integrity_files.length,
@@ -626,20 +663,15 @@ export default function App() {
             <FieldShell
               label={tx('Pasta raiz do jogo', 'Game root folder')}
               help={tx(
-                'Base usada para validar paths relativos e arquivos obrigatórios.',
-                'Base used to validate relative paths and required files.'
+                'Derivada automaticamente da pasta do executável selecionado.',
+                'Automatically derived from selected executable folder.'
+              )}
+              hint={tx(
+                'Não é necessário selecionar pasta manualmente: ela vem do caminho do .exe.',
+                'No manual folder picker is needed: this comes from the .exe path.'
               )}
             >
-              <div class="picker-row">
-                <input
-                  value={gameRoot()}
-                  placeholder="/home/user/Games/MyGame"
-                  onInput={(e) => setGameRoot(e.currentTarget.value)}
-                />
-                <button type="button" class="btn-secondary" onClick={pickGameRootFolder}>
-                  {tx('Selecionar pasta', 'Select folder')}
-                </button>
-              </div>
+              <input value={gameRoot()} placeholder="/home/user/Games/MyGame" readOnly class="readonly" />
             </FieldShell>
 
             <TextInputField
@@ -1433,12 +1465,21 @@ export default function App() {
               )}
             >
               <div class="table-list">
-                <div class="picker-row">
+                <div class="winetricks-toolbar">
                   <input
                     value={winetricksSearch()}
-                    placeholder={tx('Filtrar verbos (ex.: vcrun, corefonts)', 'Filter verbs (e.g. vcrun, corefonts)')}
+                    placeholder={tx('Digite para buscar (ex.: vcrun, corefonts)', 'Type to search (e.g. vcrun, corefonts)')}
                     onInput={(e) => setWinetricksSearch(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addWinetricksFromSearch()
+                      }
+                    }}
                   />
+                  <button type="button" class="btn-secondary" onClick={addWinetricksFromSearch}>
+                    {tx('Adicionar', 'Add')}
+                  </button>
                   <button type="button" class="btn-secondary" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
                     {winetricksLoading() ? tx('Carregando...', 'Loading...') : tx('Atualizar catálogo', 'Refresh catalog')}
                   </button>
@@ -1449,19 +1490,35 @@ export default function App() {
                     {tx('Fonte do catálogo:', 'Catalog source:')} <strong>{winetricksSource()}</strong>
                   </span>
                   <span>
-                    {tx('Itens disponíveis:', 'Available items:')} <strong>{winetricksAvailable().length}</strong>
+                    {tx('Itens no catálogo:', 'Catalog items:')} <strong>{winetricksAvailable().length}</strong>
+                  </span>
+                  <span>
+                    {tx('Resultados atuais:', 'Current matches:')} <strong>{winetricksCandidates().length}</strong>
                   </span>
                 </div>
 
-                <div class="table-list winetricks-grid">
-                  <For each={winetricksCandidates()}>
-                    {(verb) => (
-                      <button type="button" class="btn-secondary winetricks-item" onClick={() => addWinetricksVerb(verb)}>
-                        {verb}
-                      </button>
-                    )}
-                  </For>
-                </div>
+                <Show
+                  when={normalizedWinetricksSearch().length >= 2}
+                  fallback={
+                    <div class="info-card">
+                      {tx(
+                        'Digite ao menos 2 caracteres para buscar verbos e evitar travamentos na UI.',
+                        'Type at least 2 characters to search verbs and keep UI responsive.'
+                      )}
+                    </div>
+                  }
+                >
+                  <div class="winetricks-results">
+                    <For each={winetricksCandidates()}>
+                      {(verb) => (
+                        <button type="button" class="winetricks-result" onClick={() => addWinetricksVerb(verb)}>
+                          <span>{verb}</span>
+                          <span>{tx('Adicionar', 'Add')}</span>
+                        </button>
+                      )}
+                    </For>
+                  </div>
+                </Show>
 
                 <div class="table-list">
                   <For each={config().dependencies}>

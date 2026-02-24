@@ -106,22 +106,14 @@ type ToggleFieldProps = {
 export function ToggleField(props: ToggleFieldProps) {
   return (
     <FieldShell label={props.label} help={props.help}>
-      <div class="toggle-buttons">
-        <button
-          type="button"
-          classList={{ active: !props.checked }}
-          onClick={() => props.onChange(false)}
-        >
-          {props.noLabel ?? 'Não'}
-        </button>
-        <button
-          type="button"
-          classList={{ active: props.checked }}
-          onClick={() => props.onChange(true)}
-        >
-          {props.yesLabel ?? 'Sim'}
-        </button>
-      </div>
+      <button
+        type="button"
+        classList={{ 'toggle-chip': true, active: props.checked }}
+        onClick={() => props.onChange(!props.checked)}
+      >
+        <span class="toggle-dot" />
+        <span>{props.checked ? props.yesLabel ?? 'Ativado' : props.noLabel ?? 'Desativado'}</span>
+      </button>
     </FieldShell>
   )
 }
