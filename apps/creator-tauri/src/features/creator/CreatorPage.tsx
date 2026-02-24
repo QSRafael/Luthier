@@ -399,9 +399,6 @@ export default function CreatorPage() {
                   <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
                     <div class="min-w-0">
                       <p class="text-sm font-medium">{tx('Versão obrigatória', 'Required version')}</p>
-                      <p class="text-xs text-muted-foreground">
-                        {config().requirements.runtime.strict ? tx('Sim', 'Yes') : tx('Não', 'No')}
-                      </p>
                     </div>
                     <Switch
                       checked={config().requirements.runtime.strict}
@@ -428,9 +425,6 @@ export default function CreatorPage() {
                   <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
                     <div class="min-w-0">
                       <p class="text-sm font-medium">{tx('Auto update', 'Auto update')}</p>
-                      <p class="text-xs text-muted-foreground">
-                        {config().runner.auto_update ? tx('Sim', 'Yes') : tx('Não', 'No')}
-                      </p>
                     </div>
                     <Switch
                       checked={config().runner.auto_update}
