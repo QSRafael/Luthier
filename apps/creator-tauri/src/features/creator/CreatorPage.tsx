@@ -1,5 +1,6 @@
-import { createMemo, createSignal, For, JSX, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, For, JSX, Show } from 'solid-js'
 import { IconAlertCircle, IconChevronDown, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
+import { Toaster, toast } from 'solid-sonner'
 
 import { invokeCommand } from '../../api/tauri'
 import {
@@ -29,6 +30,7 @@ import {
 import { Input } from '../../components/ui/input'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemMain, ItemTitle } from '../../components/ui/item'
 import { Select } from '../../components/ui/select'
+import { Spinner } from '../../components/ui/spinner'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
@@ -338,6 +340,7 @@ export default function CreatorPage() {
   const [winecfgAccordionOpen, setWinecfgAccordionOpen] = createSignal<
     'graphics' | 'desktop' | 'drives' | 'audio' | null
   >(null)
+  const [lastStatusToastMessage, setLastStatusToastMessage] = createSignal('')
 
   const wineWindowsVersionOptions = [
     { value: '__default__', label: tx('Padrão do runtime (não alterar)', 'Runtime default (do not override)') },
@@ -626,6 +629,27 @@ export default function CreatorPage() {
     await loadMountBrowserDirs(root)
     setMountSourceBrowserOpen(true)
   }
+
+  createEffect(() => {
+    const message = statusMessage().trim()
+    if (!message) return
+    if (message === lastStatusToastMessage()) return
+    setLastStatusToastMessage(message)
+
+    const readyPt = 'Pronto.'
+    const readyEn = 'Ready.'
+    if (message === readyPt || message === readyEn) return
+
+    if (statusTone() === 'error') {
+      toast.error(message)
+      return
+    }
+    if (statusTone() === 'success') {
+      toast.success(message)
+      return
+    }
+    toast.info(message)
+  })
 
   return (
     <div class="creator-page">
@@ -1783,9 +1807,16 @@ export default function CreatorPage() {
                   </div>
 
                   <Show when={winetricksCatalogError()}>
-                    <div class="rounded-md border border-dashed border-destructive/40 px-3 py-2 text-xs text-destructive">
-                      {tx('Erro ao carregar o catálogo winetricks', 'Failed to load winetricks catalog')}
-                    </div>
+                    <Alert variant="destructive">
+                      <IconAlertCircle />
+                      <AlertTitle>{tx('Erro ao carregar o catálogo winetricks', 'Failed to load winetricks catalog')}</AlertTitle>
+                      <AlertDescription>
+                        {tx(
+                          'O catálogo local/remoto não pôde ser carregado. Você ainda pode atualizar o catálogo manualmente.',
+                          'The local/remote catalog could not be loaded. You can still refresh the catalog manually.'
+                        )}
+                      </AlertDescription>
+                    </Alert>
                   </Show>
 
                   <Show
@@ -1833,7 +1864,13 @@ export default function CreatorPage() {
                 </div>
               }
             >
-              <div class="flex flex-col items-end gap-1">
+              <div class="flex flex-col items-end gap-1.5">
+                <Show when={winetricksLoading()}>
+                  <div class="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                    <Spinner class="size-3" />
+                    <span>{tx('Carregando catálogo em segundo plano...', 'Loading catalog in background...')}</span>
+                  </div>
+                </Show>
                 <Button type="button" class="btn-secondary" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
                   {winetricksLoading() ? tx('Carregando...', 'Loading...') : tx('Atualizar catálogo', 'Refresh catalog')}
                 </Button>
@@ -3431,7 +3468,13 @@ export default function CreatorPage() {
         </Card>
       </div>
 
-      <div classList={{ 'status-toast': true, [statusTone()]: true }}>{statusMessage()}</div>
+      <Toaster
+        position="bottom-right"
+        theme={theme()}
+        richColors
+        closeButton
+        visibleToasts={5}
+      />
     </div>
   )
 }

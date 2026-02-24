@@ -1913,6 +1913,28 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
 
+### 2026-02-24 - Checkpoint 55
+Escopo implementado:
+- Feedback global da UI do Creator migrado de banner fixo para `Sonner`:
+  - mensagens de status agora disparam `toast.info`, `toast.success` e `toast.error`;
+  - `Toaster` posicionado no canto inferior direito com `richColors` e botao de fechar;
+  - mensagens `Pronto./Ready.` sao ignoradas para reduzir ruido.
+- UX do item `Winetricks` (aba `Prefix`):
+  - erro de carregamento do catalogo substituido por componente `Alert` (`destructive`);
+  - indicador de carregamento com `Spinner` visivel no proprio item enquanto o catalogo carrega;
+  - botao `Atualizar catálogo` continua como retry manual.
+- Performance percebida ao entrar na aba `Prefix`:
+  - carregamento automatico do catalogo Winetricks passou a ser disparado com pequeno atraso (`setTimeout`) para permitir renderizacao inicial da aba e exibicao do spinner;
+  - reduz a sensacao de travada ao trocar de aba.
+- Infra:
+  - novo componente reutilizavel `Spinner` (`components/ui/spinner.tsx`);
+  - removido CSS morto do antigo banner `.status-toast`.
+- Dependencias frontend:
+  - adicionada dependencia `solid-sonner`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 39
 Escopo implementado:
 - Ajuste de comportamento do acordeao na aba `winecfg`:

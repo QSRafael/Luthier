@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal } from 'solid-js'
+import { createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
 
 import { invokeCommand, pickFile, pickFolder } from '../../api/tauri'
 import type { SelectOption } from '../../components/form/FormControls'
@@ -376,9 +376,16 @@ export function useCreatorController() {
   })
 
   createEffect(() => {
-    if (activeTab() === 'prefix' && !winetricksLoaded()) {
-      void loadWinetricksCatalog()
+    if (activeTab() !== 'prefix' || winetricksLoaded() || winetricksLoading()) {
+      return
     }
+
+    // Defer loading so the Prefix tab can render first and show the spinner
+    const timer = window.setTimeout(() => {
+      void loadWinetricksCatalog()
+    }, 120)
+
+    onCleanup(() => window.clearTimeout(timer))
   })
 
   const runHash = async () => {
