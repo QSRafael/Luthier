@@ -182,6 +182,8 @@ export default function CreatorPage() {
     value_type: 'REG_SZ',
     value: ''
   })
+  const [registryImportWarningsOpen, setRegistryImportWarningsOpen] = createSignal(false)
+  const [registryImportWarnings, setRegistryImportWarnings] = createSignal<string[]>([])
 
   const [mountDialogOpen, setMountDialogOpen] = createSignal(false)
   const [mountDraft, setMountDraft] = createSignal({
@@ -351,6 +353,9 @@ export default function CreatorPage() {
           `Imported ${deduped.length} registry key(s) from .reg file${warningSuffix}.`
         )
       )
+
+      setRegistryImportWarnings(result.warnings)
+      setRegistryImportWarningsOpen(result.warnings.length > 0)
     } catch (error) {
       setStatusMessage(
         tx(
@@ -1575,6 +1580,39 @@ export default function CreatorPage() {
                 <IconPlus class="size-4" />
                 {tx('Adicionar de arquivo (.reg)', 'Add from file (.reg)')}
               </Button>
+
+              <Dialog open={registryImportWarningsOpen()} onOpenChange={setRegistryImportWarningsOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Avisos da importação de .reg', '.reg import warnings')}</DialogTitle>
+                    <DialogDescription>
+                      {tx(
+                        'Algumas linhas foram ignoradas ou importadas com fallback. Revise os avisos abaixo.',
+                        'Some lines were ignored or imported with fallback. Review the warnings below.'
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="max-h-[50vh] overflow-auto rounded-md border border-border/60 bg-muted/25 p-2">
+                    <div class="grid gap-1">
+                      <For each={registryImportWarnings()}>
+                        {(warning, index) => (
+                          <div class="rounded-md border border-border/40 bg-background/70 px-3 py-2 text-xs">
+                            <span class="font-medium text-muted-foreground">{index() + 1}.</span>{' '}
+                            <span class="break-words">{warning}</span>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" onClick={() => setRegistryImportWarningsOpen(false)}>
+                      {tx('Fechar', 'Close')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </FieldShell>
 
             <FieldShell

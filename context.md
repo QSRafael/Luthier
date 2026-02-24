@@ -2057,6 +2057,25 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
+
+### 2026-02-24 - Checkpoint 53
+Escopo implementado:
+- Importacao de `.reg` aprimorada (backend Tauri):
+  - parser agora lida melhor com valores `hex(...)` multiline (continuações com `\\`);
+  - normaliza payload hexadecimal (bytes comma-separated) para formatos `REG_BINARY`, `REG_MULTI_SZ`, `REG_EXPAND_SZ`, `REG_QWORD` etc.;
+  - `DWORD:` passou a ser aceito de forma case-insensitive (`dword:` / `DWORD:`);
+  - valores hex inválidos geram aviso, mas a entrada é mantida com payload bruto (fallback).
+- UI de importacao de `.reg`:
+  - se houver avisos, abre dialog com resumo/lista dos warnings após a importação.
+
+Testes adicionados (creator-tauri-backend):
+- parse de `hex(7)` multiline
+- parse de `DWORD:` case-insensitive
+- warning em hex inválido com manutenção da entrada
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27
