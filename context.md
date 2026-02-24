@@ -1822,6 +1822,19 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 61
+Escopo implementado:
+- Drawer mobile da sidebar:
+  - removido botao `X` (overlay continua fechando o menu).
+- Layout do bloco principal:
+  - `Card`/`CardContent` ajustados para layout em coluna (`flex`) com altura minima de viewport;
+  - area de conteudo das abas encapsulada em container `flex-1`.
+- Navegacao entre abas (`Retornar` / `Avançar`):
+  - permanece no rodape visual do bloco principal (alinhamento consistente mesmo em abas com pouco conteudo) via `mt-auto`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 60
 Escopo implementado:
 - Refinos de layout/navegacao no bloco principal:
