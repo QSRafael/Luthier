@@ -1909,6 +1909,23 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 43
+Escopo implementado:
+- Componente global `Switch` ajustado:
+  - corrigido deslocamento da bolinha (`thumb`) para atingir corretamente o fim do trilho quando ativado.
+- Novo `FeatureStateField` (UI do App Criador):
+  - substitui selects de `FeatureState` por dois cards clicaveis (`Ativado` e `Obrigatorio`) no lado direito do item;
+  - cada card alterna um bit da semantica (`enabled` e `mandatory`) e preserva o outro;
+  - mapeamento bidirecional mantido para o enum de payload:
+    - `MandatoryOn`, `MandatoryOff`, `OptionalOn`, `OptionalOff`.
+- Aplicado aos itens de `FeatureState` nas abas (Runtime, Performance/Compatibilidade e Winecfg) que usavam `SelectField<FeatureState>`.
+
+Observacao de backend:
+- Nao houve mudanca de schema/payload. A UI apenas passou a editar os mesmos 4 estados por meio de dois toggles (`Ativado` + `Obrigatorio`), preservando a logica de execucao do orquestrador.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

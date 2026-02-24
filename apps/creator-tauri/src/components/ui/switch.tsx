@@ -34,7 +34,7 @@ export const SwitchThumb = <T extends ValidComponent = 'div'>(props: SwitchThumb
   const [, rest] = splitProps(props as SwitchThumbProps, ['class'])
   return (
     <SwitchPrimitive.Thumb
-      class={cn('bg-background pointer-events-none size-4 rounded-full transition-transform data-[checked]:translate-x-[calc(100%-2px)]', props.class)}
+      class={cn('bg-background pointer-events-none size-4 rounded-full transition-transform data-[checked]:translate-x-5', props.class)}
       {...rest}
     />
   )

@@ -2,6 +2,7 @@ import { createSignal, For, Show } from 'solid-js'
 import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import {
+  FeatureStateField,
   FieldShell,
   KeyValueListField,
   SegmentedField,
@@ -522,14 +523,13 @@ export default function CreatorPage() {
               </div>
             </Item>
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="UMU"
               help={tx(
                 'Controla uso de umu-run conforme política de obrigatoriedade.',
                 'Controls umu-run usage according to enforcement policy.'
               )}
               value={config().requirements.umu}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -541,14 +541,13 @@ export default function CreatorPage() {
               }
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label={tx('Steam Runtime', 'Steam Runtime')}
               help={tx(
                 'Define se steam runtime é obrigatório, opcional ou bloqueado.',
                 'Defines whether steam runtime is mandatory, optional or blocked.'
               )}
               value={config().requirements.steam_runtime}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -560,11 +559,10 @@ export default function CreatorPage() {
               }
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="Easy AntiCheat Runtime"
               help={tx('Política para runtime local do Easy AntiCheat.', 'Policy for local Easy AntiCheat runtime.')}
               value={config().compatibility.easy_anti_cheat_runtime}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -576,11 +574,10 @@ export default function CreatorPage() {
               }
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="BattleEye Runtime"
               help={tx('Política para runtime local do BattleEye.', 'Policy for local BattleEye runtime.')}
               value={config().compatibility.battleye_runtime}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -721,14 +718,13 @@ export default function CreatorPage() {
 
         <Show when={activeTab() === 'performance'}>
           <section class="stack">
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="Gamescope"
               help={tx(
                 'Define política do gamescope e sincroniza com requirements.gamescope.',
                 'Defines gamescope policy and syncs with requirements.gamescope.'
               )}
               value={config().environment.gamescope.state}
-              options={featureStateOptions()}
               onChange={setGamescopeState}
             />
 
@@ -951,27 +947,24 @@ export default function CreatorPage() {
               />
             </Show>
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="Gamemode"
               help={tx('Define política do gamemode.', 'Defines gamemode policy.')}
               value={config().environment.gamemode}
-              options={featureStateOptions()}
               onChange={setGamemodeState}
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="MangoHud"
               help={tx('Define política do MangoHud.', 'Defines MangoHud policy.')}
               value={config().environment.mangohud}
-              options={featureStateOptions()}
               onChange={setMangohudState}
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="Wine-Wayland"
               help={tx('Política para ativar Wine-Wayland.', 'Policy for enabling Wine-Wayland.')}
               value={config().compatibility.wine_wayland}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -983,11 +976,10 @@ export default function CreatorPage() {
               }
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="HDR"
               help={tx('Política para HDR (depende de Wine-Wayland).', 'Policy for HDR (depends on Wine-Wayland).')}
               value={config().compatibility.hdr}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -999,11 +991,10 @@ export default function CreatorPage() {
               }
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="Auto DXVK-NVAPI"
               help={tx('Controla aplicação automática de DXVK-NVAPI.', 'Controls automatic DXVK-NVAPI setup.')}
               value={config().compatibility.auto_dxvk_nvapi}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -1015,11 +1006,10 @@ export default function CreatorPage() {
               }
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label="Staging"
               help={tx('Controla obrigatoriedade de runtime Wine com staging.', 'Controls mandatory usage of Wine staging runtime.')}
               value={config().compatibility.staging}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -1574,35 +1564,31 @@ export default function CreatorPage() {
               </Dialog>
             </FieldShell>
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label={tx('Capturar mouse automaticamente', 'Auto capture mouse')}
               help={tx('Equivalente à opção de captura automática do winecfg.', 'Equivalent to winecfg auto capture mouse option.')}
               value={config().winecfg.auto_capture_mouse}
-              options={featureStateOptions()}
               onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, auto_capture_mouse: value } }))}
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label={tx('Permitir decoração de janelas (WM)', 'Allow window decorations (WM)')}
               help={tx('Controla se o gerenciador de janelas decora janelas do jogo.', 'Controls whether window manager decorates game windows.')}
               value={config().winecfg.window_decorations}
-              options={featureStateOptions()}
               onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_decorations: value } }))}
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label={tx('Permitir controle de janelas (WM)', 'Allow window control (WM)')}
               help={tx('Controla se o WM pode gerenciar posição/estado das janelas.', 'Controls whether WM can manage window position/state.')}
               value={config().winecfg.window_manager_control}
-              options={featureStateOptions()}
               onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_manager_control: value } }))}
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label={tx('Desktop virtual (estado)', 'Virtual desktop (state)')}
               help={tx('Ativa/desativa emulação de desktop virtual no Wine.', 'Enables/disables virtual desktop emulation in Wine.')}
               value={config().winecfg.virtual_desktop.state}
-              options={featureStateOptions()}
               onChange={(value) =>
                 patchConfig((prev) => ({
                   ...prev,
@@ -1635,11 +1621,10 @@ export default function CreatorPage() {
               }
             />
 
-            <SelectField<FeatureState>
+            <FeatureStateField
               label={tx('Integração com desktop', 'Desktop integration')}
               help={tx('Controla integração Wine com shell/desktop do Linux.', 'Controls Wine integration with Linux shell/desktop.')}
               value={config().winecfg.desktop_integration}
-              options={featureStateOptions()}
               onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, desktop_integration: value } }))}
             />
 

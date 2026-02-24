@@ -1,6 +1,8 @@
 import { createMemo, createSignal, For, JSX, Show } from 'solid-js'
 import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
+import type { FeatureState } from '../../models/config'
+import { cn } from '../../lib/cva'
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -184,6 +186,86 @@ export function ToggleField(props: ToggleFieldProps) {
           </SwitchControl>
         </Switch>
       </div>
+    </FieldShell>
+  )
+}
+
+function decodeFeatureState(value: FeatureState) {
+  if (value === 'MandatoryOn') return { enabled: true, mandatory: true }
+  if (value === 'MandatoryOff') return { enabled: false, mandatory: true }
+  if (value === 'OptionalOn') return { enabled: true, mandatory: false }
+  return { enabled: false, mandatory: false }
+}
+
+function encodeFeatureState(enabled: boolean, mandatory: boolean): FeatureState {
+  if (enabled && mandatory) return 'MandatoryOn'
+  if (!enabled && mandatory) return 'MandatoryOff'
+  if (enabled && !mandatory) return 'OptionalOn'
+  return 'OptionalOff'
+}
+
+type FeatureStateFieldProps = {
+  label: string
+  help: string
+  value: FeatureState
+  onChange: (value: FeatureState) => void
+}
+
+type FeatureToggleCardProps = {
+  title: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}
+
+function FeatureToggleCard(props: FeatureToggleCardProps) {
+  const toggle = () => props.onChange(!props.checked)
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      class={cn(
+        'flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 transition-colors',
+        props.checked
+          ? 'border-primary/40 bg-accent/30'
+          : 'border-border/60 bg-background/70 hover:border-border hover:bg-accent/20'
+      )}
+      onClick={toggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          toggle()
+        }
+      }}
+    >
+      <p class="text-sm font-medium">{props.title}</p>
+      <Switch checked={props.checked} onChange={props.onChange} onClick={(e) => e.stopPropagation()}>
+        <SwitchInput />
+        <SwitchControl>
+          <SwitchThumb />
+        </SwitchControl>
+      </Switch>
+    </div>
+  )
+}
+
+export function FeatureStateField(props: FeatureStateFieldProps) {
+  const state = createMemo(() => decodeFeatureState(props.value))
+
+  return (
+    <FieldShell label={props.label} help={props.help} controlClass="grid gap-2 md:grid-cols-2">
+      <>
+        <FeatureToggleCard
+          title="Ativado"
+          checked={state().enabled}
+          onChange={(enabled) => props.onChange(encodeFeatureState(enabled, state().mandatory))}
+        />
+        <FeatureToggleCard
+          title="Obrigatório"
+          checked={state().mandatory}
+          onChange={(mandatory) => props.onChange(encodeFeatureState(state().enabled, mandatory))}
+        />
+      </>
     </FieldShell>
   )
 }
