@@ -877,9 +877,16 @@ export default function CreatorPage() {
                           }
                           class="mt-3"
                         >
-                          <TabsList class="w-full justify-start overflow-x-auto">
+                          <TabsList class="grid h-auto w-full grid-cols-4 gap-1">
                             <For each={upscaleMethodOptions()}>
-                              {(option) => <TabsTrigger value={option.value}>{option.label}</TabsTrigger>}
+                              {(option) => (
+                                <TabsTrigger
+                                  value={option.value}
+                                  class="h-auto w-full whitespace-normal px-2 py-2 text-center leading-tight"
+                                >
+                                  {option.label}
+                                </TabsTrigger>
+                              )}
                             </For>
                           </TabsList>
                         </Tabs>
@@ -908,9 +915,16 @@ export default function CreatorPage() {
                           }
                           class="mt-3"
                         >
-                          <TabsList class="w-full justify-start overflow-x-auto">
+                          <TabsList class="grid h-auto w-full grid-cols-3 gap-1">
                             <For each={windowTypeOptions()}>
-                              {(option) => <TabsTrigger value={option.value}>{option.label}</TabsTrigger>}
+                              {(option) => (
+                                <TabsTrigger
+                                  value={option.value}
+                                  class="h-auto w-full whitespace-normal px-2 py-2 text-center leading-tight"
+                                >
+                                  {option.label}
+                                </TabsTrigger>
+                              )}
                             </For>
                           </TabsList>
                         </Tabs>

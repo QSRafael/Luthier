@@ -1968,6 +1968,16 @@ Semantica atual do card `Obter resolucao do monitor`:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 47
+Escopo implementado:
+- Segmentados de `Gamescope` (`Metodo de upscale` e `Tipo de janela`) refinados:
+  - trocados para layout em grade (`grid`) com colunas fixas (4 e 3);
+  - botoes agora ocupam toda a largura disponivel, sem sobra no final;
+  - labels centralizados e com quebra de linha para opcoes mais longas.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27
