@@ -1,5 +1,11 @@
 import { createSignal, For, JSX, Show } from 'solid-js'
 
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Select } from '../ui/select'
+import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../ui/switch'
+import { Textarea } from '../ui/textarea'
+
 export type SelectOption<T extends string> = {
   value: T
   label: string
@@ -10,21 +16,31 @@ type FieldShellProps = {
   help: string
   children: JSX.Element
   hint?: string
+  controlClass?: string
+  compact?: boolean
 }
 
 export function FieldShell(props: FieldShellProps) {
   return (
-    <div class="field">
-      <div class="label-row">
-        <span>{props.label}</span>
-        <span class="help" title={props.help}>
-          ?
-        </span>
+    <div class="rounded-xl border bg-card p-4">
+      <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,360px)] md:items-start">
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold leading-tight text-foreground">{props.label}</span>
+            <span
+              class="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-medium text-muted-foreground"
+              title={props.help}
+            >
+              ?
+            </span>
+          </div>
+          <p class="text-xs text-muted-foreground">{props.help}</p>
+          <Show when={props.hint}>
+            <p class="text-xs text-muted-foreground/85">{props.hint}</p>
+          </Show>
+        </div>
+        <div class={props.controlClass ?? (props.compact ? 'max-w-[220px]' : 'w-full')}>{props.children}</div>
       </div>
-      <Show when={props.hint}>
-        <p class="hint">{props.hint}</p>
-      </Show>
-      {props.children}
     </div>
   )
 }
@@ -40,12 +56,12 @@ type TextInputFieldProps = {
 
 export function TextInputField(props: TextInputFieldProps) {
   return (
-    <FieldShell label={props.label} help={props.help}>
-      <input
+    <FieldShell label={props.label} help={props.help} compact>
+      <Input
         value={props.value}
         readOnly={props.readonly}
         placeholder={props.placeholder}
-        classList={{ readonly: !!props.readonly }}
+        class={props.readonly ? 'bg-muted/50 text-muted-foreground' : ''}
         onInput={(e) => props.onInput(e.currentTarget.value)}
       />
     </FieldShell>
@@ -63,8 +79,8 @@ type TextAreaFieldProps = {
 
 export function TextAreaField(props: TextAreaFieldProps) {
   return (
-    <FieldShell label={props.label} help={props.help}>
-      <textarea
+    <FieldShell label={props.label} help={props.help} controlClass="w-full">
+      <Textarea
         rows={props.rows ?? 6}
         value={props.value}
         placeholder={props.placeholder}
@@ -84,12 +100,10 @@ type SelectFieldProps<T extends string> = {
 
 export function SelectField<T extends string>(props: SelectFieldProps<T>) {
   return (
-    <FieldShell label={props.label} help={props.help}>
-      <select value={props.value} onInput={(e) => props.onChange(e.currentTarget.value as T)}>
-        <For each={props.options}>
-          {(option) => <option value={option.value}>{option.label}</option>}
-        </For>
-      </select>
+    <FieldShell label={props.label} help={props.help} compact>
+      <Select value={props.value} onInput={(e) => props.onChange(e.currentTarget.value as T)}>
+        <For each={props.options}>{(option) => <option value={option.value}>{option.label}</option>}</For>
+      </Select>
     </FieldShell>
   )
 }
@@ -105,15 +119,18 @@ type ToggleFieldProps = {
 
 export function ToggleField(props: ToggleFieldProps) {
   return (
-    <FieldShell label={props.label} help={props.help}>
-      <button
-        type="button"
-        classList={{ 'toggle-chip': true, active: props.checked }}
-        onClick={() => props.onChange(!props.checked)}
-      >
-        <span class="toggle-dot" />
-        <span>{props.checked ? props.yesLabel ?? 'Ativado' : props.noLabel ?? 'Desativado'}</span>
-      </button>
+    <FieldShell label={props.label} help={props.help} compact>
+      <div class="flex items-center justify-end gap-3">
+        <span class="text-xs font-medium text-muted-foreground">
+          {props.checked ? props.yesLabel ?? 'Ativado' : props.noLabel ?? 'Desativado'}
+        </span>
+        <Switch checked={props.checked} onChange={props.onChange}>
+          <SwitchInput />
+          <SwitchControl>
+            <SwitchThumb />
+          </SwitchControl>
+        </Switch>
+      </div>
     </FieldShell>
   )
 }
@@ -146,32 +163,24 @@ export function StringListField(props: StringListFieldProps) {
   }
 
   return (
-    <FieldShell label={props.label} help={props.help}>
-      <div class="table-list">
+    <FieldShell label={props.label} help={props.help} controlClass="w-full md:col-span-2">
+      <div class="grid gap-2">
         <For each={props.items}>
           {(item, index) => (
-            <div class="table-row table-row-single">
-              <input
-                value={item}
-                placeholder={props.placeholder}
-                onInput={(e) => updateItem(index(), e.currentTarget.value)}
-              />
-              <button type="button" class="btn-danger" onClick={() => removeItem(index())}>
+            <div class="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+              <Input value={item} placeholder={props.placeholder} onInput={(e) => updateItem(index(), e.currentTarget.value)} />
+              <Button type="button" variant="destructive" size="sm" onClick={() => removeItem(index())}>
                 Remover
-              </button>
+              </Button>
             </div>
           )}
         </For>
 
-        <div class="table-row table-row-single">
-          <input
-            value={draft()}
-            placeholder={props.placeholder}
-            onInput={(e) => setDraft(e.currentTarget.value)}
-          />
-          <button type="button" class="btn-secondary" onClick={pushDraft}>
+        <div class="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+          <Input value={draft()} placeholder={props.placeholder} onInput={(e) => setDraft(e.currentTarget.value)} />
+          <Button type="button" variant="outline" size="sm" onClick={pushDraft}>
             {props.addLabel ?? 'Adicionar'}
-          </button>
+          </Button>
         </div>
       </div>
     </FieldShell>
@@ -225,42 +234,42 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
   }
 
   return (
-    <FieldShell label={props.label} help={props.help}>
-      <div class="table-list">
+    <FieldShell label={props.label} help={props.help} controlClass="w-full md:col-span-2">
+      <div class="grid gap-2">
         <For each={props.items}>
           {(item, index) => (
-            <div class="table-row table-row-two">
-              <input
+            <div class="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <Input
                 value={item.key}
                 placeholder={props.keyPlaceholder ?? 'KEY'}
                 onInput={(e) => updateItem(index(), { key: e.currentTarget.value })}
               />
-              <input
+              <Input
                 value={item.value}
                 placeholder={props.valuePlaceholder ?? 'VALUE'}
                 onInput={(e) => updateItem(index(), { value: e.currentTarget.value })}
               />
-              <button type="button" class="btn-danger" onClick={() => removeItem(index())}>
+              <Button type="button" variant="destructive" size="sm" onClick={() => removeItem(index())}>
                 {props.removeLabel ?? 'Remover'}
-              </button>
+              </Button>
             </div>
           )}
         </For>
 
-        <div class="table-row table-row-two">
-          <input
+        <div class="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <Input
             value={draftKey()}
             placeholder={props.keyPlaceholder ?? 'KEY'}
             onInput={(e) => setDraftKey(e.currentTarget.value)}
           />
-          <input
+          <Input
             value={draftValue()}
             placeholder={props.valuePlaceholder ?? 'VALUE'}
             onInput={(e) => setDraftValue(e.currentTarget.value)}
           />
-          <button type="button" class="btn-secondary" onClick={addItem}>
+          <Button type="button" variant="outline" size="sm" onClick={addItem}>
             {props.addLabel ?? 'Adicionar'}
-          </button>
+          </Button>
         </div>
       </div>
     </FieldShell>

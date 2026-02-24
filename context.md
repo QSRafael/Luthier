@@ -1770,3 +1770,50 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
 - `cargo test -p creator-tauri-backend -- --nocapture`
+
+### 2026-02-24 - Checkpoint 25
+Escopo implementado:
+- Redesign estrutural completo da interface do Creator:
+  - novo layout com barra lateral de abas e area de edicao principal;
+  - header simplificado com foco no fluxo de configuracao (sem depender de status no topo).
+- UX de controles binarios refeita:
+  - `ToggleField` agora usa controle compacto ao lado do titulo (sem botao gigante em largura total).
+- Feedback de status/erro melhorado:
+  - mensagens agora aparecem em `toast` fixo no canto inferior direito, sempre visivel mesmo com scroll.
+- Sistema visual revisado do zero:
+  - novo tema com contraste mais forte e legibilidade consistente;
+  - estilos globais para todos os campos (`input/select/textarea`) para evitar casos de texto invisivel;
+  - ajustes responsivos para sidebar, tabelas e grids em telas menores.
+- Mantidas as regras funcionais da etapa anterior:
+  - pasta raiz derivada automaticamente do `.exe`;
+  - busca progressiva de Winetricks com limite de resultados e adicao por Enter/click.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
+- `cargo test -p creator-tauri-backend -- --nocapture`
+
+### 2026-02-24 - Checkpoint 26
+Escopo implementado:
+- Reescrita do frontend para base shadcn com separacao de responsabilidades:
+  - `App.tsx` virou entrypoint minimo;
+  - nova camada `features/creator/useCreatorController.ts` concentra estado, efeitos, comandos Tauri e regras de negocio da UI;
+  - `features/creator/CreatorPage.tsx` ficou focada em renderizacao.
+- Padronizacao visual com componentes shadcn/primitivos:
+  - criados `ui/input.tsx`, `ui/textarea.tsx`, `ui/select.tsx`, `ui/badge.tsx`;
+  - `FormControls.tsx` migrado para `Input/Select/Textarea/Switch/Button` com layout consistente.
+- Interface revisada com comportamento preservado:
+  - botoes/inputs/selects da tela principal foram convertidos para componentes padronizados;
+  - status continua visivel com toast no rodape;
+  - fluxo de pickers e fallbacks (exe, .reg, folder_mounts) mantido.
+- Organizacao e higiene do frontend:
+  - removido `src/styles.css` nao utilizado;
+  - mantido `src/styles/app.css` como fonte unica de tema/estilo;
+  - tema forca `color-scheme: light` para evitar campos com contraste ruim.
+- Ajuste de dependencias JS:
+  - removido pacote `cva` legado/invalido;
+  - removido `@tailwindcss/postcss` nao utilizado;
+  - lockfile atualizado via `npm install`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://shadcn-solid.com/schema.json",
+  "style": "default",
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "src/styles/app.css",
+    "cssVariables": true
+  },
+  "solidjs": {
+    "componentsPath": "src/components",
+    "utilsPath": "src/lib/utils"
+  },
+  "aliases": {
+    "components": "~/components",
+    "utils": "~/lib/utils"
+  }
+}
