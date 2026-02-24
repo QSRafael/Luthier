@@ -1822,6 +1822,20 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 62
+Escopo implementado:
+- Tema visual do Creator alinhado aos tokens extraidos do site do shadcn/ui:
+  - variaveis CSS (`:root` e `.dark`) atualizadas com os valores enviados (light/dark);
+  - tons de cinza/contraste do app passam a seguir a paleta real do site (via tokens).
+- Tailwind config ajustado:
+  - cores passaram a ser resolvidas com `lab(var(--token))` em vez de `oklch(...)`, para compatibilidade com os tokens extraidos via `getComputedStyle`.
+- Fundo do app:
+  - removido gradiente radial do `body`;
+  - fundo agora e solido (`--background`), como no site.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 61
 Escopo implementado:
 - Drawer mobile da sidebar:

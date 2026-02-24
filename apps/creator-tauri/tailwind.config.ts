@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
-const oklch = (name: string) => `oklch(var(${name}))`
-const oklchAlpha = (name: string) => `oklch(var(${name}) / <alpha-value>)`
+const lab = (name: string) => `lab(var(${name}))`
+const labAlpha = (name: string) => `lab(var(${name}) / <alpha-value>)`
 
 const config: Config = {
   darkMode: ['class'],
@@ -9,44 +9,44 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        border: oklch('--border'),
-        input: oklch('--input'),
-        ring: oklchAlpha('--ring'),
-        background: oklchAlpha('--background'),
-        foreground: oklchAlpha('--foreground'),
+        border: lab('--border'),
+        input: lab('--input'),
+        ring: labAlpha('--ring'),
+        background: labAlpha('--background'),
+        foreground: labAlpha('--foreground'),
         primary: {
-          DEFAULT: oklchAlpha('--primary'),
-          foreground: oklchAlpha('--primary-foreground')
+          DEFAULT: labAlpha('--primary'),
+          foreground: labAlpha('--primary-foreground')
         },
         secondary: {
-          DEFAULT: oklchAlpha('--secondary'),
-          foreground: oklchAlpha('--secondary-foreground')
+          DEFAULT: labAlpha('--secondary'),
+          foreground: labAlpha('--secondary-foreground')
         },
         destructive: {
-          DEFAULT: oklchAlpha('--destructive'),
-          foreground: oklchAlpha('--destructive-foreground')
+          DEFAULT: labAlpha('--destructive'),
+          foreground: labAlpha('--destructive-foreground')
         },
         muted: {
-          DEFAULT: oklchAlpha('--muted'),
-          foreground: oklchAlpha('--muted-foreground')
+          DEFAULT: labAlpha('--muted'),
+          foreground: labAlpha('--muted-foreground')
         },
         accent: {
-          DEFAULT: oklchAlpha('--accent'),
-          foreground: oklchAlpha('--accent-foreground')
+          DEFAULT: labAlpha('--accent'),
+          foreground: labAlpha('--accent-foreground')
         },
         card: {
-          DEFAULT: oklchAlpha('--card'),
-          foreground: oklchAlpha('--card-foreground')
+          DEFAULT: labAlpha('--card'),
+          foreground: labAlpha('--card-foreground')
         },
         sidebar: {
-          DEFAULT: oklch('--sidebar'),
-          foreground: oklch('--sidebar-foreground'),
-          primary: oklch('--sidebar-primary'),
-          'primary-foreground': oklch('--sidebar-primary-foreground'),
-          accent: oklch('--sidebar-accent'),
-          'accent-foreground': oklch('--sidebar-accent-foreground'),
-          border: oklch('--sidebar-border'),
-          ring: oklch('--sidebar-ring')
+          DEFAULT: lab('--sidebar'),
+          foreground: lab('--sidebar-foreground'),
+          primary: lab('--sidebar-primary'),
+          'primary-foreground': lab('--sidebar-primary-foreground'),
+          accent: lab('--sidebar-accent'),
+          'accent-foreground': lab('--sidebar-accent-foreground'),
+          border: lab('--sidebar-border'),
+          ring: lab('--sidebar-ring')
         }
       },
       borderRadius: {
