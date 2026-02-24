@@ -9,6 +9,7 @@ Status atual:
 - wrappers de comando preparados para Tauri:
   - `cmd_create_executable(...)`
   - `cmd_hash_executable(...)`
+  - `cmd_test_configuration(...)`
   - habilitados com feature `tauri-commands`.
 
 Próxima etapa:

@@ -143,4 +143,21 @@
   - fallback de execução quando feature `tauri-commands` não está ativa.
 - `tauri.conf.json` mínimo adicionado para inicializar runtime/app window.
 - Próximo passo técnico:
-  - iniciar frontend mínimo do Criador (estrutura de abas + formulário + revisão/gerar/testar).
+- iniciar frontend mínimo do Criador (estrutura de abas + formulário + revisão/gerar/testar).
+
+## 2026-02-24 (checkpoint 12)
+- Frontend mínimo do App Criador implementado (`apps/creator-tauri`):
+  - Vite + Solid com abas:
+    - Jogo
+    - Runtime
+    - Revisao e Gerar
+  - ações na UI:
+    - calcular hash (`cmd_hash_executable`)
+    - testar config (`cmd_test_configuration`)
+    - criar executável (`cmd_create_executable`)
+- Backend `src-tauri` ganhou comando:
+  - `test_configuration(...)` + wrapper `cmd_test_configuration(...)`
+  - valida paths, checa arquivos obrigatórios, roda doctor e monta prefix plan.
+- Próximo passo técnico:
+  - expandir UI para cobrir mais campos por aba;
+  - integrar i18n na UI e backend.

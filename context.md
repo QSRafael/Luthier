@@ -1459,3 +1459,25 @@ Proximo checkpoint planejado:
   - editar config base
   - `Testar`
   - `Criar Executavel`.
+
+### 2026-02-24 - Checkpoint 12
+Escopo implementado:
+- Frontend mínimo do App Criador criado em `apps/creator-tauri`:
+  - stack: Vite + Solid;
+  - abas iniciais:
+    - Jogo
+    - Runtime
+    - Revisao e Gerar.
+- Fluxos já conectados com backend:
+  - `Calcular Hash` -> `cmd_hash_executable`
+  - `Testar` -> `cmd_test_configuration`
+  - `Criar Executavel` -> `cmd_create_executable`
+- Backend `src-tauri` ganhou comando de teste:
+  - valida payload;
+  - roda doctor;
+  - monta prefix plan;
+  - retorna status e arquivos ausentes.
+
+Proximo checkpoint planejado:
+- Expandir UI para cobrir campos adicionais das abas do projeto.
+- Integrar i18n (`pt-BR`, `en-US`) no frontend e mensagens do backend.

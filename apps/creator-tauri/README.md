@@ -1,11 +1,23 @@
-# creator-tauri (scaffold placeholder)
+# creator-tauri
 
-Esta pasta sera usada para o App Criador em Tauri + SolidJS.
+App Criador em Tauri + SolidJS.
 
-Motivo do placeholder neste commit:
-- iniciar estrutura de workspace sem acoplar setup Node/Tauri ainda;
-- manter fase de bootstrap pequena e revisavel.
+Status atual:
+- frontend mínimo (Vite + Solid) com abas:
+  - Jogo
+  - Runtime
+  - Revisao e Gerar
+- botões funcionais na UI:
+  - `Calcular Hash`
+  - `Testar`
+  - `Criar Executavel`
+- backend Rust em `src-tauri/` com comandos:
+  - `cmd_hash_executable`
+  - `cmd_test_configuration`
+  - `cmd_create_executable`
 
-Proximo passo:
-- gerar scaffold Tauri real e integrar com `orchestrator-core`.
-- backend Rust inicial já está em `src-tauri/` usando `creator-core`.
+Rodar frontend (dev):
+- `pnpm dev` (ou `npm run dev`)
+
+Rodar backend Tauri:
+- `cargo run -p creator-tauri-backend --features tauri-commands`

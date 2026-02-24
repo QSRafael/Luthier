@@ -1,11 +1,14 @@
 #[cfg(feature = "tauri-commands")]
 fn main() {
-    use creator_tauri_backend::{cmd_create_executable, cmd_hash_executable};
+    use creator_tauri_backend::{
+        cmd_create_executable, cmd_hash_executable, cmd_test_configuration,
+    };
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             cmd_create_executable,
-            cmd_hash_executable
+            cmd_hash_executable,
+            cmd_test_configuration
         ])
         .run(tauri::generate_context!())
         .expect("error while running creator tauri backend");
