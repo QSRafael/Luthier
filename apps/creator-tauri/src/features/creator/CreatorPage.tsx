@@ -109,8 +109,8 @@ function SwitchChoiceCard(props: SwitchChoiceCardProps) {
       class={
         'flex items-center justify-between gap-3 rounded-md border px-3 py-3 transition-colors ' +
         (props.checked
-          ? 'border-primary/40 bg-muted/45'
-          : 'border-border/60 bg-muted/30 hover:border-border hover:bg-muted/40')
+          ? 'border-primary/40 bg-accent/30'
+          : 'border-border/60 bg-background/70 hover:border-border hover:bg-accent/20')
       }
       onClick={toggle}
       onKeyDown={(e) => {

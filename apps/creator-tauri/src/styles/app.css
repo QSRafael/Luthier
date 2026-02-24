@@ -247,7 +247,7 @@ body {
 }
 
 .btn-danger {
-  @apply border border-rose-500/40 bg-rose-500/15 text-rose-100;
+  @apply border border-destructive/30 bg-destructive/10 text-destructive;
 }
 
 .btn-primary {
@@ -255,7 +255,7 @@ body {
 }
 
 .btn-test {
-  @apply border border-sky-500/40 bg-sky-500/15 text-sky-100;
+  @apply border border-primary/25 bg-primary/10 text-primary;
 }
 
 .readonly {

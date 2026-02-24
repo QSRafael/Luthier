@@ -1822,6 +1822,16 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 63
+Escopo implementado:
+- Revisao de cores/contraste (Creator UI):
+  - `Alert` variante `warning` corrigida para contraste adequado em tema claro/escuro (antes usava texto claro demais no light theme);
+  - `SwitchChoiceCard` (usado em varios itens, incluindo `Melhorias`) alinhado visualmente ao padrao dos outros cards de toggle (`accent` quando selecionado, `background/accent` quando inativo/hover);
+  - botoes `.btn-test` e `.btn-danger` migrados de cores hardcoded (`sky/rose`) para semantica baseada em tokens (`primary`/`destructive`) para manter coerencia com o tema atual do shadcn.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 62
 Escopo implementado:
 - Tema visual do Creator alinhado aos tokens extraidos do site do shadcn/ui:

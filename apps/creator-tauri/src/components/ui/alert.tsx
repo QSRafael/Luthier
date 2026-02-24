@@ -10,7 +10,8 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: 'bg-card text-card-foreground border-border',
-        warning: 'border-amber-500/30 bg-amber-500/10 text-amber-100 dark:text-amber-100',
+        warning:
+          'border-amber-500/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100',
         destructive: 'border-destructive/40 bg-destructive/10 text-destructive'
       }
     },
@@ -40,4 +41,3 @@ export const AlertDescription = (props: AlertDescriptionProps) => {
   const [, rest] = splitProps(props, ['class'])
   return <div class={cn('text-xs leading-relaxed opacity-95', props.class)} {...rest} />
 }
-
