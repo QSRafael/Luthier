@@ -15,7 +15,7 @@ creator-core = { path = "../../../crates/creator-core" }
 orchestrator-core = { path = "../../../crates/orchestrator-core" }
 serde.workspace = true
 serde_json.workspace = true
-tauri = { version = "1", optional = true, default-features = false, features = ["wry"] }
+tauri = { version = "1", optional = true, default-features = false, features = [ "dialog-open", "wry"] }
 
 [build-dependencies]
 tauri-build = { version = "1", features = [] }
