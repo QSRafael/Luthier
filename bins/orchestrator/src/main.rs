@@ -1,11 +1,12 @@
-use std::{fs, io};
+use std::{fs, io, path::Path};
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
     observability::{emit_ndjson, new_trace_id, LogEvent, LogLevel},
-    prefix::build_prefix_setup_plan,
+    prefix::{base_env_for_prefix, build_prefix_setup_plan},
+    process::{execute_prefix_setup_plan, has_mandatory_failures},
     trailer::extract_config_json,
     GameConfig, OrchestratorError,
 };
@@ -178,6 +179,12 @@ fn run_play_preflight(trace_id: &str) -> anyhow::Result<()> {
     }
 
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
+    let prefix_env = base_env_for_prefix(Path::new(&prefix_plan.prefix_path));
+    let dry_run = std::env::var("GAME_ORCH_DRY_RUN")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    let setup_results = execute_prefix_setup_plan(&prefix_plan, &prefix_env, dry_run);
+
     log_event(
         trace_id,
         LogLevel::Info,
@@ -187,12 +194,36 @@ fn run_play_preflight(trace_id: &str) -> anyhow::Result<()> {
         serde_json::json!({
             "needs_init": prefix_plan.needs_init,
             "commands": prefix_plan.commands.len(),
+            "dry_run": dry_run,
+            "setup_steps": setup_results.len(),
         }),
     );
+
+    if has_mandatory_failures(&setup_results) {
+        let output = serde_json::json!({
+            "doctor": report,
+            "prefix_setup_plan": prefix_plan,
+            "prefix_setup_execution": setup_results,
+            "launch": {
+                "status": "aborted",
+                "reason": "mandatory prefix setup command failed"
+            }
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output)
+                .context("failed to serialize preflight output")?
+        );
+
+        return Err(anyhow!(
+            "mandatory prefix setup step failed; launch aborted"
+        ));
+    }
 
     let output = serde_json::json!({
         "doctor": report,
         "prefix_setup_plan": prefix_plan,
+        "prefix_setup_execution": setup_results,
         "launch": {
             "status": "pending",
             "note": "game launch wiring is not implemented yet"

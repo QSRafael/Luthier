@@ -1373,3 +1373,24 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Executar comandos reais do `PrefixSetupPlan` com timeout e erro estruturado.
 - Implementar montagem do comando final do jogo (wrappers + runtime + exe).
+
+### 2026-02-24 - Checkpoint 08
+Escopo implementado:
+- Execucao real do `PrefixSetupPlan` adicionada via modulo `process`:
+  - timeout por comando;
+  - status estruturado por etapa:
+    - `Skipped`
+    - `Success`
+    - `Failed`
+    - `TimedOut`
+  - bloqueio do fluxo apos falha obrigatoria.
+- `--play` atualizado:
+  - executa setup de prefix quando necessario;
+  - inclui `prefix_setup_execution` no JSON de preflight;
+  - aborta em falha obrigatoria.
+- Modo de simulacao:
+  - `GAME_ORCH_DRY_RUN=1` executa fluxo sem spawn real.
+
+Proximo checkpoint planejado:
+- Implementar montagem e spawn do launch command final (wrappers + runtime + exe).
+- Incluir script `pre_launch` e `post_launch` no fluxo real.

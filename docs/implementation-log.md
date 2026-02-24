@@ -93,5 +93,18 @@
   - gera `prefix_setup_plan`;
   - imprime JSON final de preflight.
 - Ainda pendente em `--play`:
-  - execução real dos comandos de setup do prefix;
-  - montagem do comando final de launch do jogo.
+- execução real dos comandos de setup do prefix;
+- montagem do comando final de launch do jogo.
+
+## 2026-02-24 (checkpoint 08)
+- Implementado executor de `PrefixSetupPlan` em `orchestrator-core::process`:
+  - execução por comando com timeout;
+  - status por etapa (`Skipped|Success|Failed|TimedOut`);
+  - parada após falha obrigatória;
+  - helper `has_mandatory_failures(...)`.
+- `--play` atualizado:
+  - executa plano de setup de prefix (ou dry-run com `GAME_ORCH_DRY_RUN=1`);
+  - inclui resultado das etapas no JSON de saída;
+  - aborta quando etapa obrigatória falha.
+- Próximo passo técnico:
+  - montar comando final de launch (wrappers + runtime + exe) e fechar loop de execução.
