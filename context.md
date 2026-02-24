@@ -1710,3 +1710,13 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
 - `cargo test -p creator-tauri-backend -- --nocapture`
 - `cargo build --workspace`
+
+### 2026-02-24 - Checkpoint 22
+Escopo implementado:
+- Pickers com fallback para modo browser (sem runtime Tauri):
+  - `pickFile` e `pickFolder` tentam dialog nativo Tauri;
+  - se Tauri nao estiver disponivel (ex.: `npm run dev` web), usam fallback via `<input type=\"file\">`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
+- `cargo test -p creator-tauri-backend -- --nocapture`
