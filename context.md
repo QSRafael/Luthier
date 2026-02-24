@@ -1926,6 +1926,20 @@ Observacao de backend:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 44
+Escopo implementado:
+- Item `Dependencias extras do sistema` (aba Runtime) refeito para o padrao de listas com dialog:
+  - botao `Adicionar dependencia` abre dialog;
+  - dialog coleta: nome, comando no terminal, variaveis de ambiente (csv) e paths padrao (csv);
+  - dependencias adicionadas aparecem no rodape do item como linhas resumidas, com botao de excluir (igual aos outros itens de lista).
+- Removido da UI desse item o controle de `FeatureState` (Ativado/Obrigatorio), conforme regra de negocio atual.
+
+Compatibilidade de payload:
+- O schema foi preservado; ao adicionar uma dependencia extra, o campo `state` e salvo automaticamente como `MandatoryOn` (oculto na UI) para manter compatibilidade com o modelo atual.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

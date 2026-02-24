@@ -193,6 +193,14 @@ export default function CreatorPage() {
     args: ''
   })
 
+  const [extraDependencyDialogOpen, setExtraDependencyDialogOpen] = createSignal(false)
+  const [extraDependencyDraft, setExtraDependencyDraft] = createSignal({
+    name: '',
+    command: '',
+    env_vars: '',
+    paths: ''
+  })
+
   const runtimeVersionFieldLabel = () => {
     const preference = config().runner.runtime_preference
     if (preference === 'Proton') return tx('Versão do Proton', 'Proton version')
@@ -595,123 +603,160 @@ export default function CreatorPage() {
                 'Dependências adicionais verificadas no doctor por comando/env/path.',
                 'Additional dependencies validated in doctor by command/env/path.'
               )}
+              controlClass="flex justify-end"
+              footer={
+                config().extra_system_dependencies.length > 0 ? (
+                  <div class="grid gap-2">
+                    <For each={config().extra_system_dependencies}>
+                      {(item, index) => (
+                        <div class="grid items-start gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                          <div class="min-w-0 space-y-1">
+                            <p class="truncate text-sm font-medium">{item.name || tx('Sem nome', 'Unnamed')}</p>
+                            <Show when={item.check_commands.length > 0}>
+                              <p class="truncate text-xs text-muted-foreground">
+                                {tx('Comando:', 'Command:')} {joinCommaList(item.check_commands)}
+                              </p>
+                            </Show>
+                            <Show when={item.check_env_vars.length > 0}>
+                              <p class="truncate text-xs text-muted-foreground">
+                                {tx('Variáveis:', 'Env vars:')} {joinCommaList(item.check_env_vars)}
+                              </p>
+                            </Show>
+                            <Show when={item.check_paths.length > 0}>
+                              <p class="truncate text-xs text-muted-foreground">
+                                {tx('Paths:', 'Paths:')} {joinCommaList(item.check_paths)}
+                              </p>
+                            </Show>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
+                              }))
+                            }
+                            title={tx('Remover dependência', 'Remove dependency')}
+                          >
+                            <IconTrash class="size-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                ) : undefined
+              }
             >
-              <div class="table-list">
-                <For each={config().extra_system_dependencies}>
-                  {(item, index) => (
-                    <div class="table-card">
-                      <div class="table-grid table-grid-two">
-                        <Input
-                          value={item.name}
-                          placeholder={tx('Nome da dependência', 'Dependency name')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...prev.extra_system_dependencies[index()],
-                                name: e.currentTarget.value
-                              })
-                            }))
-                          }
-                        />
-                        <Select
-                          value={item.state}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...prev.extra_system_dependencies[index()],
-                                state: e.currentTarget.value as FeatureState
-                              })
-                            }))
-                          }
-                        >
-                          <For each={featureStateOptions()}>
-                            {(option) => <option value={option.value}>{option.label}</option>}
-                          </For>
-                        </Select>
-                      </div>
-
-                      <div class="table-grid table-grid-three">
-                        <Input
-                          value={joinCommaList(item.check_commands)}
-                          placeholder={tx('Comandos (vulkaninfo, mangohud)', 'Commands (vulkaninfo, mangohud)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...prev.extra_system_dependencies[index()],
-                                check_commands: splitCommaList(e.currentTarget.value)
-                              })
-                            }))
-                          }
-                        />
-                        <Input
-                          value={joinCommaList(item.check_env_vars)}
-                          placeholder={tx('Variáveis (VAR_A, VAR_B)', 'Env vars (VAR_A, VAR_B)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...prev.extra_system_dependencies[index()],
-                                check_env_vars: splitCommaList(e.currentTarget.value)
-                              })
-                            }))
-                          }
-                        />
-                        <Input
-                          value={joinCommaList(item.check_paths)}
-                          placeholder={tx('Paths padrão (/usr/bin/x)', 'Default paths (/usr/bin/x)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...prev.extra_system_dependencies[index()],
-                                check_paths: splitCommaList(e.currentTarget.value)
-                              })
-                            }))
-                          }
-                        />
-                      </div>
-
-                      <Button
-                        type="button"
-                        class="btn-danger"
-                        onClick={() =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
-                          }))
-                        }
-                      >
-                        {tx('Remover dependência', 'Remove dependency')}
-                      </Button>
-                    </div>
-                  )}
-                </For>
-
+              <Dialog open={extraDependencyDialogOpen()} onOpenChange={setExtraDependencyDialogOpen}>
                 <Button
                   type="button"
-                  class="btn-secondary"
-                  onClick={() =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      extra_system_dependencies: [
-                        ...prev.extra_system_dependencies,
-                        {
-                          name: '',
-                          state: 'OptionalOff',
-                          check_commands: [],
-                          check_env_vars: [],
-                          check_paths: []
-                        }
-                      ]
-                    }))
-                  }
+                  variant="outline"
+                  size="sm"
+                  class="inline-flex items-center gap-1.5"
+                  onClick={() => setExtraDependencyDialogOpen(true)}
                 >
-                  {tx('Adicionar dependência extra', 'Add extra dependency')}
+                  <IconPlus class="size-4" />
+                  {tx('Adicionar dependência', 'Add dependency')}
                 </Button>
-              </div>
+
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Adicionar dependência extra do sistema', 'Add extra system dependency')}</DialogTitle>
+                    <DialogDescription>
+                      {tx(
+                        'Informe como o doctor pode detectar essa dependência (comando, variáveis e paths padrão).',
+                        'Define how doctor can detect this dependency (command, env vars and default paths).'
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="grid gap-2">
+                    <Input
+                      value={extraDependencyDraft().name}
+                      placeholder={tx('Nome da dependência', 'Dependency name')}
+                      onInput={(e) =>
+                        setExtraDependencyDraft((prev) => ({
+                          ...prev,
+                          name: e.currentTarget.value
+                        }))
+                      }
+                    />
+
+                    <Input
+                      value={extraDependencyDraft().command}
+                      placeholder={tx('Comando no terminal (ex.: mangohud)', 'Terminal command (e.g. mangohud)')}
+                      onInput={(e) =>
+                        setExtraDependencyDraft((prev) => ({
+                          ...prev,
+                          command: e.currentTarget.value
+                        }))
+                      }
+                    />
+
+                    <Input
+                      value={extraDependencyDraft().env_vars}
+                      placeholder={tx('Variáveis de ambiente (separadas por vírgula)', 'Environment vars (comma-separated)')}
+                      onInput={(e) =>
+                        setExtraDependencyDraft((prev) => ({
+                          ...prev,
+                          env_vars: e.currentTarget.value
+                        }))
+                      }
+                    />
+
+                    <Input
+                      value={extraDependencyDraft().paths}
+                      placeholder={tx('Paths padrão (separados por vírgula)', 'Default paths (comma-separated)')}
+                      onInput={(e) =>
+                        setExtraDependencyDraft((prev) => ({
+                          ...prev,
+                          paths: e.currentTarget.value
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setExtraDependencyDialogOpen(false)}>
+                      {tx('Cancelar', 'Cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={!extraDependencyDraft().name.trim()}
+                      onClick={() => {
+                        const draft = extraDependencyDraft()
+                        if (!draft.name.trim()) return
+
+                        patchConfig((prev) => ({
+                          ...prev,
+                          extra_system_dependencies: [
+                            ...prev.extra_system_dependencies,
+                            {
+                              name: draft.name.trim(),
+                              state: 'MandatoryOn',
+                              check_commands: splitCommaList(draft.command),
+                              check_env_vars: splitCommaList(draft.env_vars),
+                              check_paths: splitCommaList(draft.paths)
+                            }
+                          ]
+                        }))
+
+                        setExtraDependencyDraft({
+                          name: '',
+                          command: '',
+                          env_vars: '',
+                          paths: ''
+                        })
+                        setExtraDependencyDialogOpen(false)
+                      }}
+                    >
+                      {tx('Confirmar', 'Confirm')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </FieldShell>
           </section>
         </Show>
