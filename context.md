@@ -1262,7 +1262,12 @@ Observacao:
 
 ---
 
-## 23) Progresso de Implementacao (checkpoint)
+## 23) Todo
+- Melhorar pasta raiz do jogo
+- Melhorar versão do proton
+- ordem de fallback runtime
+
+## 24) Progresso de Implementacao (checkpoint)
 
 ### 2026-02-24 - Checkpoint 01
 Escopo implementado:
@@ -1813,6 +1818,24 @@ Escopo implementado:
   - removido pacote `cva` legado/invalido;
   - removido `@tailwindcss/postcss` nao utilizado;
   - lockfile atualizado via `npm install`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 35
+Escopo implementado:
+- Aba `Runtime` reestruturada para um fluxo mais simples:
+  - `Preferência geral de runtime` agora usa seletor segmentado `Auto | Proton | Wine` (estilo tabs/shadcn).
+  - `Runtime primário` removido da UI (mantido no schema para compatibilidade do payload).
+  - `Ordem de fallback` removida da UI por enquanto (mantida no schema para futura fase).
+- Configuração de versão consolidada em um único item:
+  - label e descrição mudam dinamicamente conforme a preferência (`Auto`, `Proton`, `Wine`);
+  - campo de versão + select `Versão obrigatória` + select `Auto update` ficam no mesmo item.
+- `Runtime estrito` deixou de ser toggle separado e passou a ser configurado por select (`Versão obrigatória`) dentro do item de versão.
+- `Auto update do runner` deixou de ser item separado e passou a select dentro do item de versão.
+
+Observacao de arquitetura:
+- A simplificação foi aplicada apenas na camada de UI. Os campos de schema (`requirements.runtime.primary` e `fallback_order`) continuam existindo para preservar compatibilidade e permitir retorno posterior sem migração de payload.
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)

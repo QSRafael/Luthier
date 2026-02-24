@@ -23,6 +23,7 @@ import {
 } from '../ui/item'
 import { Select } from '../ui/select'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../ui/switch'
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 import { Textarea } from '../ui/textarea'
 
 export type SelectOption<T extends string> = {
@@ -130,6 +131,32 @@ export function SelectField<T extends string>(props: SelectFieldProps<T>) {
       <Select value={props.value} onInput={(e) => props.onChange(e.currentTarget.value as T)}>
         <For each={props.options}>{(option) => <option value={option.value}>{option.label}</option>}</For>
       </Select>
+    </FieldShell>
+  )
+}
+
+type SegmentedFieldProps<T extends string> = {
+  label: string
+  help: string
+  value: T
+  options: Array<SelectOption<T>>
+  onChange: (value: T) => void
+}
+
+export function SegmentedField<T extends string>(props: SegmentedFieldProps<T>) {
+  return (
+    <FieldShell label={props.label} help={props.help} controlClass="flex justify-end">
+      <Tabs value={props.value} onChange={(value) => props.onChange(value as T)} class="items-end">
+        <TabsList class="w-full justify-start md:w-auto">
+          <For each={props.options}>
+            {(option) => (
+              <TabsTrigger value={option.value} class="min-w-[72px]">
+                {option.label}
+              </TabsTrigger>
+            )}
+          </For>
+        </TabsList>
+      </Tabs>
     </FieldShell>
   )
 }

@@ -4,6 +4,7 @@ import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 import {
   FieldShell,
   KeyValueListField,
+  SegmentedField,
   SelectField,
   StringListField,
   TextAreaField,
@@ -25,7 +26,7 @@ import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import type { Theme } from '../../components/theme-provider'
 import { Locale } from '../../i18n'
-import { CreatorTab, FeatureState, RuntimePreference, RuntimePrimary } from '../../models/config'
+import { CreatorTab, FeatureState, RuntimePreference } from '../../models/config'
 import {
   AudioDriverOption,
   CreatorController,
@@ -82,18 +83,15 @@ export default function CreatorPage() {
     t,
     tx,
     featureStateOptions,
-    runtimePrimaryOptions,
     runtimePreferenceOptions,
     audioDriverOptions,
     dllModeOptions,
     upscaleMethodOptions,
     windowTypeOptions,
     prefixPathPreview,
-    runtimeFallbackOrder,
     environmentVarsAsList,
     audioDriverValue,
     gamescopeEnabled,
-    availableFallbackCandidates,
     normalizedWinetricksSearch,
     winetricksCandidates,
     payloadSummary,
@@ -116,10 +114,6 @@ export default function CreatorPage() {
     setGamescopeState,
     setGamemodeState,
     setMangohudState,
-    setRuntimePrimary,
-    addFallbackCandidate,
-    removeFallbackCandidate,
-    moveFallbackCandidate,
     updateCustomVars,
     addWinetricksVerb,
     removeWinetricksVerb,
@@ -153,6 +147,33 @@ export default function CreatorPage() {
     executable: '',
     args: ''
   })
+
+  const runtimeVersionFieldLabel = () => {
+    const preference = config().runner.runtime_preference
+    if (preference === 'Proton') return tx('Versão do Proton', 'Proton version')
+    if (preference === 'Wine') return tx('Versão do Wine', 'Wine version')
+    return tx('Versão de runtime (preferida)', 'Preferred runtime version')
+  }
+
+  const runtimeVersionFieldHelp = () => {
+    const preference = config().runner.runtime_preference
+    if (preference === 'Proton') {
+      return tx(
+        'Versão alvo do Proton usada pelo orquestrador quando a preferência está em Proton.',
+        'Target Proton version used by the orchestrator when preference is Proton.'
+      )
+    }
+    if (preference === 'Wine') {
+      return tx(
+        'Versão/identificador de Wine esperada quando a preferência está em Wine.',
+        'Expected Wine version/identifier when preference is Wine.'
+      )
+    }
+    return tx(
+      'Versão preferida para runtime quando o modo Auto escolher Proton/Wine conforme disponibilidade.',
+      'Preferred runtime version when Auto mode picks Proton/Wine based on availability.'
+    )
+  }
 
   return (
     <div class="creator-page">
@@ -326,7 +347,7 @@ export default function CreatorPage() {
 
         <Show when={activeTab() === 'runtime'}>
           <section class="stack">
-            <SelectField<RuntimePreference>
+            <SegmentedField<RuntimePreference>
               label={tx('Preferência geral de runtime', 'General runtime preference')}
               help={tx('Prioridade macro entre Auto, Proton e Wine.', 'Macro priority among Auto, Proton and Wine.')}
               value={config().runner.runtime_preference}
@@ -342,121 +363,79 @@ export default function CreatorPage() {
               }
             />
 
-            <ToggleField
-              label={tx('Runtime estrito', 'Strict runtime')}
-              help={tx(
-                'Quando ativo, só o runtime primário é aceito (sem fallback).',
-                'When enabled, only primary runtime is accepted (no fallback).'
-              )}
-              checked={config().requirements.runtime.strict}
-              onChange={(checked) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  requirements: {
-                    ...prev.requirements,
-                    runtime: {
-                      ...prev.requirements.runtime,
-                      strict: checked
-                    }
-                  }
-                }))
-              }
-            />
-
-            <SelectField<RuntimePrimary>
-              label={tx('Runtime primário', 'Primary runtime')}
-              help={tx('Primeiro candidato de execução do jogo.', 'First runtime candidate for launch.')}
-              value={config().requirements.runtime.primary}
-              options={runtimePrimaryOptions()}
-              onChange={setRuntimePrimary}
-            />
-
             <FieldShell
-              label={tx('Ordem de fallback', 'Fallback order')}
-              help={tx(
-                'Adicione candidatos e mova a ordem manualmente.',
-                'Add candidates and move order manually.'
-              )}
+              label={runtimeVersionFieldLabel()}
+              help={runtimeVersionFieldHelp()}
+              controlClass="w-full"
             >
-              <div class="table-list">
-                <For each={availableFallbackCandidates()}>
-                  {(candidate) => {
-                    const inFallback = runtimeFallbackOrder().includes(candidate)
-                    return (
-                      <div class="table-row table-row-fallback">
-                        <span>{candidate}</span>
-                        <div class="row-actions">
-                          <Show
-                            when={inFallback}
-                            fallback={
-                              <Button type="button" class="btn-secondary" onClick={() => addFallbackCandidate(candidate)}>
-                                {tx('Adicionar', 'Add')}
-                              </Button>
-                            }
-                          >
-                            <Button type="button" class="btn-danger" onClick={() => removeFallbackCandidate(candidate)}>
-                              {tx('Remover', 'Remove')}
-                            </Button>
-                          </Show>
-                        </div>
-                      </div>
-                    )
-                  }}
-                </For>
+              <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px]">
+                <div class="grid gap-1.5">
+                  <label class="text-xs font-medium text-muted-foreground">
+                    {runtimeVersionFieldLabel()}
+                  </label>
+                  <Input
+                    value={config().runner.proton_version}
+                    placeholder={
+                      config().runner.runtime_preference === 'Wine' ? 'wine-ge-8-26' : 'GE-Proton9-10'
+                    }
+                    onInput={(e) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        runner: {
+                          ...prev.runner,
+                          proton_version: e.currentTarget.value
+                        }
+                      }))
+                    }
+                  />
+                </div>
 
-                <For each={runtimeFallbackOrder()}>
-                  {(candidate, index) => (
-                    <div class="table-row table-row-fallback">
-                      <span>{candidate}</span>
-                      <div class="row-actions">
-                        <Button type="button" class="btn-secondary" onClick={() => moveFallbackCandidate(index(), -1)}>
-                          {tx('Subir', 'Up')}
-                        </Button>
-                        <Button type="button" class="btn-secondary" onClick={() => moveFallbackCandidate(index(), 1)}>
-                          {tx('Descer', 'Down')}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </For>
+                <div class="grid gap-1.5">
+                  <label class="text-xs font-medium text-muted-foreground">
+                    {tx('Versão obrigatória', 'Required version')}
+                  </label>
+                  <Select
+                    value={config().requirements.runtime.strict ? 'true' : 'false'}
+                    onInput={(e) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        requirements: {
+                          ...prev.requirements,
+                          runtime: {
+                            ...prev.requirements.runtime,
+                            strict: e.currentTarget.value === 'true'
+                          }
+                        }
+                      }))
+                    }
+                  >
+                    <option value="false">{tx('Não', 'No')}</option>
+                    <option value="true">{tx('Sim', 'Yes')}</option>
+                  </Select>
+                </div>
+
+                <div class="grid gap-1.5">
+                  <label class="text-xs font-medium text-muted-foreground">
+                    {tx('Auto update', 'Auto update')}
+                  </label>
+                  <Select
+                    value={config().runner.auto_update ? 'true' : 'false'}
+                    onInput={(e) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        runner: {
+                          ...prev.runner,
+                          auto_update: e.currentTarget.value === 'true'
+                        }
+                      }))
+                    }
+                  >
+                    <option value="false">{tx('Não', 'No')}</option>
+                    <option value="true">{tx('Sim', 'Yes')}</option>
+                  </Select>
+                </div>
               </div>
             </FieldShell>
-
-            <TextInputField
-              label={tx('Versão do Proton', 'Proton version')}
-              help={tx(
-                'Versão alvo do Proton quando runtime selecionado usar Proton.',
-                'Target Proton version when selected runtime uses Proton.'
-              )}
-              value={config().runner.proton_version}
-              onInput={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  runner: {
-                    ...prev.runner,
-                    proton_version: value
-                  }
-                }))
-              }
-            />
-
-            <ToggleField
-              label={tx('Auto update do runner', 'Runner auto update')}
-              help={tx(
-                'Mantém metadados de runner atualizados quando aplicável.',
-                'Keeps runner metadata updated when applicable.'
-              )}
-              checked={config().runner.auto_update}
-              onChange={(checked) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  runner: {
-                    ...prev.runner,
-                    auto_update: checked
-                  }
-                }))
-              }
-            />
 
             <ToggleField
               label="ESYNC"
