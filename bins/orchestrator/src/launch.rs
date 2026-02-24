@@ -166,19 +166,16 @@ pub fn build_winecfg_command(
 
     let mut command_tokens = match selected_runtime {
         RuntimeCandidate::ProtonUmu => {
-            let umu = report
-                .runtime
-                .umu_run
-                .clone()
-                .ok_or_else(|| anyhow!("selected runtime ProtonUmu but umu-run path is missing"))?;
+            let umu =
+                report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected runtime ProtonUmu but umu-run path is missing")
+                })?;
             vec![umu, "winecfg".to_string()]
         }
         RuntimeCandidate::ProtonNative => {
-            let proton = report
-                .runtime
-                .proton
-                .clone()
-                .ok_or_else(|| anyhow!("selected runtime ProtonNative but proton path is missing"))?;
+            let proton = report.runtime.proton.clone().ok_or_else(|| {
+                anyhow!("selected runtime ProtonNative but proton path is missing")
+            })?;
             vec![proton, "run".to_string(), "winecfg".to_string()]
         }
         RuntimeCandidate::Wine => {

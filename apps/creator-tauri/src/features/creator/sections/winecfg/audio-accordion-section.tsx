@@ -7,7 +7,7 @@ import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 
 export function WinecfgAudioAccordionSection(props: WinecfgAccordionSectionProps) {
-  const { config, patchConfig, ct, audioDriverOptions, audioDriverValue } = props.view as any
+  const { config, patchConfig, ct, audioDriverOptions, audioDriverValue } = props.view
 
   return (
               <AccordionSection

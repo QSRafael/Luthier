@@ -10,7 +10,7 @@ import { WinecfgGraphicsAccordionSection } from './winecfg/graphics-accordion-se
 import { WinecfgWindowsVersionItem } from './winecfg/windows-version-item'
 
 export function WinecfgTabSection(props: CreatorPageSectionProps) {
-  const { ct, winecfgAccordionOpen, setWinecfgAccordionOpen } = props.view as any
+  const { ct, winecfgAccordionOpen, setWinecfgAccordionOpen } = props.view
 
   return (
     <section class="stack">

@@ -5,7 +5,7 @@ import { Select } from '../../../../components/ui/select'
 import type { WinecfgSectionViewProps } from './shared'
 
 export function WinecfgWindowsVersionItem(props: WinecfgSectionViewProps) {
-  const { config, patchConfig, ct, wineWindowsVersionOptions } = props.view as any
+  const { config, patchConfig, ct, wineWindowsVersionOptions } = props.view
 
   return (
             <FieldShell

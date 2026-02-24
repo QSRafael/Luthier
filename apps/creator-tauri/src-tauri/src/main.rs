@@ -2,11 +2,10 @@
 fn main() {
     use creator_tauri_backend::{
         create_executable, hash_executable, import_registry_file, list_child_directories,
-        test_configuration, winetricks_available,
-        CreateExecutableInput, CreateExecutableOutput, HashExeInput, HashExeOutput,
-        ImportRegistryFileInput, ImportRegistryFileOutput, ListChildDirectoriesInput,
-        ListChildDirectoriesOutput, TestConfigurationInput, TestConfigurationOutput,
-        WinetricksAvailableOutput,
+        test_configuration, winetricks_available, CreateExecutableInput, CreateExecutableOutput,
+        HashExeInput, HashExeOutput, ImportRegistryFileInput, ImportRegistryFileOutput,
+        ListChildDirectoriesInput, ListChildDirectoriesOutput, TestConfigurationInput,
+        TestConfigurationOutput, WinetricksAvailableOutput,
     };
 
     #[tauri::command]
@@ -34,7 +33,9 @@ fn main() {
     }
 
     #[tauri::command]
-    fn cmd_import_registry_file(input: ImportRegistryFileInput) -> Result<ImportRegistryFileOutput, String> {
+    fn cmd_import_registry_file(
+        input: ImportRegistryFileInput,
+    ) -> Result<ImportRegistryFileOutput, String> {
         import_registry_file(input)
     }
 

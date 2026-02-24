@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
-use orchestrator_core::{doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig, RegistryKey};
+use orchestrator_core::{
+    doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig, RegistryKey,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -174,7 +176,9 @@ pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
     })
 }
 
-pub fn import_registry_file(input: ImportRegistryFileInput) -> Result<ImportRegistryFileOutput, String> {
+pub fn import_registry_file(
+    input: ImportRegistryFileInput,
+) -> Result<ImportRegistryFileOutput, String> {
     let bytes = fs::read(&input.path).map_err(|err| format!("failed to read .reg file: {err}"))?;
     let raw = decode_reg_file_text(&bytes)?;
     let (entries, warnings) = parse_reg_file_entries(&raw);
@@ -331,14 +335,16 @@ fn decode_reg_file_text(bytes: &[u8]) -> Result<String, String> {
         for chunk in &mut iter {
             units.push(u16::from_le_bytes([chunk[0], chunk[1]]));
         }
-        return String::from_utf16(&units).map_err(|err| format!("invalid UTF-16LE .reg file: {err}"));
+        return String::from_utf16(&units)
+            .map_err(|err| format!("invalid UTF-16LE .reg file: {err}"));
     }
 
     if bytes.starts_with(&[0xFE, 0xFF]) {
         return Err("UTF-16BE .reg files are not supported".to_string());
     }
 
-    let text = String::from_utf8(bytes.to_vec()).map_err(|err| format!("invalid UTF-8 .reg file: {err}"))?;
+    let text = String::from_utf8(bytes.to_vec())
+        .map_err(|err| format!("invalid UTF-8 .reg file: {err}"))?;
     Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_string())
 }
 
@@ -365,7 +371,9 @@ fn parse_reg_file_entries(raw: &str) -> (Vec<RegistryKey>, Vec<String>) {
         }
 
         let Some(path) = current_path.clone() else {
-            warnings.push(format!("ignored line outside registry key section: {trimmed}"));
+            warnings.push(format!(
+                "ignored line outside registry key section: {trimmed}"
+            ));
             continue;
         };
 
@@ -377,7 +385,9 @@ fn parse_reg_file_entries(raw: &str) -> (Vec<RegistryKey>, Vec<String>) {
         let name = match parse_reg_value_name(name_raw.trim()) {
             Some(name) => name,
             None => {
-                warnings.push(format!("ignored registry value with unsupported name syntax: {trimmed}"));
+                warnings.push(format!(
+                    "ignored registry value with unsupported name syntax: {trimmed}"
+                ));
                 continue;
             }
         };
@@ -515,7 +525,11 @@ fn parse_reg_data(raw: &str) -> (String, String, Vec<String>) {
 
     if lower.starts_with("hex(") {
         let type_end = raw.find("):").unwrap_or(raw.len());
-        let suffix = if type_end + 2 <= raw.len() { &raw[type_end + 2..] } else { "" };
+        let suffix = if type_end + 2 <= raw.len() {
+            &raw[type_end + 2..]
+        } else {
+            ""
+        };
         let value = match normalize_registry_hex_payload(suffix) {
             Ok(value) => value,
             Err(err) => {

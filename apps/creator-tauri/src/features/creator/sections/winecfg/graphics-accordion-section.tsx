@@ -9,7 +9,7 @@ import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 
 export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionProps) {
-  const { config, patchConfig, ct, winecfgVirtualDesktopEnabled, winecfgVirtualDesktopResolution, setWinecfgVirtualDesktopResolutionPart } = props.view as any
+  const { config, patchConfig, ct, winecfgVirtualDesktopEnabled, winecfgVirtualDesktopResolution, setWinecfgVirtualDesktopResolutionPart } = props.view
 
   return (
               <AccordionSection

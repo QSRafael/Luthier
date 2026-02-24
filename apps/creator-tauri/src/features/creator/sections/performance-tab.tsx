@@ -19,6 +19,7 @@ import { Input } from '../../../components/ui/input'
 import { Select } from '../../../components/ui/select'
 import { Spinner } from '../../../components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
+import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
 import { Textarea } from '../../../components/ui/textarea'
 import type { RuntimePreference } from '../../../models/config'
 import type { AudioDriverOption, GamescopeWindowType, UpscaleMethod } from '../useCreatorController'
@@ -51,7 +52,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
     wineWaylandEnabled,
     setGamescopeOutputWidth,
     setGamescopeOutputHeight,
-  } = props.view as any
+  } = props.view
 
   return (
           <section class="stack">

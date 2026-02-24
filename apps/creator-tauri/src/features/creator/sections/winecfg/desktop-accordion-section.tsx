@@ -12,7 +12,7 @@ import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 
 export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionProps) {
-  const { config, patchConfig, ct, removeAt, wineDesktopFolderDialogOpen, setWineDesktopFolderDialogOpen, wineDesktopFolderDraft, setWineDesktopFolderDraft, wineDesktopFolderKeyOptions } = props.view as any
+  const { config, patchConfig, ct, removeAt, wineDesktopFolderDialogOpen, setWineDesktopFolderDialogOpen, wineDesktopFolderDraft, setWineDesktopFolderDraft, wineDesktopFolderKeyOptions } = props.view
 
   return (
               <AccordionSection
@@ -86,7 +86,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                             <Select
                               value={wineDesktopFolderDraft().folder_key}
                               onInput={(e) =>
-                                setWineDesktopFolderDraft((prev) => ({ ...prev, folder_key: e.currentTarget.value }))
+                                setWineDesktopFolderDraft((prev: any) => ({ ...prev, folder_key: e.currentTarget.value }))
                               }
                             >
                               <For each={wineDesktopFolderKeyOptions}>
@@ -97,14 +97,14 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                               value={wineDesktopFolderDraft().shortcut_name}
                               placeholder={ct('creator_shortcut_name_in_wine')}
                               onInput={(e) =>
-                                setWineDesktopFolderDraft((prev) => ({ ...prev, shortcut_name: e.currentTarget.value }))
+                                setWineDesktopFolderDraft((prev: any) => ({ ...prev, shortcut_name: e.currentTarget.value }))
                               }
                             />
                             <Input
                               value={wineDesktopFolderDraft().linux_path}
                               placeholder="/mnt/games/shared"
                               onInput={(e) =>
-                                setWineDesktopFolderDraft((prev) => ({ ...prev, linux_path: e.currentTarget.value }))
+                                setWineDesktopFolderDraft((prev: any) => ({ ...prev, linux_path: e.currentTarget.value }))
                               }
                             />
                             <p class="text-xs text-muted-foreground">

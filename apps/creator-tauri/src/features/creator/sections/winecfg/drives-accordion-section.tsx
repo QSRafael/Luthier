@@ -11,7 +11,7 @@ import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 
 export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProps) {
-  const { setStatusMessage, config, patchConfig, ct, removeAt, wineDriveDialogOpen, setWineDriveDialogOpen, wineDriveDraft, setWineDriveDraft, wineDriveTypeOptions, availableWineDriveLetters } = props.view as any
+  const { setStatusMessage, config, patchConfig, ct, removeAt, wineDriveDialogOpen, setWineDriveDialogOpen, wineDriveDraft, setWineDriveDraft, wineDriveTypeOptions, availableWineDriveLetters } = props.view
 
   return (
               <AccordionSection
@@ -104,7 +104,7 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                         <div class="grid gap-2">
                           <Select
                             value={wineDriveDraft().letter}
-                            onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, letter: e.currentTarget.value }))}
+                            onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, letter: e.currentTarget.value }))}
                           >
                             <For each={availableWineDriveLetters().length > 0 ? availableWineDriveLetters() : [wineDriveDraft().letter]}>
                               {(letter) => <option value={letter}>{letter}:</option>}
@@ -114,12 +114,12 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                           <Input
                             value={wineDriveDraft().host_path}
                             placeholder="/mnt/storage/shared"
-                            onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, host_path: e.currentTarget.value }))}
+                            onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, host_path: e.currentTarget.value }))}
                           />
 
                           <Select
                             value={wineDriveDraft().drive_type}
-                            onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, drive_type: e.currentTarget.value }))}
+                            onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, drive_type: e.currentTarget.value }))}
                           >
                             <For each={wineDriveTypeOptions}>
                               {(option) => <option value={option.value}>{option.label}</option>}
@@ -130,12 +130,12 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                             <Input
                               value={wineDriveDraft().label}
                               placeholder={ct('creator_label_optional')}
-                              onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, label: e.currentTarget.value }))}
+                              onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, label: e.currentTarget.value }))}
                             />
                             <Input
                               value={wineDriveDraft().serial}
                               placeholder={ct('creator_serial_optional')}
-                              onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, serial: e.currentTarget.value }))}
+                              onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, serial: e.currentTarget.value }))}
                             />
                           </div>
 

@@ -67,7 +67,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
     setExtraDependencyDraft,
     canImportRegistryFromFile,
     importRegistryKeysFromRegFile,
-  } = props.view as any
+  } = props.view
 
   return (
           <section class="stack">
@@ -278,7 +278,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       value={registryDraft().path}
                       placeholder={ct('creator_path_hkcu')}
                       onInput={(e) =>
-                        setRegistryDraft((prev) => ({
+                        setRegistryDraft((prev: any) => ({
                           ...prev,
                           path: e.currentTarget.value
                         }))
@@ -288,7 +288,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       value={registryDraft().name}
                       placeholder={ct('creator_key_name')}
                       onInput={(e) =>
-                        setRegistryDraft((prev) => ({
+                        setRegistryDraft((prev: any) => ({
                           ...prev,
                           name: e.currentTarget.value
                         }))
@@ -299,7 +299,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         value={registryDraft().value_type}
                         placeholder={ct('creator_type_reg_sz')}
                         onInput={(e) =>
-                          setRegistryDraft((prev) => ({
+                          setRegistryDraft((prev: any) => ({
                             ...prev,
                             value_type: e.currentTarget.value
                           }))
@@ -309,7 +309,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         value={registryDraft().value}
                         placeholder={ct('creator_value')}
                         onInput={(e) =>
-                          setRegistryDraft((prev) => ({
+                          setRegistryDraft((prev: any) => ({
                             ...prev,
                             value: e.currentTarget.value
                           }))
@@ -472,7 +472,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       value={extraDependencyDraft().name}
                       placeholder={ct('creator_dependency_name')}
                       onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
+                        setExtraDependencyDraft((prev: any) => ({
                           ...prev,
                           name: e.currentTarget.value
                         }))
@@ -483,7 +483,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       value={extraDependencyDraft().command}
                       placeholder={ct('creator_terminal_command_e_g_mangohud')}
                       onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
+                        setExtraDependencyDraft((prev: any) => ({
                           ...prev,
                           command: e.currentTarget.value
                         }))
@@ -494,7 +494,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       value={extraDependencyDraft().env_vars}
                       placeholder={ct('creator_environment_vars_comma_separated')}
                       onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
+                        setExtraDependencyDraft((prev: any) => ({
                           ...prev,
                           env_vars: e.currentTarget.value
                         }))
@@ -505,7 +505,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       value={extraDependencyDraft().paths}
                       placeholder={ct('creator_default_paths_comma_separated')}
                       onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
+                        setExtraDependencyDraft((prev: any) => ({
                           ...prev,
                           paths: e.currentTarget.value
                         }))

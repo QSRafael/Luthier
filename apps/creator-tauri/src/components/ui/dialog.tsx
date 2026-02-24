@@ -4,8 +4,8 @@ import { Dialog as DialogPrimitive } from '@kobalte/core/dialog'
 
 import { cn } from '../../lib/cva'
 
-export type DialogProps<T extends ValidComponent = 'div'> = ComponentProps<typeof DialogPrimitive<T>>
-export const Dialog = <T extends ValidComponent = 'div'>(props: DialogProps<T>) => {
+export type DialogProps = ComponentProps<typeof DialogPrimitive>
+export const Dialog = (props: DialogProps) => {
   return <DialogPrimitive {...props} />
 }
 

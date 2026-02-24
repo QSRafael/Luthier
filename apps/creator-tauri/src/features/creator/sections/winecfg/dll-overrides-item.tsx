@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import type { WinecfgSectionViewProps } from './shared'
 
 export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
-  const { config, patchConfig, ct, dllModeOptions, replaceAt, removeAt, dllDialogOpen, setDllDialogOpen, dllDraft, setDllDraft } = props.view as any
+  const { config, patchConfig, ct, dllModeOptions, replaceAt, removeAt, dllDialogOpen, setDllDialogOpen, dllDraft, setDllDraft } = props.view
 
   return (
             <FieldShell
@@ -108,7 +108,7 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                       value={dllDraft().dll}
                       placeholder="d3dcompiler_47"
                       onInput={(e) =>
-                        setDllDraft((prev) => ({
+                        setDllDraft((prev: any) => ({
                           ...prev,
                           dll: e.currentTarget.value
                         }))
@@ -117,7 +117,7 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                     <Select
                       value={dllDraft().mode}
                       onInput={(e) =>
-                        setDllDraft((prev) => ({
+                        setDllDraft((prev: any) => ({
                           ...prev,
                           mode: e.currentTarget.value
                         }))

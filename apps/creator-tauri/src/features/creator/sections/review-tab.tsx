@@ -44,7 +44,7 @@ export function ReviewTabSection(props: CreatorPageSectionProps) {
     payloadSummary,
     runTest,
     runCreate,
-  } = props.view as any
+  } = props.view
 
   return (
           <section class="stack">

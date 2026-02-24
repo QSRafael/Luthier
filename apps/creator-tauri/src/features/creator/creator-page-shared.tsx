@@ -16,7 +16,7 @@ export type ListChildDirectoriesOutput = {
   directories: string[]
 }
 
-export type CreatorPageSectionView = any
+export type CreatorPageSectionView = CreatorController & Record<string, any>
 
 export type CreatorPageSectionProps = {
   view: CreatorPageSectionView

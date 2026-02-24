@@ -46,7 +46,7 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
     setWrapperDialogOpen,
     wrapperDraft,
     setWrapperDraft,
-  } = props.view as any
+  } = props.view
 
   return (
           <section class="stack">
@@ -132,7 +132,7 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                         title={ct('creator_label_enabled')}
                         checked={featureStateEnabled(wrapperDraft().state)}
                         onChange={(checked) =>
-                          setWrapperDraft((prev) => ({
+                          setWrapperDraft((prev: any) => ({
                             ...prev,
                             state: buildFeatureState(checked, featureStateMandatory(prev.state))
                           }))
@@ -142,7 +142,7 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                         title={ct('creator_label_mandatory')}
                         checked={featureStateMandatory(wrapperDraft().state)}
                         onChange={(checked) =>
-                          setWrapperDraft((prev) => ({
+                          setWrapperDraft((prev: any) => ({
                             ...prev,
                             state: buildFeatureState(featureStateEnabled(prev.state), checked)
                           }))
@@ -153,7 +153,7 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                       value={wrapperDraft().executable}
                       placeholder={ct('creator_executable_e_g_gamescope')}
                       onInput={(e) =>
-                        setWrapperDraft((prev) => ({
+                        setWrapperDraft((prev: any) => ({
                           ...prev,
                           executable: e.currentTarget.value
                         }))
@@ -163,7 +163,7 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                       value={wrapperDraft().args}
                       placeholder={ct('creator_args_e_g_w_1920_h_1080')}
                       onInput={(e) =>
-                        setWrapperDraft((prev) => ({
+                        setWrapperDraft((prev: any) => ({
                           ...prev,
                           args: e.currentTarget.value
                         }))

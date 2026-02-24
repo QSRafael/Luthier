@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/aler
 import { Button } from '../../../components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemMain, ItemTitle } from '../../../components/ui/item'
 import { Select } from '../../../components/ui/select'
 import { Spinner } from '../../../components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
@@ -42,7 +43,7 @@ export function RuntimeTabSection(props: CreatorPageSectionProps) {
     runtimePreferenceOptions,
     runtimeVersionFieldLabel,
     runtimeVersionFieldHelp,
-  } = props.view as any
+  } = props.view
 
   return (
           <section class="stack">

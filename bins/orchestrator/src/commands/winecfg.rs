@@ -5,7 +5,10 @@ use orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
     observability::LogLevel,
     prefix::{base_env_for_prefix, build_prefix_setup_plan},
-    process::{execute_external_command, execute_prefix_setup_plan, has_mandatory_failures, ExternalCommand},
+    process::{
+        execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
+        ExternalCommand,
+    },
 };
 
 use crate::{
@@ -110,9 +113,9 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
 
     println!(
         "{}",
-        serde_json::to_string_pretty(&output).context("failed to serialize winecfg command output")?
+        serde_json::to_string_pretty(&output)
+            .context("failed to serialize winecfg command output")?
     );
 
     Ok(())
 }
-

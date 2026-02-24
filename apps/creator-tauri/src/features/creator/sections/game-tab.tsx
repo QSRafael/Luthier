@@ -80,7 +80,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
     openMountSourceBrowser,
     mountSourceBrowserSegments,
     mountSourceBrowserCurrentRelative,
-  } = props.view as any
+  } = props.view
 
   return (
           <section class="stack">
@@ -418,7 +418,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                         value={mountDraft().source_relative_path}
                         placeholder={ct('creator_relative_source_e_g_save')}
                         onInput={(e) =>
-                          setMountDraft((prev) => ({
+                          setMountDraft((prev: any) => ({
                             ...prev,
                             source_relative_path: e.currentTarget.value
                           }))
@@ -438,7 +438,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                       value={mountDraft().target_windows_path}
                       placeholder={ct('creator_windows_target_c_users')}
                       onInput={(e) =>
-                        setMountDraft((prev) => ({
+                        setMountDraft((prev: any) => ({
                           ...prev,
                           target_windows_path: e.currentTarget.value
                         }))
@@ -450,7 +450,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                         type="checkbox"
                         checked={mountDraft().create_source_if_missing}
                         onInput={(e) =>
-                          setMountDraft((prev) => ({
+                          setMountDraft((prev: any) => ({
                             ...prev,
                             create_source_if_missing: e.currentTarget.checked
                           }))
@@ -585,7 +585,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                       <Button
                         type="button"
                         onClick={() => {
-                          setMountDraft((prev) => ({
+                          setMountDraft((prev: any) => ({
                             ...prev,
                             source_relative_path: mountSourceBrowserCurrentRelative() || './'
                           }))

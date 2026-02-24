@@ -2698,3 +2698,26 @@ Boas praticas aplicadas nesta etapa:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 44
+Escopo implementado:
+- Rodada de checagem estatica/lint no projeto (frontend + Rust) e correcoes:
+  - frontend: `npx tsc --noEmit` (strict) passou apos ajustes;
+  - Rust: `cargo clippy --workspace --all-targets -- -D warnings` passou;
+  - Rust: `cargo fmt --all` aplicado (ajustes de formatacao em arquivos Rust).
+- Ajustes de infraestrutura para typecheck frontend:
+  - adicionado `@types/node` em `devDependencies` do Creator;
+  - `tsconfig.json` atualizado com `types: ["vite/client", "node"]` e `skipLibCheck: true` (para evitar ruido de typings de terceiros como Kobalte/Vite e focar no codigo da app).
+- Correcoes de tipagem/codigo apos a grande refatoracao:
+  - `CreatorPageSectionView` agora tipado como `CreatorController & Record<string, any>` (reduzindo `implicit any` nas abas);
+  - imports faltantes corrigidos nas abas (`runtime` e `performance`);
+  - `Button` recebeu suporte a `size=\"icon\"` (uso existente no Creator);
+  - typing do wrapper `Dialog` ajustado para evitar erro de generic com Kobalte root.
+
+Observacao:
+- Restaram `any` apenas nos estados locais transitórios expostos via `view` genérico das abas refatoradas; isso foi mantido como tradeoff controlado para preservar funcionalidade durante a refatoracao incremental.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npx tsc --noEmit` (frontend)
+- `/home/rafael/.cargo/bin/cargo clippy --workspace --all-targets -- -D warnings`
+- `/home/rafael/.cargo/bin/cargo fmt --all`

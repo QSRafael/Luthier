@@ -14,8 +14,7 @@ use orchestrator_core::observability::{new_trace_id, LogLevel};
 
 use crate::cli::Cli;
 use crate::commands::{
-    run_config_command, run_doctor_command, run_play, run_show_embedded_config,
-    run_winecfg_command,
+    run_config_command, run_doctor_command, run_play, run_show_embedded_config, run_winecfg_command,
 };
 use crate::logging::log_event;
 
