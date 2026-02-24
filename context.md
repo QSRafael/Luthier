@@ -1934,3 +1934,23 @@ Observacao de arquitetura:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 34
+Escopo implementado:
+- Picker de `Executável principal` reforçado:
+  - filtro visual continua por extensões Windows launcher;
+  - validação adicional no retorno rejeita extensões fora de `.exe`, `.bat`, `.cmd`, `.com`.
+- `Pasta raiz do jogo` exibida como caminho relativo ao diretório do executável:
+  - mesma pasta do executável => `./`
+  - pasta ancestral escolhida manualmente => `../`, `../../`, `../../../`, etc.
+- Regra de negócio reforçada:
+  - ao escolher outra pasta raiz, a UI valida que o executável principal está dentro dessa pasta/subpastas;
+  - seleção inválida é rejeitada com mensagem de status.
+- Fallback web de `pickFolder` melhorado:
+  - não usa mais `webkitdirectory` (que parecia “upload de arquivos”);
+  - agora solicita apenas o caminho da pasta via prompt quando Tauri dialog não está disponível.
+- `pickFile` fallback web:
+  - passou a respeitar extensões dos filtros (`accept`) para reduzir seleção de tipos errados.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)

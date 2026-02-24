@@ -61,6 +61,8 @@ export default function CreatorPage() {
     setOutputPath,
     gameRoot,
     gameRootManualOverride,
+    gameRootRelativeDisplay,
+    exeInsideGameRoot,
     exePath,
     setExePath,
     registryImportPath,
@@ -234,16 +236,20 @@ export default function CreatorPage() {
                 'Defaults to the main executable folder, but can be changed if the .exe is in a subfolder.'
               )}
               hint={tx(
-                gameRootManualOverride()
-                  ? 'Pasta raiz alterada manualmente.'
-                  : 'Pasta raiz automática baseada no executável.',
-                gameRootManualOverride()
-                  ? 'Game root manually overridden.'
-                  : 'Automatic game root based on the executable.'
+                !exeInsideGameRoot()
+                  ? 'Invalido: o executável principal precisa estar dentro da pasta raiz.'
+                  : gameRootManualOverride()
+                    ? 'Pasta raiz alterada manualmente.'
+                    : 'Pasta raiz automática baseada no executável.',
+                !exeInsideGameRoot()
+                  ? 'Invalid: the main executable must be inside the game root.'
+                  : gameRootManualOverride()
+                    ? 'Game root manually overridden.'
+                    : 'Automatic game root based on the executable.'
               )}
             >
               <div class="picker-row">
-                <Input value={gameRoot()} placeholder="/home/user/Games/MyGame" readOnly class="readonly" />
+                <Input value={gameRootRelativeDisplay()} placeholder="./" readOnly class="readonly" />
                 <Button type="button" class="btn-secondary" onClick={pickGameRootOverride}>
                   {tx('Escolher outra', 'Choose another')}
                 </Button>

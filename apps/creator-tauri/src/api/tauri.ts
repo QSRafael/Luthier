@@ -14,7 +14,7 @@ export async function pickFile(options: OpenDialogOptions = {}): Promise<string 
     const selection = await dialog.open({ multiple: false, ...options })
     return typeof selection === 'string' ? selection : null
   } catch {
-    return browserPickFile(false)
+    return browserPickFile(options)
   }
 }
 
@@ -24,16 +24,24 @@ export async function pickFolder(options: OpenDialogOptions = {}): Promise<strin
     const selection = await dialog.open({ multiple: false, directory: true, ...options })
     return typeof selection === 'string' ? selection : null
   } catch {
-    return browserPickFile(true)
+    return browserPickFolder(options)
   }
 }
 
-function browserPickFile(directory: boolean): Promise<string | null> {
+function browserPickFile(options: OpenDialogOptions = {}): Promise<string | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
-    if (directory) {
-      input.setAttribute('webkitdirectory', '')
+
+    const accept = options.filters
+      ?.flatMap((filter) => filter.extensions ?? [])
+      .map((ext) => ext.trim())
+      .filter(Boolean)
+      .map((ext) => (ext.startsWith('.') ? ext : `.${ext}`))
+      .join(',')
+
+    if (accept) {
+      input.accept = accept
     }
 
     input.onchange = () => {
@@ -44,4 +52,11 @@ function browserPickFile(directory: boolean): Promise<string | null> {
     input.oncancel = () => resolve(null)
     input.click()
   })
+}
+
+function browserPickFolder(options: OpenDialogOptions = {}): Promise<string | null> {
+  const title = options.title ?? 'Informe o caminho da pasta'
+  const value = window.prompt(title, '')
+  const normalized = value?.trim()
+  return Promise.resolve(normalized ? normalized : null)
 }

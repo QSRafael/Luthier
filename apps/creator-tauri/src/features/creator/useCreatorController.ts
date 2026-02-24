@@ -86,6 +86,50 @@ function isFeatureEnabled(state: FeatureState): boolean {
   return state === 'MandatoryOn' || state === 'OptionalOn'
 }
 
+function splitPathSegments(raw: string): string[] {
+  return normalizePath(raw)
+    .split('/')
+    .filter(Boolean)
+}
+
+function pathPrefix(raw: string): string {
+  const normalized = normalizePath(raw)
+  if (normalized.startsWith('/')) return '/'
+  const driveMatch = normalized.match(/^[a-zA-Z]:/)
+  return driveMatch?.[0].toLowerCase() ?? ''
+}
+
+function relativePathBetween(fromPath: string, toPath: string): string | null {
+  const fromNormalized = normalizePath(fromPath)
+  const toNormalized = normalizePath(toPath)
+
+  if (!fromNormalized || !toNormalized) return null
+  if (pathPrefix(fromNormalized) !== pathPrefix(toNormalized)) return null
+
+  const fromParts = splitPathSegments(fromNormalized)
+  const toParts = splitPathSegments(toNormalized)
+
+  let shared = 0
+  while (shared < fromParts.length && shared < toParts.length && fromParts[shared] === toParts[shared]) {
+    shared += 1
+  }
+
+  const up = Array.from({ length: fromParts.length - shared }, () => '..')
+  const down = toParts.slice(shared)
+  const parts = [...up, ...down]
+  return parts.length ? parts.join('/') : '.'
+}
+
+function formatRelativeDirDisplay(relative: string | null): string {
+  if (!relative || relative === '.') return './'
+  return relative.endsWith('/') ? relative : `${relative}/`
+}
+
+function hasWindowsLauncherExtension(path: string): boolean {
+  const lower = basename(path).toLowerCase()
+  return ['.exe', '.bat', '.cmd', '.com'].some((ext) => lower.endsWith(ext))
+}
+
 export function useCreatorController() {
   const initialLocale = detectLocale()
   const [locale, setLocale] = createSignal<Locale>(initialLocale)
@@ -180,6 +224,29 @@ export function useCreatorController() {
   const prefixPathPreview = createMemo(() => {
     const hash = config().exe_hash.trim() || '<exe_hash>'
     return `~/.local/share/GameOrchestrator/prefixes/${hash}/`
+  })
+
+  const exeDirectory = createMemo(() => {
+    const current = exePath().trim()
+    if (!current) return ''
+    return dirname(current)
+  })
+
+  const exeInsideGameRoot = createMemo(() => {
+    const exe = exePath().trim()
+    const root = gameRoot().trim()
+    if (!exe || !root) return true
+    return relativeFromRoot(root, exe) !== null
+  })
+
+  const gameRootRelativeDisplay = createMemo(() => {
+    const exeDir = exeDirectory()
+    const root = gameRoot().trim()
+
+    if (!root) return './'
+    if (!exeDir) return './'
+
+    return formatRelativeDirDisplay(relativePathBetween(exeDir, root))
   })
 
   const runtimeFallbackOrder = createMemo(() => config().requirements.runtime.fallback_order)
@@ -392,6 +459,16 @@ export function useCreatorController() {
     })
     if (!selected) return
 
+    if (!hasWindowsLauncherExtension(selected)) {
+      setStatusMessage(
+        tx(
+          'Selecione um executável Windows válido (.exe, .bat, .cmd, .com).',
+          'Select a valid Windows launcher (.exe, .bat, .cmd, .com).'
+        )
+      )
+      return
+    }
+
     setExePath(selected)
     const detectedRoot = dirname(selected)
     setGameRootManualOverride(false)
@@ -419,6 +496,18 @@ export function useCreatorController() {
       title: tx('Selecionar pasta raiz do jogo', 'Select game root folder')
     })
     if (!selected) return
+
+    const currentExe = exePath().trim()
+    if (currentExe && relativeFromRoot(selected, currentExe) === null) {
+      setStatusMessage(
+        tx(
+          'A pasta raiz escolhida deve conter o executável principal.',
+          'The selected game root must contain the main executable.'
+        )
+      )
+      return
+    }
+
     setGameRoot(selected)
     setGameRootManualOverride(true)
   }
@@ -682,6 +771,8 @@ export function useCreatorController() {
     gameRoot,
     setGameRoot,
     gameRootManualOverride,
+    gameRootRelativeDisplay,
+    exeInsideGameRoot,
     exePath,
     setExePath,
     registryImportPath,
