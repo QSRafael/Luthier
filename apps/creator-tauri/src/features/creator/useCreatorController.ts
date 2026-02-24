@@ -169,7 +169,6 @@ export function useCreatorController() {
     'prefix',
     'winecfg',
     'wrappers',
-    'scripts',
     'review'
   ]
 

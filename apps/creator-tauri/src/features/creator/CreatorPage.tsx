@@ -10,7 +10,6 @@ import {
   SegmentedField,
   SelectField,
   StringListField,
-  TextAreaField,
   TextInputField,
   ToggleField,
   WinecfgFeatureStateField
@@ -34,6 +33,7 @@ import { Spinner } from '../../components/ui/spinner'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { Textarea } from '../../components/ui/textarea'
 import type { Theme } from '../../components/theme-provider'
 import { Locale } from '../../i18n'
 import { CreatorTab, FeatureState, RuntimePreference } from '../../models/config'
@@ -53,7 +53,7 @@ function tabLabel(tab: CreatorTab, controller: CreatorController) {
   if (tab === 'performance') return tx('Performance e Compatibilidade', 'Performance and Compatibility')
   if (tab === 'prefix') return tx('Prefixo e Dependências', 'Prefix and Dependencies')
   if (tab === 'winecfg') return 'Winecfg'
-  if (tab === 'wrappers') return tx('Wrappers e Ambiente', 'Wrappers and Environment')
+  if (tab === 'wrappers') return tx('Execução e Ambiente', 'Launch and Environment')
   if (tab === 'scripts') return tx('Scripts', 'Scripts')
   return tx('Revisão e Gerar', 'Review and Generate')
 }
@@ -207,6 +207,15 @@ function featureStateEnabled(value: FeatureState): boolean {
   return value === 'MandatoryOn' || value === 'OptionalOn'
 }
 
+function featureStateMandatory(value: FeatureState): boolean {
+  return value === 'MandatoryOn' || value === 'MandatoryOff'
+}
+
+function buildFeatureState(enabled: boolean, mandatory: boolean): FeatureState {
+  if (enabled) return mandatory ? 'MandatoryOn' : 'OptionalOn'
+  return mandatory ? 'MandatoryOff' : 'OptionalOff'
+}
+
 export default function CreatorPage() {
   const controller = useCreatorController()
   const { theme, setTheme } = useTheme()
@@ -244,7 +253,6 @@ export default function CreatorPage() {
     configPreview,
     t,
     tx,
-    featureStateOptions,
     runtimePreferenceOptions,
     audioDriverOptions,
     dllModeOptions,
@@ -3210,7 +3218,7 @@ export default function CreatorPage() {
           </section>
         </Show>
 
-        <Show when={activeTab() === 'wrappers'}>
+        <Show when={activeTab() === 'wrappers' || activeTab() === 'scripts'}>
           <section class="stack">
             <FieldShell
               label={tx('Wrapper commands', 'Wrapper commands')}
@@ -3226,32 +3234,50 @@ export default function CreatorPage() {
                       </div>
                     }
                   >
-                    <For each={config().compatibility.wrapper_commands}>
-                      {(item, index) => (
-                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)_auto]">
-                          <span class="truncate text-xs text-muted-foreground">{item.state}</span>
-                          <span class="truncate text-sm font-medium">{item.executable}</span>
-                          <span class="truncate text-sm text-muted-foreground">{item.args}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              patchConfig((prev) => ({
-                                ...prev,
-                                compatibility: {
-                                  ...prev.compatibility,
-                                  wrapper_commands: removeAt(prev.compatibility.wrapper_commands, index())
-                                }
-                              }))
-                            }
-                            title={tx('Remover wrapper', 'Remove wrapper')}
-                          >
-                            <IconTrash class="size-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </For>
+                    <div class="rounded-md border border-border/60 bg-background/40">
+                      <Table>
+                        <TableHeader>
+                          <TableRow class="hover:bg-transparent">
+                            <TableHead>{tx('Ativado', 'Enabled')}</TableHead>
+                            <TableHead>{tx('Obrigatório', 'Mandatory')}</TableHead>
+                            <TableHead>{tx('Executável', 'Executable')}</TableHead>
+                            <TableHead>{tx('Argumentos', 'Arguments')}</TableHead>
+                            <TableHead class="w-14 text-right">{tx('Ação', 'Action')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <For each={config().compatibility.wrapper_commands}>
+                            {(item, index) => (
+                              <TableRow>
+                                <TableCell>{featureStateEnabled(item.state) ? tx('Sim', 'Yes') : tx('Não', 'No')}</TableCell>
+                                <TableCell>{featureStateMandatory(item.state) ? tx('Sim', 'Yes') : tx('Não', 'No')}</TableCell>
+                                <TableCell class="font-medium">{item.executable}</TableCell>
+                                <TableCell class="text-muted-foreground">{item.args || '—'}</TableCell>
+                                <TableCell class="text-right">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={() =>
+                                      patchConfig((prev) => ({
+                                        ...prev,
+                                        compatibility: {
+                                          ...prev.compatibility,
+                                          wrapper_commands: removeAt(prev.compatibility.wrapper_commands, index())
+                                        }
+                                      }))
+                                    }
+                                    title={tx('Remover wrapper', 'Remove wrapper')}
+                                  >
+                                    <IconTrash class="size-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </For>
+                        </TableBody>
+                      </Table>
+                    </div>
                   </Show>
                 </div>
               }
@@ -3270,18 +3296,29 @@ export default function CreatorPage() {
                     </DialogDescription>
                   </DialogHeader>
 
-                  <div class="grid gap-2">
-                    <Select
-                      value={wrapperDraft().state}
-                      onInput={(e) =>
-                        setWrapperDraft((prev) => ({
-                          ...prev,
-                          state: e.currentTarget.value as FeatureState
-                        }))
-                      }
-                    >
-                      <For each={featureStateOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
-                    </Select>
+                  <div class="grid gap-3">
+                    <div class="grid gap-2 md:grid-cols-2">
+                      <SwitchChoiceCard
+                        title={tx('Ativado', 'Enabled')}
+                        checked={featureStateEnabled(wrapperDraft().state)}
+                        onChange={(checked) =>
+                          setWrapperDraft((prev) => ({
+                            ...prev,
+                            state: buildFeatureState(checked, featureStateMandatory(prev.state))
+                          }))
+                        }
+                      />
+                      <SwitchChoiceCard
+                        title={tx('Obrigatório', 'Mandatory')}
+                        checked={featureStateMandatory(wrapperDraft().state)}
+                        onChange={(checked) =>
+                          setWrapperDraft((prev) => ({
+                            ...prev,
+                            state: buildFeatureState(featureStateEnabled(prev.state), checked)
+                          }))
+                        }
+                      />
+                    </div>
                     <Input
                       value={wrapperDraft().executable}
                       placeholder={tx('Executável (ex.: gamescope)', 'Executable (e.g. gamescope)')}
@@ -3345,48 +3382,104 @@ export default function CreatorPage() {
               valuePlaceholder="1"
               addLabel={tx('Adicionar variável', 'Add variable')}
               removeLabel={tx('Remover', 'Remove')}
+              emptyMessage={tx('Nenhuma variável de ambiente adicionada.', 'No environment variable added.')}
+              tableHeaders={{
+                key: tx('Variável', 'Variable'),
+                value: tx('Valor', 'Value')
+              }}
             />
 
             <FieldShell
               label={tx('Chaves protegidas', 'Protected keys')}
               help={tx('Não podem ser sobrescritas por custom_vars: WINEPREFIX, PROTON_VERB.', 'Cannot be overwritten by custom_vars: WINEPREFIX, PROTON_VERB.')}
+              controlClass="hidden"
+              footer={
+                <Alert variant="warning">
+                  <IconAlertCircle />
+                  <AlertTitle>{tx('Chaves protegidas pelo runtime', 'Runtime-protected keys')}</AlertTitle>
+                  <AlertDescription>
+                    <span class="block">
+                      {tx(
+                        'As chaves abaixo são reservadas e qualquer override em custom_vars será ignorado.',
+                        'The keys below are reserved and any custom_vars override will be ignored.'
+                      )}
+                    </span>
+                    <span class="mt-1 block font-mono text-[11px]">WINEPREFIX · PROTON_VERB</span>
+                  </AlertDescription>
+                </Alert>
+              }
             >
-              <div class="info-card">
-                <code>WINEPREFIX</code>
-                <code>PROTON_VERB</code>
-              </div>
+              <span />
             </FieldShell>
-          </section>
-        </Show>
 
-        <Show when={activeTab() === 'scripts'}>
-          <section class="stack">
-            <TextAreaField
+            <FieldShell
               label={tx('Script pre-launch (bash)', 'Pre-launch script (bash)')}
               help={tx('Executado antes do comando principal do jogo.', 'Executed before main game command.')}
-              value={config().scripts.pre_launch}
-              rows={8}
-              onInput={(value) => patchConfig((prev) => ({ ...prev, scripts: { ...prev.scripts, pre_launch: value } }))}
-              placeholder="#!/usr/bin/env bash\necho preparing..."
-            />
+              controlClass="hidden"
+              footer={
+                <Textarea
+                  rows={8}
+                  value={config().scripts.pre_launch}
+                  placeholder="#!/usr/bin/env bash\necho preparing..."
+                  onInput={(e) =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      scripts: { ...prev.scripts, pre_launch: e.currentTarget.value }
+                    }))
+                  }
+                />
+              }
+            >
+              <span />
+            </FieldShell>
 
-            <TextAreaField
+            <FieldShell
               label={tx('Script post-launch (bash)', 'Post-launch script (bash)')}
               help={tx('Executado após o encerramento do processo do jogo.', 'Executed after game process exits.')}
-              value={config().scripts.post_launch}
-              rows={8}
-              onInput={(value) => patchConfig((prev) => ({ ...prev, scripts: { ...prev.scripts, post_launch: value } }))}
-              placeholder="#!/usr/bin/env bash\necho finished..."
-            />
+              controlClass="hidden"
+              footer={
+                <Textarea
+                  rows={8}
+                  value={config().scripts.post_launch}
+                  placeholder="#!/usr/bin/env bash\necho finished..."
+                  onInput={(e) =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      scripts: { ...prev.scripts, post_launch: e.currentTarget.value }
+                    }))
+                  }
+                />
+              }
+            >
+              <span />
+            </FieldShell>
 
             <FieldShell
               label={tx('Validação básica', 'Basic validation')}
               help={tx('No MVP, os scripts aceitam apenas bash e execução local.', 'In MVP, scripts accept bash only and local execution.')}
+              controlClass="hidden"
+              footer={
+                <Alert variant="warning">
+                  <IconAlertCircle />
+                  <AlertTitle>{tx('Scripts locais (MVP)', 'Local scripts (MVP)')}</AlertTitle>
+                  <AlertDescription>
+                    <span class="block">
+                      {tx(
+                        'Scripts aceitam apenas bash e execução local no MVP.',
+                        'Scripts accept bash only and local execution in the MVP.'
+                      )}
+                    </span>
+                    <span class="mt-1 block">
+                      {tx(
+                        'Scripts não são enviados para a API comunitária. Use apenas comandos confiáveis.',
+                        'Scripts are not sent to the community API. Use trusted commands only.'
+                      )}
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              }
             >
-              <div class="info-card">
-                <span>{tx('Scripts não são enviados para API comunitária.', 'Scripts are not sent to community API.')}</span>
-                <span>{tx('Use apenas comandos confiáveis.', 'Use trusted commands only.')}</span>
-              </div>
+              <span />
             </FieldShell>
           </section>
         </Show>

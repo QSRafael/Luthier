@@ -527,6 +527,11 @@ type KeyValueListFieldProps = {
   valuePlaceholder?: string
   addLabel?: string
   removeLabel?: string
+  emptyMessage?: string
+  tableHeaders?: {
+    key: string
+    value: string
+  }
 }
 
 export function KeyValueListField(props: KeyValueListFieldProps) {
@@ -556,27 +561,72 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
       help={props.help}
       controlClass="flex justify-end"
       footer={
-        props.items.length > 0 ? (
-          <div class="grid gap-2">
-            <For each={props.items}>
-              {(item, index) => (
-                <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                  <span class="truncate text-sm font-medium">{item.key}</span>
-                  <span class="truncate text-sm text-muted-foreground">{item.value}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeItem(index())}
-                    title={props.removeLabel ?? 'Remover'}
-                  >
-                    <IconTrash class="size-4" />
-                  </Button>
-                </div>
-              )}
-            </For>
-          </div>
-        ) : undefined
+        <Show
+          when={props.items.length > 0}
+          fallback={
+            <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+              {props.emptyMessage ?? 'Nenhum item adicionado.'}
+            </div>
+          }
+        >
+          <Show
+            when={props.tableHeaders}
+            fallback={
+              <div class="grid gap-2">
+                <For each={props.items}>
+                  {(item, index) => (
+                    <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                      <span class="truncate text-sm font-medium">{item.key}</span>
+                      <span class="truncate text-sm text-muted-foreground">{item.value}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeItem(index())}
+                        title={props.removeLabel ?? 'Remover'}
+                      >
+                        <IconTrash class="size-4" />
+                      </Button>
+                    </div>
+                  )}
+                </For>
+              </div>
+            }
+          >
+            <div class="rounded-md border border-border/60 bg-background/40">
+              <Table>
+                <TableHeader>
+                  <TableRow class="hover:bg-transparent">
+                    <TableHead>{props.tableHeaders?.key}</TableHead>
+                    <TableHead>{props.tableHeaders?.value}</TableHead>
+                    <TableHead class="w-14 text-right">{props.removeLabel ?? 'Ação'}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <For each={props.items}>
+                    {(item, index) => (
+                      <TableRow>
+                        <TableCell class="font-medium">{item.key}</TableCell>
+                        <TableCell class="text-muted-foreground">{item.value || '—'}</TableCell>
+                        <TableCell class="text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeItem(index())}
+                            title={props.removeLabel ?? 'Remover'}
+                          >
+                            <IconTrash class="size-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </For>
+                </TableBody>
+              </Table>
+            </div>
+          </Show>
+        </Show>
       }
     >
       <Dialog open={open()} onOpenChange={setOpen}>

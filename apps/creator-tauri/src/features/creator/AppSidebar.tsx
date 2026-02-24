@@ -5,7 +5,6 @@ import {
   IconDeviceGamepad2,
   IconFlask,
   IconInnerShadowTop,
-  IconScript,
   IconSettings,
   IconTool,
   IconGauge
@@ -41,7 +40,6 @@ const navMain: NavEntry[] = [
   { tab: 'prefix', icon: IconTool },
   { tab: 'winecfg', icon: IconSettings },
   { tab: 'wrappers', icon: IconFlask },
-  { tab: 'scripts', icon: IconScript },
   { tab: 'review', icon: IconChecklist }
 ]
 

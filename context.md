@@ -1822,6 +1822,29 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 56
+Escopo implementado:
+- Aba `Wrappers e Ambiente` renomeada para `Execução e Ambiente` e consolidada:
+  - conteudo de `Scripts` foi movido para a mesma aba;
+  - aba `Scripts` removida da navegacao lateral e da ordem de tabs do Creator (compatibilidade visual mantida).
+- `Wrapper commands`:
+  - lista substituida por tabela com cabecalho (`Ativado`, `Obrigatório`, `Executável`, `Argumentos`);
+  - dialog de adicao agora usa cards clicaveis para politica (`Ativado` / `Obrigatório`) em duas colunas;
+  - `FeatureState` continua sendo persistido no backend via composicao dos dois cards.
+- `Variáveis de ambiente`:
+  - `KeyValueListField` expandido para suportar tabela com cabecalho;
+  - estado vazio agora mostra divisor + mensagem (`Nenhuma variável de ambiente adicionada.`).
+- `Chaves protegidas`:
+  - item informativo convertido para `Alert` (warning), explicando keys reservadas pelo runtime.
+- `Scripts` (`pre-launch` e `post-launch`):
+  - campos agora aparecem como `FieldShell` com `Textarea` no rodape (largura total);
+  - melhor aderencia ao padrao visual dos demais itens da UI.
+- `Validação básica`:
+  - item convertido para `Alert` (warning) com regras do MVP (bash local, sem envio para API comunitaria).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 35
 Escopo implementado:
 - Aba `Runtime` reestruturada para um fluxo mais simples:
