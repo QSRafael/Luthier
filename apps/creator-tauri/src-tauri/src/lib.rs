@@ -1,4 +1,6 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
 use orchestrator_core::{doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig};
@@ -42,6 +44,12 @@ pub struct TestConfigurationOutput {
     pub missing_files: Vec<String>,
     pub doctor: serde_json::Value,
     pub prefix_setup_plan: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WinetricksAvailableOutput {
+    pub source: String,
+    pub components: Vec<String>,
 }
 
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
@@ -103,6 +111,46 @@ pub fn test_configuration(
     })
 }
 
+pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
+    let fallback = fallback_winetricks_components();
+    let Some(binary) = find_executable_in_path("winetricks") else {
+        return Ok(WinetricksAvailableOutput {
+            source: "fallback".to_string(),
+            components: fallback,
+        });
+    };
+
+    let mut components = BTreeSet::new();
+    for args in &[["dlls", "list"], ["fonts", "list"]] {
+        let output = Command::new(&binary)
+            .args(args)
+            .output()
+            .map_err(|err| format!("failed to execute winetricks: {err}"))?;
+
+        if !output.status.success() {
+            continue;
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for component in parse_winetricks_components(&stdout) {
+            components.insert(component);
+        }
+    }
+
+    let parsed = components.into_iter().collect::<Vec<String>>();
+    if parsed.is_empty() {
+        return Ok(WinetricksAvailableOutput {
+            source: "fallback".to_string(),
+            components: fallback,
+        });
+    }
+
+    Ok(WinetricksAvailableOutput {
+        source: "winetricks".to_string(),
+        components: parsed,
+    })
+}
+
 #[cfg_attr(feature = "tauri-commands", tauri::command)]
 pub fn cmd_create_executable(
     input: CreateExecutableInput,
@@ -120,6 +168,11 @@ pub fn cmd_test_configuration(
     input: TestConfigurationInput,
 ) -> Result<TestConfigurationOutput, String> {
     test_configuration(input)
+}
+
+#[cfg_attr(feature = "tauri-commands", tauri::command)]
+pub fn cmd_winetricks_available() -> Result<WinetricksAvailableOutput, String> {
+    winetricks_available()
 }
 
 fn collect_missing_files(config: &GameConfig, game_root: &Path) -> Result<Vec<String>, String> {
@@ -181,6 +234,62 @@ fn has_windows_drive_prefix(path: &str) -> bool {
     bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic()
 }
 
+fn parse_winetricks_components(raw: &str) -> Vec<String> {
+    raw.lines()
+        .filter_map(|line| {
+            let entry = line.split_whitespace().next()?;
+            if entry.starts_with('#') || entry.contains(':') {
+                return None;
+            }
+
+            if entry
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
+            {
+                Some(entry.to_string())
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn find_executable_in_path(name: &str) -> Option<PathBuf> {
+    let path_var = std::env::var_os("PATH")?;
+    for directory in std::env::split_paths(&path_var) {
+        let candidate = directory.join(name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn fallback_winetricks_components() -> Vec<String> {
+    [
+        "corefonts",
+        "d3dx9",
+        "d3dcompiler_47",
+        "dotnet48",
+        "dxvk",
+        "faudio",
+        "galliumnine",
+        "mf",
+        "msxml3",
+        "physx",
+        "vcrun2005",
+        "vcrun2008",
+        "vcrun2010",
+        "vcrun2013",
+        "vcrun2019",
+        "xact",
+        "xinput",
+    ]
+    .iter()
+    .map(|item| item.to_string())
+    .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,5 +326,18 @@ mod tests {
 
         let err = test_configuration(input).expect_err("invalid json must fail");
         assert!(err.contains("invalid config JSON"));
+    }
+
+    #[test]
+    fn parses_winetricks_output_lines() {
+        let parsed = parse_winetricks_components(
+            r#"
+            d3dx9                Direct3D 9
+            corefonts            Core fonts
+            # comment
+            "#,
+        );
+
+        assert_eq!(parsed, vec!["d3dx9".to_string(), "corefonts".to_string()]);
     }
 }

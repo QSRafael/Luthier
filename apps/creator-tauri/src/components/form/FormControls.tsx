@@ -99,19 +99,29 @@ type ToggleFieldProps = {
   help: string
   checked: boolean
   onChange: (checked: boolean) => void
+  yesLabel?: string
+  noLabel?: string
 }
 
 export function ToggleField(props: ToggleFieldProps) {
   return (
     <FieldShell label={props.label} help={props.help}>
-      <label class="toggle-row">
-        <input
-          type="checkbox"
-          checked={props.checked}
-          onInput={(e) => props.onChange(e.currentTarget.checked)}
-        />
-        <span>{props.checked ? 'On' : 'Off'}</span>
-      </label>
+      <div class="toggle-buttons">
+        <button
+          type="button"
+          classList={{ active: !props.checked }}
+          onClick={() => props.onChange(false)}
+        >
+          {props.noLabel ?? 'Não'}
+        </button>
+        <button
+          type="button"
+          classList={{ active: props.checked }}
+          onClick={() => props.onChange(true)}
+        >
+          {props.yesLabel ?? 'Sim'}
+        </button>
+      </div>
     </FieldShell>
   )
 }
@@ -188,9 +198,14 @@ type KeyValueListFieldProps = {
   onChange: (items: KeyValueItem[]) => void
   keyPlaceholder?: string
   valuePlaceholder?: string
+  addLabel?: string
+  removeLabel?: string
 }
 
 export function KeyValueListField(props: KeyValueListFieldProps) {
+  const [draftKey, setDraftKey] = createSignal('')
+  const [draftValue, setDraftValue] = createSignal('')
+
   const updateItem = (index: number, patch: Partial<KeyValueItem>) => {
     props.onChange(
       props.items.map((item, current) =>
@@ -209,7 +224,12 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
   }
 
   const addItem = () => {
-    props.onChange([...props.items, { key: '', value: '' }])
+    const key = draftKey().trim()
+    if (!key) return
+
+    props.onChange([...props.items, { key, value: draftValue() }])
+    setDraftKey('')
+    setDraftValue('')
   }
 
   return (
@@ -229,15 +249,25 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
                 onInput={(e) => updateItem(index(), { value: e.currentTarget.value })}
               />
               <button type="button" class="btn-danger" onClick={() => removeItem(index())}>
-                Remover
+                {props.removeLabel ?? 'Remover'}
               </button>
             </div>
           )}
         </For>
 
-        <div class="row-actions">
+        <div class="table-row table-row-two">
+          <input
+            value={draftKey()}
+            placeholder={props.keyPlaceholder ?? 'KEY'}
+            onInput={(e) => setDraftKey(e.currentTarget.value)}
+          />
+          <input
+            value={draftValue()}
+            placeholder={props.valuePlaceholder ?? 'VALUE'}
+            onInput={(e) => setDraftValue(e.currentTarget.value)}
+          />
           <button type="button" class="btn-secondary" onClick={addItem}>
-            Adicionar
+            {props.addLabel ?? 'Adicionar'}
           </button>
         </div>
       </div>

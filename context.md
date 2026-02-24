@@ -1678,3 +1678,35 @@ Observacoes desta etapa:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
 - `cargo build --workspace`
+
+### 2026-02-24 - Checkpoint 21
+Escopo implementado:
+- Correcoes de UX no App Criador (frontend):
+  - campo de executavel com `file picker` real;
+  - `Import .reg` com `file picker`;
+  - `folder_mounts.source_relative_path` com `folder picker` (com validacao para pasta dentro de `game_root`);
+  - `Orchestrator base` tornou-se fixo/read-only (nao editavel pela UI).
+- Runtime/fallback:
+  - fallback reorganizado para fluxo de adicionar/remover e mover ordem (`Subir`/`Descer`).
+- Toggles:
+  - checkboxes substituidos por botoes `Sim`/`Nao` com feedback visual de cor.
+- Gamescope (inspirado em Heroic):
+  - opcoes avancadas visiveis apenas quando gamescope esta ativo;
+  - campos adicionados: resolucao de jogo (w/h), resolucao de saida (w/h), metodo de upscale, tipo de janela, limitador de FPS (foco/sem foco), force grab cursor e opcoes adicionais.
+- Winetricks:
+  - politica manual removida da UI; ativacao agora e automatica quando houver verbos;
+  - lista de verbos via catalogo (modelo Heroic), sem entrada livre como fluxo principal.
+- Backend local App Criador:
+  - novo comando `cmd_winetricks_available`;
+  - tenta ler verbos via `winetricks dlls list` + `fonts list`;
+  - fallback para lista curada quando `winetricks` nao estiver disponivel.
+- Correcao de edicao:
+  - tabela de dependencias extras corrigida (nao perde input por caractere);
+  - adicionador de variaveis de ambiente corrigido (fluxo por linha de rascunho).
+- Winecfg:
+  - exibicao de defaults de drives (`C:` interno fixo + `Z:` padrao compatibilidade) com botao para restaurar padrao.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
+- `cargo test -p creator-tauri-backend -- --nocapture`
+- `cargo build --workspace`

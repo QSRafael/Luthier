@@ -208,10 +208,44 @@ button {
   background: color-mix(in oklab, var(--danger) 20%, var(--bg-soft) 80%);
 }
 
-.toggle-row {
-  display: flex;
-  align-items: center;
+.toggle-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.toggle-buttons button {
+  border-color: var(--line);
+  background: #141d24;
+}
+
+.toggle-buttons button.active {
+  border-color: color-mix(in oklab, var(--primary) 70%, black 30%);
+  background: color-mix(in oklab, var(--primary) 24%, #141d24 76%);
+  color: var(--text);
+}
+
+.picker-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 0.55rem;
+  align-items: center;
+}
+
+.winetricks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.4rem;
+}
+
+.winetricks-item {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: #141d24;
+}
+
+.winetricks-item:hover {
+  border-color: var(--primary);
 }
 
 .table-list {
@@ -386,6 +420,10 @@ button {
   }
 
   .table-row-single {
+    grid-template-columns: 1fr;
+  }
+
+  .picker-row {
     grid-template-columns: 1fr;
   }
 

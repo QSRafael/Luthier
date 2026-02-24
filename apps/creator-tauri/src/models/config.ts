@@ -34,6 +34,17 @@ export type GameConfig = {
       state: FeatureState
       resolution: string | null
       fsr: boolean
+      game_width: string
+      game_height: string
+      output_width: string
+      output_height: string
+      upscale_method: 'fsr' | 'nis' | 'integer' | 'stretch'
+      window_type: 'fullscreen' | 'borderless' | 'windowed'
+      enable_limiter: boolean
+      fps_limiter: string
+      fps_limiter_no_focus: string
+      force_grab_cursor: boolean
+      additional_options: string
     }
     mangohud: FeatureState
     prime_offload: boolean
@@ -109,7 +120,22 @@ export function defaultGameConfig(): GameConfig {
     },
     environment: {
       gamemode: 'OptionalOn',
-      gamescope: { state: 'OptionalOff', resolution: null, fsr: false },
+      gamescope: {
+        state: 'OptionalOff',
+        resolution: null,
+        fsr: false,
+        game_width: '',
+        game_height: '',
+        output_width: '',
+        output_height: '',
+        upscale_method: 'fsr',
+        window_type: 'fullscreen',
+        enable_limiter: false,
+        fps_limiter: '',
+        fps_limiter_no_focus: '',
+        force_grab_cursor: false,
+        additional_options: ''
+      },
       mangohud: 'OptionalOff',
       prime_offload: false,
       custom_vars: {}
@@ -130,7 +156,7 @@ export function defaultGameConfig(): GameConfig {
       window_manager_control: 'OptionalOn',
       virtual_desktop: { state: 'OptionalOff', resolution: null },
       desktop_integration: 'OptionalOn',
-      drives: [],
+      drives: [{ letter: 'Z', source_relative_path: '.', state: 'OptionalOn' }],
       audio_driver: null
     },
     dependencies: [],

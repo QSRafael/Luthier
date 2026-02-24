@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
 
-import { invokeCommand } from './api/tauri'
+import { invokeCommand, pickFile, pickFolder } from './api/tauri'
 import {
   FieldShell,
   KeyValueItem,
@@ -22,13 +22,23 @@ import {
   RuntimePrimary
 } from './models/config'
 
-const FEATURE_STATES: FeatureState[] = ['MandatoryOn', 'MandatoryOff', 'OptionalOn', 'OptionalOff']
+const ORCHESTRATOR_BASE_PATH = './target/debug/orchestrator'
+
 const RUNTIME_CANDIDATES: RuntimePrimary[] = ['ProtonUmu', 'ProtonNative', 'Wine']
 const RUNTIME_PREFERENCES: RuntimePreference[] = ['Auto', 'Proton', 'Wine']
 const DLL_MODES = ['builtin', 'native', 'builtin,native', 'native,builtin', 'disabled'] as const
 const AUDIO_DRIVERS = ['__none__', 'pipewire', 'pulseaudio', 'alsa'] as const
+const UPSCALE_METHODS = ['fsr', 'nis', 'integer', 'stretch'] as const
+const WINDOW_TYPES = ['fullscreen', 'borderless', 'windowed'] as const
 
 type AudioDriverOption = (typeof AUDIO_DRIVERS)[number]
+type UpscaleMethod = (typeof UPSCALE_METHODS)[number]
+type GamescopeWindowType = (typeof WINDOW_TYPES)[number]
+
+type WinetricksAvailableOutput = {
+  source: string
+  components: string[]
+}
 
 function replaceAt<T>(items: T[], index: number, next: T): T[] {
   return items.map((item, current) => (current === index ? next : item))
@@ -49,12 +59,46 @@ function joinCommaList(items: string[]): string {
   return items.join(', ')
 }
 
+function normalizePath(raw: string): string {
+  return raw.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/\/$/, '')
+}
+
+function dirname(raw: string): string {
+  const normalized = normalizePath(raw)
+  const index = normalized.lastIndexOf('/')
+  if (index <= 0) return normalized
+  return normalized.slice(0, index)
+}
+
+function basename(raw: string): string {
+  const normalized = normalizePath(raw)
+  const index = normalized.lastIndexOf('/')
+  if (index < 0) return normalized
+  return normalized.slice(index + 1)
+}
+
+function relativeFromRoot(root: string, path: string): string | null {
+  const normalizedRoot = normalizePath(root)
+  const normalizedPath = normalizePath(path)
+
+  if (!normalizedRoot || !normalizedPath) return null
+  if (normalizedPath === normalizedRoot) return '.'
+  if (normalizedPath.startsWith(`${normalizedRoot}/`)) {
+    return normalizedPath.slice(normalizedRoot.length + 1)
+  }
+
+  return null
+}
+
+function isFeatureEnabled(state: FeatureState): boolean {
+  return state === 'MandatoryOn' || state === 'OptionalOn'
+}
+
 export default function App() {
   const initialLocale = detectLocale()
   const [locale, setLocale] = createSignal<Locale>(initialLocale)
   const [activeTab, setActiveTab] = createSignal<CreatorTab>('game')
 
-  const [baseBinaryPath, setBaseBinaryPath] = createSignal('./target/debug/orchestrator')
   const [outputPath, setOutputPath] = createSignal('./tmp/game-orchestrator')
   const [gameRoot, setGameRoot] = createSignal('./tmp')
   const [exePath, setExePath] = createSignal('')
@@ -62,6 +106,12 @@ export default function App() {
   const [iconPreviewPath, setIconPreviewPath] = createSignal('')
   const [statusMessage, setStatusMessage] = createSignal(translate(initialLocale, 'statusReady'))
   const [resultJson, setResultJson] = createSignal('')
+
+  const [winetricksAvailable, setWinetricksAvailable] = createSignal<string[]>([])
+  const [winetricksLoading, setWinetricksLoading] = createSignal(false)
+  const [winetricksSource, setWinetricksSource] = createSignal('fallback')
+  const [winetricksSearch, setWinetricksSearch] = createSignal('')
+  const [winetricksLoaded, setWinetricksLoaded] = createSignal(false)
 
   const [config, setConfig] = createSignal<GameConfig>(defaultGameConfig())
 
@@ -115,10 +165,7 @@ export default function App() {
   ])
 
   const runtimePrimaryOptions = createMemo<SelectOption<RuntimePrimary>[]>(() =>
-    RUNTIME_CANDIDATES.map((value) => ({
-      value,
-      label: value
-    }))
+    RUNTIME_CANDIDATES.map((value) => ({ value, label: value }))
   )
 
   const runtimePreferenceOptions = createMemo<SelectOption<RuntimePreference>[]>(() =>
@@ -130,23 +177,27 @@ export default function App() {
       value: '__none__',
       label: tx('Padrão do runtime', 'Runtime default')
     },
-    {
-      value: 'pipewire',
-      label: 'pipewire'
-    },
-    {
-      value: 'pulseaudio',
-      label: 'pulseaudio'
-    },
-    {
-      value: 'alsa',
-      label: 'alsa'
-    }
+    { value: 'pipewire', label: 'pipewire' },
+    { value: 'pulseaudio', label: 'pulseaudio' },
+    { value: 'alsa', label: 'alsa' }
   ])
 
   const dllModeOptions = createMemo<SelectOption<(typeof DLL_MODES)[number]>[]>(() =>
     DLL_MODES.map((mode) => ({ value: mode, label: mode }))
   )
+
+  const upscaleMethodOptions = createMemo<SelectOption<UpscaleMethod>[]>(() => [
+    { value: 'fsr', label: 'AMD FSR' },
+    { value: 'nis', label: 'NVIDIA NIS' },
+    { value: 'integer', label: tx('Escala Inteira', 'Integer Scaling') },
+    { value: 'stretch', label: tx('Esticar imagem', 'Stretch image') }
+  ])
+
+  const windowTypeOptions = createMemo<SelectOption<GamescopeWindowType>[]>(() => [
+    { value: 'fullscreen', label: tx('Tela cheia', 'Fullscreen') },
+    { value: 'borderless', label: tx('Sem borda', 'Borderless') },
+    { value: 'windowed', label: tx('Janela', 'Windowed') }
+  ])
 
   const prefixPathPreview = createMemo(() => {
     const hash = config().exe_hash.trim() || '<exe_hash>'
@@ -165,8 +216,43 @@ export default function App() {
     return '__none__'
   })
 
+  const gamescopeEnabled = createMemo(() => isFeatureEnabled(config().environment.gamescope.state))
+
+  const availableFallbackCandidates = createMemo(() =>
+    RUNTIME_CANDIDATES.filter((candidate) => candidate !== config().requirements.runtime.primary)
+  )
+
+  const winetricksCandidates = createMemo(() => {
+    const search = winetricksSearch().trim().toLowerCase()
+    return winetricksAvailable()
+      .filter((verb) => !config().dependencies.includes(verb))
+      .filter((verb) => (!search ? true : verb.toLowerCase().includes(search)))
+      .slice(0, 120)
+  })
+
   createEffect(() => {
     localStorage.setItem('creator.locale', locale())
+  })
+
+  createEffect(() => {
+    const hasVerbs = config().dependencies.length > 0
+    const expected: FeatureState = hasVerbs ? 'OptionalOn' : 'OptionalOff'
+
+    if (config().requirements.winetricks !== expected) {
+      patchConfig((prev) => ({
+        ...prev,
+        requirements: {
+          ...prev.requirements,
+          winetricks: expected
+        }
+      }))
+    }
+  })
+
+  createEffect(() => {
+    if (activeTab() === 'prefix' && !winetricksLoaded()) {
+      void loadWinetricksCatalog()
+    }
   })
 
   const runHash = async () => {
@@ -200,7 +286,7 @@ export default function App() {
     try {
       setStatusMessage(t('msgCreateStart'))
       const result = await invokeCommand<unknown>('cmd_create_executable', {
-        base_binary_path: baseBinaryPath(),
+        base_binary_path: ORCHESTRATOR_BASE_PATH,
         output_path: outputPath(),
         config_json: configPreview(),
         backup_existing: true,
@@ -213,11 +299,104 @@ export default function App() {
     }
   }
 
+  const loadWinetricksCatalog = async () => {
+    try {
+      setWinetricksLoading(true)
+      const result = await invokeCommand<WinetricksAvailableOutput>('cmd_winetricks_available')
+      setWinetricksAvailable(result.components)
+      setWinetricksSource(result.source)
+      setWinetricksLoaded(true)
+      setStatusMessage(
+        tx(
+          `Catálogo Winetricks carregado (${result.components.length} itens).`,
+          `Winetricks catalog loaded (${result.components.length} items).`
+        )
+      )
+    } catch (error) {
+      setWinetricksAvailable([])
+      setWinetricksSource('fallback')
+      setWinetricksLoaded(true)
+      setStatusMessage(
+        tx(
+          `Falha ao carregar catálogo Winetricks: ${String(error)}`,
+          `Failed to load Winetricks catalog: ${String(error)}`
+        )
+      )
+    } finally {
+      setWinetricksLoading(false)
+    }
+  }
+
+  const pickExecutable = async () => {
+    const selected = await pickFile({
+      title: tx('Selecionar executável do jogo', 'Select game executable'),
+      filters: [{ name: 'Windows Executable', extensions: ['exe'] }]
+    })
+    if (!selected) return
+
+    setExePath(selected)
+    const detectedRoot = dirname(selected)
+    if (!gameRoot().trim()) {
+      setGameRoot(detectedRoot)
+    }
+
+    const rootToUse = gameRoot().trim() || detectedRoot
+    const relative = relativeFromRoot(rootToUse, selected)
+
+    patchConfig((prev) => ({
+      ...prev,
+      relative_exe_path: relative ? `./${relative}` : `./${basename(selected)}`
+    }))
+  }
+
+  const pickGameRootFolder = async () => {
+    const selected = await pickFolder({
+      title: tx('Selecionar pasta raiz do jogo', 'Select game root folder')
+    })
+    if (!selected) return
+    setGameRoot(selected)
+  }
+
+  const pickRegistryFile = async () => {
+    const selected = await pickFile({
+      title: tx('Selecionar arquivo .reg', 'Select .reg file'),
+      filters: [{ name: 'Registry file', extensions: ['reg'] }]
+    })
+    if (!selected) return
+    setRegistryImportPath(selected)
+  }
+
+  const pickMountFolder = async (index: number) => {
+    const selected = await pickFolder({
+      title: tx('Selecionar pasta para montar', 'Select folder to mount')
+    })
+    if (!selected) return
+
+    const relative = relativeFromRoot(gameRoot(), selected)
+    if (!relative) {
+      setStatusMessage(
+        tx(
+          'A pasta selecionada precisa estar dentro da pasta raiz do jogo.',
+          'Selected folder must be inside game root folder.'
+        )
+      )
+      return
+    }
+
+    patchConfig((prev) => ({
+      ...prev,
+      folder_mounts: replaceAt(prev.folder_mounts, index, {
+        ...prev.folder_mounts[index],
+        source_relative_path: relative
+      })
+    }))
+  }
+
   const applyIconExtractionPlaceholder = () => {
     setStatusMessage(
       tx(
-        'Extração de ícone será conectada ao backend nas próximas etapas (visual pronto).',
-        'Icon extraction will be wired to backend in next steps (visual ready).'
+        'Extração de ícone será conectada ao backend na próxima etapa funcional.',
+        'Icon extraction will be wired to backend in the next functional step.'
       )
     )
     if (!iconPreviewPath()) {
@@ -284,26 +463,33 @@ export default function App() {
     }))
   }
 
-  const toggleFallbackCandidate = (candidate: RuntimePrimary, enabled: boolean) => {
+  const addFallbackCandidate = (candidate: RuntimePrimary) => {
     patchConfig((prev) => {
-      const current = prev.requirements.runtime.fallback_order
-      const next = enabled
-        ? current.includes(candidate)
-          ? current
-          : [...current, candidate]
-        : current.filter((item) => item !== candidate)
-
+      if (prev.requirements.runtime.fallback_order.includes(candidate)) return prev
       return {
         ...prev,
         requirements: {
           ...prev.requirements,
           runtime: {
             ...prev.requirements.runtime,
-            fallback_order: next
+            fallback_order: [...prev.requirements.runtime.fallback_order, candidate]
           }
         }
       }
     })
+  }
+
+  const removeFallbackCandidate = (candidate: RuntimePrimary) => {
+    patchConfig((prev) => ({
+      ...prev,
+      requirements: {
+        ...prev.requirements,
+        runtime: {
+          ...prev.requirements.runtime,
+          fallback_order: prev.requirements.runtime.fallback_order.filter((item) => item !== candidate)
+        }
+      }
+    }))
   }
 
   const moveFallbackCandidate = (index: number, direction: -1 | 1) => {
@@ -343,6 +529,20 @@ export default function App() {
     }))
   }
 
+  const addWinetricksVerb = (verb: string) => {
+    patchConfig((prev) => {
+      if (prev.dependencies.includes(verb)) return prev
+      return { ...prev, dependencies: [...prev.dependencies, verb] }
+    })
+  }
+
+  const removeWinetricksVerb = (verb: string) => {
+    patchConfig((prev) => ({
+      ...prev,
+      dependencies: prev.dependencies.filter((item) => item !== verb)
+    }))
+  }
+
   const payloadSummary = createMemo(() => ({
     launchArgs: config().launch_args.length,
     integrityFiles: config().integrity_files.length,
@@ -366,8 +566,8 @@ export default function App() {
           </h1>
           <p class="subtitle">
             {tx(
-              'Todas as abas e componentes do MVP foram montados para ajuste fino por jogo.',
-              'All MVP tabs and components are now available for per-game fine tuning.'
+              'Abas completas com foco em simplicidade, mas mantendo as opções avançadas.',
+              'Complete tabs focused on simplicity while keeping advanced options.'
             )}
           </p>
         </div>
@@ -408,27 +608,39 @@ export default function App() {
               onInput={(value) => patchConfig((prev) => ({ ...prev, game_name: value }))}
             />
 
-            <TextInputField
+            <FieldShell
               label={tx('Executável principal (.exe)', 'Main executable (.exe)')}
               help={tx(
-                'Caminho usado para calcular hash e validar referência do jogo.',
-                'Path used to calculate hash and validate game reference.'
+                'Use o picker para selecionar o .exe real do jogo.',
+                'Use picker to select the real game executable.'
               )}
-              value={exePath()}
-              onInput={setExePath}
-              placeholder="/home/user/Games/MyGame/game.exe"
-            />
+            >
+              <div class="picker-row">
+                <input value={exePath()} placeholder="/home/user/Games/MyGame/game.exe" onInput={(e) => setExePath(e.currentTarget.value)} />
+                <button type="button" class="btn-secondary" onClick={pickExecutable}>
+                  {tx('Selecionar arquivo', 'Select file')}
+                </button>
+              </div>
+            </FieldShell>
 
-            <TextInputField
+            <FieldShell
               label={tx('Pasta raiz do jogo', 'Game root folder')}
               help={tx(
                 'Base usada para validar paths relativos e arquivos obrigatórios.',
                 'Base used to validate relative paths and required files.'
               )}
-              value={gameRoot()}
-              onInput={setGameRoot}
-              placeholder="/home/user/Games/MyGame"
-            />
+            >
+              <div class="picker-row">
+                <input
+                  value={gameRoot()}
+                  placeholder="/home/user/Games/MyGame"
+                  onInput={(e) => setGameRoot(e.currentTarget.value)}
+                />
+                <button type="button" class="btn-secondary" onClick={pickGameRootFolder}>
+                  {tx('Selecionar pasta', 'Select folder')}
+                </button>
+              </div>
+            </FieldShell>
 
             <TextInputField
               label={tx('Path relativo do exe no payload', 'Relative exe path in payload')}
@@ -459,20 +671,17 @@ export default function App() {
             <FieldShell
               label={tx('Ícone extraído', 'Extracted icon')}
               help={tx(
-                'Preview do ícone do jogo para facilitar identificação visual no Criador.',
-                'Game icon preview to make visual identification easier in Creator.'
+                'Preview do ícone do jogo para facilitar identificação visual.',
+                'Game icon preview for easier visual identification.'
               )}
               hint={tx(
                 'Visual pronto. A extração real será conectada ao backend na próxima etapa.',
-                'Visual is ready. Real extraction will be wired to backend in next step.'
+                'Visual is ready. Real extraction will be wired to backend next.'
               )}
             >
               <div class="icon-preview">
                 <div class="icon-box">
-                  <Show
-                    when={iconPreviewPath()}
-                    fallback={<span>{tx('Sem ícone extraído', 'No extracted icon')}</span>}
-                  >
+                  <Show when={iconPreviewPath()} fallback={<span>{tx('Sem ícone extraído', 'No extracted icon')}</span>}>
                     <img src={iconPreviewPath()} alt="icon preview" />
                   </Show>
                 </div>
@@ -484,10 +693,7 @@ export default function App() {
 
             <StringListField
               label={tx('Argumentos de launch', 'Launch arguments')}
-              help={tx(
-                'Argumentos extras passados para o exe do jogo.',
-                'Extra arguments passed to the game executable.'
-              )}
+              help={tx('Argumentos extras passados para o exe do jogo.', 'Extra arguments passed to game executable.')}
               items={config().launch_args}
               onChange={(items) => patchConfig((prev) => ({ ...prev, launch_args: items }))}
               placeholder={tx('-windowed', '-windowed')}
@@ -496,10 +702,7 @@ export default function App() {
 
             <StringListField
               label={tx('Arquivos obrigatórios (integrity_files)', 'Required files (integrity_files)')}
-              help={tx(
-                'Se algum item faltar na pasta do jogo, o launch é bloqueado.',
-                'If any item is missing in game folder, launch is blocked.'
-              )}
+              help={tx('Se algum item faltar, o launch é bloqueado.', 'If any item is missing, launch is blocked.')}
               items={config().integrity_files}
               onChange={(items) => patchConfig((prev) => ({ ...prev, integrity_files: items }))}
               placeholder={tx('./data/core.dll', './data/core.dll')}
@@ -512,10 +715,7 @@ export default function App() {
           <section class="stack">
             <SelectField<RuntimePreference>
               label={tx('Preferência geral de runtime', 'General runtime preference')}
-              help={tx(
-                'Define prioridade macro entre Auto, Proton e Wine.',
-                'Defines macro priority among Auto, Proton and Wine.'
-              )}
+              help={tx('Prioridade macro entre Auto, Proton e Wine.', 'Macro priority among Auto, Proton and Wine.')}
               value={config().runner.runtime_preference}
               options={runtimePreferenceOptions()}
               onChange={(value) =>
@@ -552,10 +752,7 @@ export default function App() {
 
             <SelectField<RuntimePrimary>
               label={tx('Runtime primário', 'Primary runtime')}
-              help={tx(
-                'Primeiro candidato de execução do jogo.',
-                'First execution candidate for game launch.'
-              )}
+              help={tx('Primeiro candidato de execução do jogo.', 'First runtime candidate for launch.')}
               value={config().requirements.runtime.primary}
               options={runtimePrimaryOptions()}
               onChange={setRuntimePrimary}
@@ -564,23 +761,34 @@ export default function App() {
             <FieldShell
               label={tx('Ordem de fallback', 'Fallback order')}
               help={tx(
-                'Ative os candidatos extras e ajuste a ordem de tentativa.',
-                'Enable extra candidates and adjust retry order.'
+                'Adicione candidatos e mova a ordem manualmente.',
+                'Add candidates and move order manually.'
               )}
             >
               <div class="table-list">
-                <For each={RUNTIME_CANDIDATES}>
-                  {(candidate) => (
-                    <label class="option-row">
-                      <input
-                        type="checkbox"
-                        checked={runtimeFallbackOrder().includes(candidate)}
-                        disabled={candidate === config().requirements.runtime.primary}
-                        onInput={(e) => toggleFallbackCandidate(candidate, e.currentTarget.checked)}
-                      />
-                      <span>{candidate}</span>
-                    </label>
-                  )}
+                <For each={availableFallbackCandidates()}>
+                  {(candidate) => {
+                    const inFallback = runtimeFallbackOrder().includes(candidate)
+                    return (
+                      <div class="table-row table-row-fallback">
+                        <span>{candidate}</span>
+                        <div class="row-actions">
+                          <Show
+                            when={inFallback}
+                            fallback={
+                              <button type="button" class="btn-secondary" onClick={() => addFallbackCandidate(candidate)}>
+                                {tx('Adicionar', 'Add')}
+                              </button>
+                            }
+                          >
+                            <button type="button" class="btn-danger" onClick={() => removeFallbackCandidate(candidate)}>
+                              {tx('Remover', 'Remove')}
+                            </button>
+                          </Show>
+                        </div>
+                      </div>
+                    )
+                  }}
                 </For>
 
                 <For each={runtimeFallbackOrder()}>
@@ -588,18 +796,10 @@ export default function App() {
                     <div class="table-row table-row-fallback">
                       <span>{candidate}</span>
                       <div class="row-actions">
-                        <button
-                          type="button"
-                          class="btn-secondary"
-                          onClick={() => moveFallbackCandidate(index(), -1)}
-                        >
+                        <button type="button" class="btn-secondary" onClick={() => moveFallbackCandidate(index(), -1)}>
                           {tx('Subir', 'Up')}
                         </button>
-                        <button
-                          type="button"
-                          class="btn-secondary"
-                          onClick={() => moveFallbackCandidate(index(), 1)}
-                        >
+                        <button type="button" class="btn-secondary" onClick={() => moveFallbackCandidate(index(), 1)}>
                           {tx('Descer', 'Down')}
                         </button>
                       </div>
@@ -715,10 +915,7 @@ export default function App() {
 
             <SelectField<FeatureState>
               label="Easy AntiCheat Runtime"
-              help={tx(
-                'Política para runtime local do Easy AntiCheat.',
-                'Policy for local Easy AntiCheat runtime.'
-              )}
+              help={tx('Política para runtime local do Easy AntiCheat.', 'Policy for local Easy AntiCheat runtime.')}
               value={config().compatibility.easy_anti_cheat_runtime}
               options={featureStateOptions()}
               onChange={(value) =>
@@ -767,7 +964,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...item,
+                                ...prev.extra_system_dependencies[index()],
                                 name: e.currentTarget.value
                               })
                             }))
@@ -779,7 +976,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...item,
+                                ...prev.extra_system_dependencies[index()],
                                 state: e.currentTarget.value as FeatureState
                               })
                             }))
@@ -794,12 +991,12 @@ export default function App() {
                       <div class="table-grid table-grid-three">
                         <input
                           value={joinCommaList(item.check_commands)}
-                          placeholder={tx('Comandos (rg, vulkaninfo)', 'Commands (rg, vulkaninfo)')}
+                          placeholder={tx('Comandos (vulkaninfo, mangohud)', 'Commands (vulkaninfo, mangohud)')}
                           onInput={(e) =>
                             patchConfig((prev) => ({
                               ...prev,
                               extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...item,
+                                ...prev.extra_system_dependencies[index()],
                                 check_commands: splitCommaList(e.currentTarget.value)
                               })
                             }))
@@ -807,12 +1004,12 @@ export default function App() {
                         />
                         <input
                           value={joinCommaList(item.check_env_vars)}
-                          placeholder={tx('Variáveis (PATH_X, VAR_Y)', 'Environment vars (PATH_X, VAR_Y)')}
+                          placeholder={tx('Variáveis (VAR_A, VAR_B)', 'Env vars (VAR_A, VAR_B)')}
                           onInput={(e) =>
                             patchConfig((prev) => ({
                               ...prev,
                               extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...item,
+                                ...prev.extra_system_dependencies[index()],
                                 check_env_vars: splitCommaList(e.currentTarget.value)
                               })
                             }))
@@ -825,7 +1022,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               extra_system_dependencies: replaceAt(prev.extra_system_dependencies, index(), {
-                                ...item,
+                                ...prev.extra_system_dependencies[index()],
                                 check_paths: splitCommaList(e.currentTarget.value)
                               })
                             }))
@@ -888,54 +1085,228 @@ export default function App() {
               onChange={setGamescopeState}
             />
 
-            <TextInputField
-              label={tx('Resolução do gamescope', 'Gamescope resolution')}
-              help={tx(
-                'Formato esperado: 1920x1080. Aplicado quando gamescope estiver ativo.',
-                'Expected format: 1920x1080. Applied when gamescope is active.'
-              )}
-              value={config().environment.gamescope.resolution ?? ''}
-              onInput={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  environment: {
-                    ...prev.environment,
-                    gamescope: {
-                      ...prev.environment.gamescope,
-                      resolution: value.trim() ? value : null
+            <Show when={gamescopeEnabled()} fallback={<div class="info-card"><span>{tx('Gamescope está desativado. Ative para configurar resolução, upscale e janela.', 'Gamescope is disabled. Enable it to configure resolution, upscale and window mode.')}</span></div>}>
+              <SelectField<UpscaleMethod>
+                label={tx('Método de upscale', 'Upscale method')}
+                help={tx('Método usado pelo gamescope para upscale.', 'Method used by gamescope for upscaling.')}
+                value={config().environment.gamescope.upscale_method}
+                options={upscaleMethodOptions()}
+                onChange={(value) =>
+                  patchConfig((prev) => ({
+                    ...prev,
+                    environment: {
+                      ...prev.environment,
+                      gamescope: {
+                        ...prev.environment.gamescope,
+                        upscale_method: value,
+                        fsr: value === 'fsr'
+                      }
                     }
-                  }
-                }))
-              }
-            />
+                  }))
+                }
+              />
 
-            <ToggleField
-              label="FSR (gamescope)"
-              help={tx(
-                'Ativa upscaling FSR quando gamescope estiver ligado.',
-                'Enables FSR upscaling when gamescope is enabled.'
-              )}
-              checked={config().environment.gamescope.fsr}
-              onChange={(checked) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  environment: {
-                    ...prev.environment,
-                    gamescope: {
-                      ...prev.environment.gamescope,
-                      fsr: checked
-                    }
+              <div class="table-grid table-grid-two">
+                <TextInputField
+                  label={tx('Resolução do jogo - largura', 'Game resolution - width')}
+                  help={tx('Largura renderizada pelo jogo.', 'Width rendered by the game.')}
+                  value={config().environment.gamescope.game_width}
+                  onInput={(value) =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      environment: {
+                        ...prev.environment,
+                        gamescope: {
+                          ...prev.environment.gamescope,
+                          game_width: value
+                        }
+                      }
+                    }))
                   }
-                }))
-              }
-            />
+                />
+
+                <TextInputField
+                  label={tx('Resolução do jogo - altura', 'Game resolution - height')}
+                  help={tx('Altura renderizada pelo jogo.', 'Height rendered by the game.')}
+                  value={config().environment.gamescope.game_height}
+                  onInput={(value) =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      environment: {
+                        ...prev.environment,
+                        gamescope: {
+                          ...prev.environment.gamescope,
+                          game_height: value
+                        }
+                      }
+                    }))
+                  }
+                />
+              </div>
+
+              <div class="table-grid table-grid-two">
+                <TextInputField
+                  label={tx('Resolução da tela - largura', 'Display resolution - width')}
+                  help={tx('Largura final de saída do gamescope.', 'Final output width from gamescope.')}
+                  value={config().environment.gamescope.output_width}
+                  onInput={(value) =>
+                    patchConfig((prev) => {
+                      const nextHeight = prev.environment.gamescope.output_height
+                      return {
+                        ...prev,
+                        environment: {
+                          ...prev.environment,
+                          gamescope: {
+                            ...prev.environment.gamescope,
+                            output_width: value,
+                            resolution: value && nextHeight ? `${value}x${nextHeight}` : null
+                          }
+                        }
+                      }
+                    })
+                  }
+                />
+
+                <TextInputField
+                  label={tx('Resolução da tela - altura', 'Display resolution - height')}
+                  help={tx('Altura final de saída do gamescope.', 'Final output height from gamescope.')}
+                  value={config().environment.gamescope.output_height}
+                  onInput={(value) =>
+                    patchConfig((prev) => {
+                      const nextWidth = prev.environment.gamescope.output_width
+                      return {
+                        ...prev,
+                        environment: {
+                          ...prev.environment,
+                          gamescope: {
+                            ...prev.environment.gamescope,
+                            output_height: value,
+                            resolution: nextWidth && value ? `${nextWidth}x${value}` : null
+                          }
+                        }
+                      }
+                    })
+                  }
+                />
+              </div>
+
+              <SelectField<GamescopeWindowType>
+                label={tx('Tipo de janela', 'Window type')}
+                help={tx('Define comportamento da janela no gamescope.', 'Defines gamescope window behavior.')}
+                value={config().environment.gamescope.window_type}
+                options={windowTypeOptions()}
+                onChange={(value) =>
+                  patchConfig((prev) => ({
+                    ...prev,
+                    environment: {
+                      ...prev.environment,
+                      gamescope: {
+                        ...prev.environment.gamescope,
+                        window_type: value
+                      }
+                    }
+                  }))
+                }
+              />
+
+              <ToggleField
+                label={tx('Limitar FPS', 'Enable FPS limiter')}
+                help={tx('Ativa limitador de FPS do gamescope.', 'Enables gamescope FPS limiter.')}
+                checked={config().environment.gamescope.enable_limiter}
+                onChange={(checked) =>
+                  patchConfig((prev) => ({
+                    ...prev,
+                    environment: {
+                      ...prev.environment,
+                      gamescope: {
+                        ...prev.environment.gamescope,
+                        enable_limiter: checked
+                      }
+                    }
+                  }))
+                }
+              />
+
+              <Show when={config().environment.gamescope.enable_limiter}>
+                <div class="table-grid table-grid-two">
+                  <TextInputField
+                    label={tx('FPS limite', 'FPS limit')}
+                    help={tx('Limite de FPS quando o jogo está em foco.', 'FPS limit when game is focused.')}
+                    value={config().environment.gamescope.fps_limiter}
+                    onInput={(value) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        environment: {
+                          ...prev.environment,
+                          gamescope: {
+                            ...prev.environment.gamescope,
+                            fps_limiter: value
+                          }
+                        }
+                      }))
+                    }
+                  />
+
+                  <TextInputField
+                    label={tx('FPS sem foco', 'FPS limit without focus')}
+                    help={tx('Limite de FPS quando o jogo perde foco.', 'FPS limit when game loses focus.')}
+                    value={config().environment.gamescope.fps_limiter_no_focus}
+                    onInput={(value) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        environment: {
+                          ...prev.environment,
+                          gamescope: {
+                            ...prev.environment.gamescope,
+                            fps_limiter_no_focus: value
+                          }
+                        }
+                      }))
+                    }
+                  />
+                </div>
+              </Show>
+
+              <ToggleField
+                label={tx('Forçar captura de cursor', 'Force grab cursor')}
+                help={tx('Força modo relativo de mouse para evitar perda de foco.', 'Forces relative mouse mode to avoid focus loss.')}
+                checked={config().environment.gamescope.force_grab_cursor}
+                onChange={(checked) =>
+                  patchConfig((prev) => ({
+                    ...prev,
+                    environment: {
+                      ...prev.environment,
+                      gamescope: {
+                        ...prev.environment.gamescope,
+                        force_grab_cursor: checked
+                      }
+                    }
+                  }))
+                }
+              />
+
+              <TextInputField
+                label={tx('Opções adicionais do gamescope', 'Gamescope additional options')}
+                help={tx('Flags extras adicionadas ao comando do gamescope.', 'Extra flags appended to gamescope command.')}
+                value={config().environment.gamescope.additional_options}
+                onInput={(value) =>
+                  patchConfig((prev) => ({
+                    ...prev,
+                    environment: {
+                      ...prev.environment,
+                      gamescope: {
+                        ...prev.environment.gamescope,
+                        additional_options: value
+                      }
+                    }
+                  }))
+                }
+              />
+            </Show>
 
             <SelectField<FeatureState>
               label="Gamemode"
-              help={tx(
-                'Define política do gamemode e sincroniza com requirements.gamemode.',
-                'Defines gamemode policy and syncs with requirements.gamemode.'
-              )}
+              help={tx('Define política do gamemode.', 'Defines gamemode policy.')}
               value={config().environment.gamemode}
               options={featureStateOptions()}
               onChange={setGamemodeState}
@@ -943,10 +1314,7 @@ export default function App() {
 
             <SelectField<FeatureState>
               label="MangoHud"
-              help={tx(
-                'Define política do MangoHud e sincroniza com requirements.mangohud.',
-                'Defines MangoHud policy and syncs with requirements.mangohud.'
-              )}
+              help={tx('Define política do MangoHud.', 'Defines MangoHud policy.')}
               value={config().environment.mangohud}
               options={featureStateOptions()}
               onChange={setMangohudState}
@@ -970,10 +1338,7 @@ export default function App() {
 
             <SelectField<FeatureState>
               label="HDR"
-              help={tx(
-                'Política para HDR (depende de Wine-Wayland e suporte do host).',
-                'Policy for HDR (depends on Wine-Wayland and host support).'
-              )}
+              help={tx('Política para HDR (depende de Wine-Wayland).', 'Policy for HDR (depends on Wine-Wayland).')}
               value={config().compatibility.hdr}
               options={featureStateOptions()}
               onChange={(value) =>
@@ -989,10 +1354,7 @@ export default function App() {
 
             <SelectField<FeatureState>
               label="Auto DXVK-NVAPI"
-              help={tx(
-                'Controla aplicação automática de DXVK-NVAPI no runtime.',
-                'Controls automatic DXVK-NVAPI application on runtime.'
-              )}
+              help={tx('Controla aplicação automática de DXVK-NVAPI.', 'Controls automatic DXVK-NVAPI setup.')}
               value={config().compatibility.auto_dxvk_nvapi}
               options={featureStateOptions()}
               onChange={(value) =>
@@ -1008,10 +1370,7 @@ export default function App() {
 
             <SelectField<FeatureState>
               label="Staging"
-              help={tx(
-                'Controla obrigatoriedade de runtime Wine com patches staging.',
-                'Controls mandatory usage of Wine runtime with staging patches.'
-              )}
+              help={tx('Controla obrigatoriedade de runtime Wine com staging.', 'Controls mandatory usage of Wine staging runtime.')}
               value={config().compatibility.staging}
               options={featureStateOptions()}
               onChange={(value) =>
@@ -1027,10 +1386,7 @@ export default function App() {
 
             <ToggleField
               label={tx('Prime Offload', 'Prime Offload')}
-              help={tx(
-                'Ativa variáveis para offload de GPU dedicada em notebooks híbridos.',
-                'Enables dedicated GPU offload variables in hybrid laptops.'
-              )}
+              help={tx('Ativa variáveis para offload de GPU dedicada.', 'Enables dedicated GPU offload variables.')}
               checked={config().environment.prime_offload}
               onChange={(checked) =>
                 patchConfig((prev) => ({
@@ -1049,52 +1405,82 @@ export default function App() {
           <section class="stack">
             <TextInputField
               label={tx('Prefix path final', 'Final prefix path')}
-              help={tx(
-                'Calculado automaticamente a partir do hash do executável.',
-                'Automatically calculated from executable hash.'
-              )}
+              help={tx('Calculado automaticamente a partir do hash do executável.', 'Automatically calculated from executable hash.')}
               value={prefixPathPreview()}
               onInput={() => undefined}
               readonly
             />
 
-            <SelectField<FeatureState>
+            <FieldShell
               label="Winetricks"
               help={tx(
-                'Define se instalação de verbos Winetricks é obrigatória ou opcional.',
-                'Defines whether Winetricks verb installation is mandatory or optional.'
+                'Ativa automaticamente quando existir ao menos um verbo configurado.',
+                'Enabled automatically when at least one verb is configured.'
               )}
-              value={config().requirements.winetricks}
-              options={featureStateOptions()}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  requirements: {
-                    ...prev.requirements,
-                    winetricks: value
-                  }
-                }))
-              }
-            />
+            >
+              <div class="info-card">
+                <span>
+                  {tx('Estado atual:', 'Current state:')} <strong>{config().requirements.winetricks}</strong>
+                </span>
+              </div>
+            </FieldShell>
 
-            <StringListField
+            <FieldShell
               label={tx('Lista de verbos Winetricks', 'Winetricks verbs list')}
               help={tx(
-                'Verbos instalados no setup inicial do prefixo.',
-                'Verbs installed in initial prefix setup.'
+                'Selecione da lista de componentes disponíveis (modelo Heroic).',
+                'Select from available components list (Heroic-like model).'
               )}
-              items={config().dependencies}
-              onChange={(items) => patchConfig((prev) => ({ ...prev, dependencies: items }))}
-              placeholder={tx('corefonts', 'corefonts')}
-              addLabel={tx('Adicionar verbo', 'Add verb')}
-            />
+            >
+              <div class="table-list">
+                <div class="picker-row">
+                  <input
+                    value={winetricksSearch()}
+                    placeholder={tx('Filtrar verbos (ex.: vcrun, corefonts)', 'Filter verbs (e.g. vcrun, corefonts)')}
+                    onInput={(e) => setWinetricksSearch(e.currentTarget.value)}
+                  />
+                  <button type="button" class="btn-secondary" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
+                    {winetricksLoading() ? tx('Carregando...', 'Loading...') : tx('Atualizar catálogo', 'Refresh catalog')}
+                  </button>
+                </div>
+
+                <div class="info-card">
+                  <span>
+                    {tx('Fonte do catálogo:', 'Catalog source:')} <strong>{winetricksSource()}</strong>
+                  </span>
+                  <span>
+                    {tx('Itens disponíveis:', 'Available items:')} <strong>{winetricksAvailable().length}</strong>
+                  </span>
+                </div>
+
+                <div class="table-list winetricks-grid">
+                  <For each={winetricksCandidates()}>
+                    {(verb) => (
+                      <button type="button" class="btn-secondary winetricks-item" onClick={() => addWinetricksVerb(verb)}>
+                        {verb}
+                      </button>
+                    )}
+                  </For>
+                </div>
+
+                <div class="table-list">
+                  <For each={config().dependencies}>
+                    {(verb) => (
+                      <div class="table-row table-row-single">
+                        <input value={verb} readOnly class="readonly" />
+                        <button type="button" class="btn-danger" onClick={() => removeWinetricksVerb(verb)}>
+                          {tx('Remover', 'Remove')}
+                        </button>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            </FieldShell>
 
             <FieldShell
               label={tx('Chaves de registro', 'Registry keys')}
-              help={tx(
-                'Tabela de chaves aplicadas no prefixo após bootstrap.',
-                'Table of keys applied to prefix after bootstrap.'
-              )}
+              help={tx('Tabela de chaves aplicadas no prefixo após bootstrap.', 'Table of keys applied to prefix after bootstrap.')}
             >
               <div class="table-list">
                 <For each={config().registry_keys}>
@@ -1108,7 +1494,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...item,
+                                ...prev.registry_keys[index()],
                                 path: e.currentTarget.value
                               })
                             }))
@@ -1121,7 +1507,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...item,
+                                ...prev.registry_keys[index()],
                                 name: e.currentTarget.value
                               })
                             }))
@@ -1137,7 +1523,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...item,
+                                ...prev.registry_keys[index()],
                                 value_type: e.currentTarget.value
                               })
                             }))
@@ -1150,7 +1536,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               registry_keys: replaceAt(prev.registry_keys, index(), {
-                                ...item,
+                                ...prev.registry_keys[index()],
                                 value: e.currentTarget.value
                               })
                             }))
@@ -1180,15 +1566,7 @@ export default function App() {
                   onClick={() =>
                     patchConfig((prev) => ({
                       ...prev,
-                      registry_keys: [
-                        ...prev.registry_keys,
-                        {
-                          path: '',
-                          name: '',
-                          value_type: 'REG_SZ',
-                          value: ''
-                        }
-                      ]
+                      registry_keys: [...prev.registry_keys, { path: '', name: '', value_type: 'REG_SZ', value: '' }]
                     }))
                   }
                 >
@@ -1197,42 +1575,46 @@ export default function App() {
               </div>
             </FieldShell>
 
-            <TextInputField
-              label={tx('Import de .reg (visual)', '.reg import (visual)')}
-              help={tx(
-                'Campo visual preparado para fase de importação de arquivo .reg.',
-                'Visual field prepared for .reg file import phase.'
-              )}
-              value={registryImportPath()}
-              onInput={setRegistryImportPath}
-              placeholder="./patches/game.reg"
-            />
+            <FieldShell
+              label={tx('Import de .reg', '.reg import')}
+              help={tx('Selecione um arquivo .reg para importação futura no setup.', 'Select a .reg file for future setup import.')}
+            >
+              <div class="picker-row">
+                <input value={registryImportPath()} placeholder="./patches/game.reg" onInput={(e) => setRegistryImportPath(e.currentTarget.value)} />
+                <button type="button" class="btn-secondary" onClick={pickRegistryFile}>
+                  {tx('Selecionar arquivo', 'Select file')}
+                </button>
+              </div>
+            </FieldShell>
 
             <FieldShell
               label={tx('Pastas montadas (folder_mounts)', 'Mounted folders (folder_mounts)')}
-              help={tx(
-                'Mapeia pasta relativa do jogo para destino Windows dentro do prefixo.',
-                'Maps game-relative folder to Windows target path inside prefix.'
-              )}
+              help={tx('Mapeia pasta relativa do jogo para destino Windows dentro do prefixo.', 'Maps game-relative folder to Windows target path inside prefix.')}
             >
               <div class="table-list">
                 <For each={config().folder_mounts}>
                   {(item, index) => (
                     <div class="table-card">
                       <div class="table-grid table-grid-two">
-                        <input
-                          value={item.source_relative_path}
-                          placeholder={tx('Origem relativa (ex.: save)', 'Relative source (e.g. save)')}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              folder_mounts: replaceAt(prev.folder_mounts, index(), {
-                                ...item,
-                                source_relative_path: e.currentTarget.value
-                              })
-                            }))
-                          }
-                        />
+                        <div class="picker-row">
+                          <input
+                            value={item.source_relative_path}
+                            placeholder={tx('Origem relativa (ex.: save)', 'Relative source (e.g. save)')}
+                            onInput={(e) =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                folder_mounts: replaceAt(prev.folder_mounts, index(), {
+                                  ...prev.folder_mounts[index()],
+                                  source_relative_path: e.currentTarget.value
+                                })
+                              }))
+                            }
+                          />
+                          <button type="button" class="btn-secondary" onClick={() => void pickMountFolder(index())}>
+                            {tx('Escolher pasta', 'Choose folder')}
+                          </button>
+                        </div>
+
                         <input
                           value={item.target_windows_path}
                           placeholder={tx('Destino Windows (C:\\users\\...)', 'Windows target (C:\\users\\...)')}
@@ -1240,7 +1622,7 @@ export default function App() {
                             patchConfig((prev) => ({
                               ...prev,
                               folder_mounts: replaceAt(prev.folder_mounts, index(), {
-                                ...item,
+                                ...prev.folder_mounts[index()],
                                 target_windows_path: e.currentTarget.value
                               })
                             }))
@@ -1248,22 +1630,20 @@ export default function App() {
                         />
                       </div>
 
-                      <label class="option-row">
-                        <input
-                          type="checkbox"
-                          checked={item.create_source_if_missing}
-                          onInput={(e) =>
-                            patchConfig((prev) => ({
-                              ...prev,
-                              folder_mounts: replaceAt(prev.folder_mounts, index(), {
-                                ...item,
-                                create_source_if_missing: e.currentTarget.checked
-                              })
-                            }))
-                          }
-                        />
-                        <span>{tx('Criar origem se estiver ausente', 'Create source when missing')}</span>
-                      </label>
+                      <ToggleField
+                        label={tx('Criar origem se estiver ausente', 'Create source if missing')}
+                        help={tx('Se ativo, cria pasta de origem automaticamente.', 'When enabled, source folder is created automatically.')}
+                        checked={item.create_source_if_missing}
+                        onChange={(checked) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            folder_mounts: replaceAt(prev.folder_mounts, index(), {
+                              ...prev.folder_mounts[index()],
+                              create_source_if_missing: checked
+                            })
+                          }))
+                        }
+                      />
 
                       <button
                         type="button"
@@ -1309,10 +1689,7 @@ export default function App() {
           <section class="stack">
             <FieldShell
               label={tx('Substituição de DLL', 'DLL overrides')}
-              help={tx(
-                'Configura overrides por DLL como native/builtin.',
-                'Configures per-DLL overrides such as native/builtin.'
-              )}
+              help={tx('Configura overrides por DLL como native/builtin.', 'Configures per-DLL overrides such as native/builtin.')}
             >
               <div class="table-list">
                 <For each={config().winecfg.dll_overrides}>
@@ -1327,7 +1704,7 @@ export default function App() {
                             winecfg: {
                               ...prev.winecfg,
                               dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
-                                ...item,
+                                ...prev.winecfg.dll_overrides[index()],
                                 dll: e.currentTarget.value
                               })
                             }
@@ -1342,16 +1719,14 @@ export default function App() {
                             winecfg: {
                               ...prev.winecfg,
                               dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
-                                ...item,
+                                ...prev.winecfg.dll_overrides[index()],
                                 mode: e.currentTarget.value
                               })
                             }
                           }))
                         }
                       >
-                        <For each={dllModeOptions()}>
-                          {(option) => <option value={option.value}>{option.label}</option>}
-                        </For>
+                        <For each={dllModeOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
                       </select>
                       <button
                         type="button"
@@ -1395,15 +1770,7 @@ export default function App() {
               help={tx('Equivalente à opção de captura automática do winecfg.', 'Equivalent to winecfg auto capture mouse option.')}
               value={config().winecfg.auto_capture_mouse}
               options={featureStateOptions()}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  winecfg: {
-                    ...prev.winecfg,
-                    auto_capture_mouse: value
-                  }
-                }))
-              }
+              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, auto_capture_mouse: value } }))}
             />
 
             <SelectField<FeatureState>
@@ -1411,15 +1778,7 @@ export default function App() {
               help={tx('Controla se o gerenciador de janelas decora janelas do jogo.', 'Controls whether window manager decorates game windows.')}
               value={config().winecfg.window_decorations}
               options={featureStateOptions()}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  winecfg: {
-                    ...prev.winecfg,
-                    window_decorations: value
-                  }
-                }))
-              }
+              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_decorations: value } }))}
             />
 
             <SelectField<FeatureState>
@@ -1427,15 +1786,7 @@ export default function App() {
               help={tx('Controla se o WM pode gerenciar posição/estado das janelas.', 'Controls whether WM can manage window position/state.')}
               value={config().winecfg.window_manager_control}
               options={featureStateOptions()}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  winecfg: {
-                    ...prev.winecfg,
-                    window_manager_control: value
-                  }
-                }))
-              }
+              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_manager_control: value } }))}
             />
 
             <SelectField<FeatureState>
@@ -1480,21 +1831,37 @@ export default function App() {
               help={tx('Controla integração Wine com shell/desktop do Linux.', 'Controls Wine integration with Linux shell/desktop.')}
               value={config().winecfg.desktop_integration}
               options={featureStateOptions()}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  winecfg: {
-                    ...prev.winecfg,
-                    desktop_integration: value
-                  }
-                }))
-              }
+              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, desktop_integration: value } }))}
             />
 
             <FieldShell
               label={tx('Unidades (drives)', 'Drives')}
               help={tx('Mapeia letras de unidade para paths relativos da pasta do jogo.', 'Maps drive letters to relative paths inside game folder.')}
             >
+              <div class="info-card">
+                <span>
+                  <strong>C:</strong> {tx('fixo em drive_c (interno)', 'fixed to drive_c (internal)')}
+                </span>
+                <span>
+                  <strong>Z:</strong> {tx('padrão de compatibilidade (ativado por padrão)', 'compatibility default (enabled by default)')}
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  onClick={() =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      winecfg: {
+                        ...prev.winecfg,
+                        drives: [{ letter: 'Z', source_relative_path: '.', state: 'OptionalOn' }]
+                      }
+                    }))
+                  }
+                >
+                  {tx('Restaurar padrão de drives', 'Restore default drives')}
+                </button>
+              </div>
+
               <div class="table-list">
                 <For each={config().winecfg.drives}>
                   {(item, index) => (
@@ -1508,7 +1875,7 @@ export default function App() {
                             winecfg: {
                               ...prev.winecfg,
                               drives: replaceAt(prev.winecfg.drives, index(), {
-                                ...item,
+                                ...prev.winecfg.drives[index()],
                                 letter: e.currentTarget.value
                               })
                             }
@@ -1524,7 +1891,7 @@ export default function App() {
                             winecfg: {
                               ...prev.winecfg,
                               drives: replaceAt(prev.winecfg.drives, index(), {
-                                ...item,
+                                ...prev.winecfg.drives[index()],
                                 source_relative_path: e.currentTarget.value
                               })
                             }
@@ -1539,16 +1906,14 @@ export default function App() {
                             winecfg: {
                               ...prev.winecfg,
                               drives: replaceAt(prev.winecfg.drives, index(), {
-                                ...item,
+                                ...prev.winecfg.drives[index()],
                                 state: e.currentTarget.value as FeatureState
                               })
                             }
                           }))
                         }
                       >
-                        <For each={featureStateOptions()}>
-                          {(option) => <option value={option.value}>{option.label}</option>}
-                        </For>
+                        <For each={featureStateOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
                       </select>
 
                       <button
@@ -1578,14 +1943,7 @@ export default function App() {
                       ...prev,
                       winecfg: {
                         ...prev.winecfg,
-                        drives: [
-                          ...prev.winecfg.drives,
-                          {
-                            letter: '',
-                            source_relative_path: '',
-                            state: 'OptionalOff'
-                          }
-                        ]
+                        drives: [...prev.winecfg.drives, { letter: '', source_relative_path: '', state: 'OptionalOff' }]
                       }
                     }))
                   }
@@ -1632,16 +1990,14 @@ export default function App() {
                               compatibility: {
                                 ...prev.compatibility,
                                 wrapper_commands: replaceAt(prev.compatibility.wrapper_commands, index(), {
-                                  ...item,
+                                  ...prev.compatibility.wrapper_commands[index()],
                                   state: e.currentTarget.value as FeatureState
                                 })
                               }
                             }))
                           }
                         >
-                          <For each={featureStateOptions()}>
-                            {(option) => <option value={option.value}>{option.label}</option>}
-                          </For>
+                          <For each={featureStateOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
                         </select>
                         <input
                           value={item.executable}
@@ -1652,7 +2008,7 @@ export default function App() {
                               compatibility: {
                                 ...prev.compatibility,
                                 wrapper_commands: replaceAt(prev.compatibility.wrapper_commands, index(), {
-                                  ...item,
+                                  ...prev.compatibility.wrapper_commands[index()],
                                   executable: e.currentTarget.value
                                 })
                               }
@@ -1668,7 +2024,7 @@ export default function App() {
                               compatibility: {
                                 ...prev.compatibility,
                                 wrapper_commands: replaceAt(prev.compatibility.wrapper_commands, index(), {
-                                  ...item,
+                                  ...prev.compatibility.wrapper_commands[index()],
                                   args: e.currentTarget.value
                                 })
                               }
@@ -1704,14 +2060,7 @@ export default function App() {
                       ...prev,
                       compatibility: {
                         ...prev.compatibility,
-                        wrapper_commands: [
-                          ...prev.compatibility.wrapper_commands,
-                          {
-                            state: 'OptionalOff',
-                            executable: '',
-                            args: ''
-                          }
-                        ]
+                        wrapper_commands: [...prev.compatibility.wrapper_commands, { state: 'OptionalOff', executable: '', args: '' }]
                       }
                     }))
                   }
@@ -1723,22 +2072,18 @@ export default function App() {
 
             <KeyValueListField
               label={tx('Variáveis de ambiente', 'Environment variables')}
-              help={tx(
-                'Aplicadas no launch (chaves protegidas são ignoradas pelo runtime).',
-                'Applied at launch (protected keys are ignored by runtime).'
-              )}
+              help={tx('Aplicadas no launch (chaves protegidas são ignoradas pelo runtime).', 'Applied at launch (protected keys are ignored by runtime).')}
               items={environmentVarsAsList()}
               onChange={updateCustomVars}
               keyPlaceholder="WINE_FULLSCREEN_FSR"
               valuePlaceholder="1"
+              addLabel={tx('Adicionar variável', 'Add variable')}
+              removeLabel={tx('Remover', 'Remove')}
             />
 
             <FieldShell
               label={tx('Chaves protegidas', 'Protected keys')}
-              help={tx(
-                'Não podem ser sobrescritas por custom_vars: WINEPREFIX, PROTON_VERB.',
-                'Cannot be overwritten by custom_vars: WINEPREFIX, PROTON_VERB.'
-              )}
+              help={tx('Não podem ser sobrescritas por custom_vars: WINEPREFIX, PROTON_VERB.', 'Cannot be overwritten by custom_vars: WINEPREFIX, PROTON_VERB.')}
             >
               <div class="info-card">
                 <code>WINEPREFIX</code>
@@ -1752,21 +2097,10 @@ export default function App() {
           <section class="stack">
             <TextAreaField
               label={tx('Script pre-launch (bash)', 'Pre-launch script (bash)')}
-              help={tx(
-                'Executado antes do comando principal do jogo.',
-                'Executed before main game command.'
-              )}
+              help={tx('Executado antes do comando principal do jogo.', 'Executed before main game command.')}
               value={config().scripts.pre_launch}
               rows={8}
-              onInput={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  scripts: {
-                    ...prev.scripts,
-                    pre_launch: value
-                  }
-                }))
-              }
+              onInput={(value) => patchConfig((prev) => ({ ...prev, scripts: { ...prev.scripts, pre_launch: value } }))}
               placeholder="#!/usr/bin/env bash\necho preparing..."
             />
 
@@ -1775,15 +2109,7 @@ export default function App() {
               help={tx('Executado após o encerramento do processo do jogo.', 'Executed after game process exits.')}
               value={config().scripts.post_launch}
               rows={8}
-              onInput={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  scripts: {
-                    ...prev.scripts,
-                    post_launch: value
-                  }
-                }))
-              }
+              onInput={(value) => patchConfig((prev) => ({ ...prev, scripts: { ...prev.scripts, post_launch: value } }))}
               placeholder="#!/usr/bin/env bash\necho finished..."
             />
 
@@ -1803,9 +2129,10 @@ export default function App() {
           <section class="stack">
             <TextInputField
               label={tx('Orchestrator base', 'Orchestrator base')}
-              help={tx('Binário base pré-compilado usado na injeção do payload.', 'Prebuilt base binary used for payload injection.')}
-              value={baseBinaryPath()}
-              onInput={setBaseBinaryPath}
+              help={tx('Caminho fixo do binário base do Orchestrator (não editável).', 'Fixed path to Orchestrator base binary (not editable).')}
+              value={ORCHESTRATOR_BASE_PATH}
+              onInput={() => undefined}
+              readonly
             />
 
             <TextInputField
