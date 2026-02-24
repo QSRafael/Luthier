@@ -1424,3 +1424,19 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Expor comandos Tauri reais (`#[tauri::command]`) no backend do App Criador.
 - Criar UI mínima do Criador para gerar e testar sem sair da janela.
+
+### 2026-02-24 - Checkpoint 10
+Escopo implementado:
+- Camada de comando preparada no backend `src-tauri`:
+  - `cmd_create_executable(...)`
+  - `cmd_hash_executable(...)`
+- Compatibilidade com Tauri via feature flag:
+  - `tauri-commands` habilita `#[tauri::command]` sem acoplar build padrão.
+
+Proximo checkpoint planejado:
+- Criar bootstrap Tauri (`main.rs`) com `generate_handler!` e registro desses comandos.
+- Iniciar UI mínima para fluxo de:
+  - selecionar `.exe`
+  - gerar payload
+  - `Testar`
+  - `Criar Executavel`.

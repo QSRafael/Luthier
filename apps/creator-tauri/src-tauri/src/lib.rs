@@ -58,6 +58,18 @@ pub fn hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
     Ok(HashExeOutput { sha256_hex: hash })
 }
 
+#[cfg_attr(feature = "tauri-commands", tauri::command)]
+pub fn cmd_create_executable(
+    input: CreateExecutableInput,
+) -> Result<CreateExecutableOutput, String> {
+    create_executable(input)
+}
+
+#[cfg_attr(feature = "tauri-commands", tauri::command)]
+pub fn cmd_hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
+    hash_executable(input)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,5 +86,14 @@ mod tests {
 
         let err = create_executable(input).expect_err("invalid json must fail");
         assert!(err.contains("invalid config JSON"));
+    }
+
+    #[test]
+    fn command_wrapper_calls_hash() {
+        let input = HashExeInput {
+            executable_path: "/does/not/exist.exe".to_string(),
+        };
+        let err = cmd_hash_executable(input).expect_err("missing file must fail");
+        assert!(err.contains("io error"));
     }
 }

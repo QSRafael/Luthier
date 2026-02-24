@@ -126,4 +126,13 @@
 - Observabilidade:
   - eventos adicionais `GO-CFG-020`, `GO-PF-020`, `GO-SC-020`, `GO-SC-021`, `GO-LN-020`.
 - Próximo passo técnico:
-  - integrar comandos Tauri reais (`#[tauri::command]`) e iniciar UI mínima para fluxo de gerar/testar.
+- integrar comandos Tauri reais (`#[tauri::command]`) e iniciar UI mínima para fluxo de gerar/testar.
+
+## 2026-02-24 (checkpoint 10)
+- Backend `src-tauri` agora possui wrappers de comando para integração UI:
+  - `cmd_create_executable(...)`
+  - `cmd_hash_executable(...)`
+- Atributos `#[tauri::command]` foram preparados via `cfg_attr` com feature `tauri-commands`.
+- Próximo passo técnico:
+  - criar bootstrap Tauri `main.rs` com `generate_handler!`;
+  - adicionar UI mínima (abas principais + revisão/gerar/testar).
