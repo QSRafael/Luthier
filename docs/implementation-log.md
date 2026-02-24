@@ -62,5 +62,16 @@
     - `doctor`
     - `prefix_setup_plan` (quando há config embutida)
 - Próximo passo técnico:
-  - executar de fato o plano do prefix com timeouts/erros estruturados;
-  - começar montagem de launch command (wrappers + runtime).
+- executar de fato o plano do prefix com timeouts/erros estruturados;
+- começar montagem de launch command (wrappers + runtime).
+
+## 2026-02-24 (checkpoint 05)
+- Criado crate `creator-core` para backend do App Criador:
+  - `create_orchestrator_binary(...)` (injeção usando `orchestrator-core::injector`);
+  - `sha256_file(...)`;
+  - validações de paths relativos no payload;
+  - utilitário `to_relative_inside_game_root(...)`.
+- `orchestrator-core::injector` ganhou `inject_from_parts(...)` para uso direto do backend sem arquivo intermediário.
+- Próximo passo técnico:
+  - ligar `creator-core` ao `src-tauri` com comandos invocáveis pela UI;
+  - iniciar execução real do `PrefixSetupPlan` no Orquestrador.

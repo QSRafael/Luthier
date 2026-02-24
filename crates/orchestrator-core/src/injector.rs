@@ -39,10 +39,19 @@ pub fn inject_from_files(
     let base_bytes = fs::read(base_binary_path)?;
     let config_bytes = fs::read(config_json_path)?;
 
-    // Validate schema before embedding.
-    let _: GameConfig = serde_json::from_slice(&config_bytes)?;
+    inject_from_parts(&base_bytes, &config_bytes, output_path, options)
+}
 
-    let injected = append_config(&base_bytes, &config_bytes);
+pub fn inject_from_parts(
+    base_bytes: &[u8],
+    config_bytes: &[u8],
+    output_path: &Path,
+    options: InjectOptions,
+) -> Result<InjectionResult, OrchestratorError> {
+    // Validate schema before embedding.
+    let _: GameConfig = serde_json::from_slice(config_bytes)?;
+
+    let injected = append_config(base_bytes, config_bytes);
 
     if options.backup_existing && output_path.exists() {
         let backup_path = backup_path_for(output_path);

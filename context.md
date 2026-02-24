@@ -1329,3 +1329,16 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Executar plano de prefix (nao apenas planejar), com timeout e retorno estruturado por etapa.
 - Iniciar montagem do launch command final (wrappers + runtime + exe).
+
+### 2026-02-24 - Checkpoint 05
+Escopo implementado:
+- Novo crate `creator-core` para backend local do App Criador:
+  - `create_orchestrator_binary(...)` usando `inject_from_parts(...)`;
+  - `sha256_file(...)` para hash de executavel;
+  - validacao de paths relativos no payload (`relative_exe_path`, `integrity_files`, `folder_mounts`);
+  - helper para normalizar caminho relativo dentro da pasta do jogo.
+- `orchestrator-core::injector` atualizado com API de injeção por bytes (`inject_from_parts`) para evitar depender de arquivo temporario de config.
+
+Proximo checkpoint planejado:
+- Integrar `creator-core` ao backend Tauri (`src-tauri`) com comandos de alto nivel para UI.
+- Executar `PrefixSetupPlan` de forma real no Orquestrador com logs por etapa.
