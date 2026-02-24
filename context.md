@@ -1641,3 +1641,40 @@ Validacao do checkpoint:
 - `cargo test -p orchestrator -- --nocapture`
 - `cargo build --workspace`
 - `cargo clippy -p orchestrator --all-targets -- -D warnings`
+
+### 2026-02-24 - Checkpoint 20
+Escopo implementado:
+- App Criador (frontend Solid) recebeu refatoracao visual completa com componentes reutilizaveis:
+  - `TextInputField`, `TextAreaField`, `SelectField`, `ToggleField`;
+  - `StringListField` (listas editaveis);
+  - `KeyValueListField` (chave/valor);
+  - `FieldShell` padronizando label + tooltip `?`.
+- UI estruturada nas 8 abas planejadas:
+  - `Jogo`
+  - `Runtime`
+  - `Performance e Compatibilidade`
+  - `Prefixo e Dependencias`
+  - `Winecfg`
+  - `Wrappers e Ambiente`
+  - `Scripts`
+  - `Revisao e Gerar`
+- Todas as opcoes principais de configuracao do payload estao visiveis e editaveis na UI (MVP visual), incluindo:
+  - estados de feature (`MandatoryOn`, `MandatoryOff`, `OptionalOn`, `OptionalOff`);
+  - runtime primario/fallback;
+  - dependencias extras;
+  - winetricks, registry keys, folder mounts;
+  - opcoes de winecfg (dll overrides, virtual desktop, drives, audio);
+  - wrappers customizados, variaveis de ambiente e scripts.
+- Ajuste de layout/CSS para suportar:
+  - listas e tabelas editaveis;
+  - cards de resumo;
+  - responsividade desktop/mobile.
+- Limpeza tecnica:
+  - componente legado `components/Field.tsx` removido (nao utilizado).
+
+Observacoes desta etapa:
+- `Import .reg` e `Extrair icone` estao prontos visualmente, mas ainda nao conectados ao backend (proxima etapa funcional).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
+- `cargo build --workspace`

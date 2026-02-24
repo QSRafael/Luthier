@@ -2,7 +2,17 @@ export type FeatureState = 'MandatoryOn' | 'MandatoryOff' | 'OptionalOn' | 'Opti
 
 export type RuntimePrimary = 'ProtonUmu' | 'ProtonNative' | 'Wine'
 
-export type CreatorTab = 'game' | 'runtime' | 'review'
+export type RuntimePreference = 'Auto' | 'Proton' | 'Wine'
+
+export type CreatorTab =
+  | 'game'
+  | 'runtime'
+  | 'performance'
+  | 'prefix'
+  | 'winecfg'
+  | 'wrappers'
+  | 'scripts'
+  | 'review'
 
 export type GameConfig = {
   config_version: number
@@ -16,7 +26,7 @@ export type GameConfig = {
     auto_update: boolean
     esync: boolean
     fsync: boolean
-    runtime_preference: 'Auto' | 'Proton' | 'Wine'
+    runtime_preference: RuntimePreference
   }
   environment: {
     gamemode: FeatureState
