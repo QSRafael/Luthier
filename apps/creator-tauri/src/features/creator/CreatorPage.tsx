@@ -24,6 +24,7 @@ import {
 } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
+import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
 import type { Theme } from '../../components/theme-provider'
 import { Locale } from '../../i18n'
 import { CreatorTab, FeatureState, RuntimePreference } from '../../models/config'
@@ -368,7 +369,7 @@ export default function CreatorPage() {
               help={runtimeVersionFieldHelp()}
               controlClass="w-full"
             >
-              <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px]">
+              <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
                 <div class="grid gap-1.5">
                   <label class="text-xs font-medium text-muted-foreground">
                     {runtimeVersionFieldLabel()}
@@ -390,49 +391,61 @@ export default function CreatorPage() {
                   />
                 </div>
 
-                <div class="grid gap-1.5">
-                  <label class="text-xs font-medium text-muted-foreground">
-                    {tx('Versão obrigatória', 'Required version')}
-                  </label>
-                  <Select
-                    value={config().requirements.runtime.strict ? 'true' : 'false'}
-                    onInput={(e) =>
-                      patchConfig((prev) => ({
-                        ...prev,
-                        requirements: {
-                          ...prev.requirements,
-                          runtime: {
-                            ...prev.requirements.runtime,
-                            strict: e.currentTarget.value === 'true'
+                <div class="grid content-start gap-2.5 rounded-md border border-border/80 bg-muted/20 p-3">
+                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium">{tx('Versão obrigatória', 'Required version')}</p>
+                      <p class="text-xs text-muted-foreground">
+                        {config().requirements.runtime.strict ? tx('Sim', 'Yes') : tx('Não', 'No')}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config().requirements.runtime.strict}
+                      onChange={(checked) =>
+                        patchConfig((prev) => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            runtime: {
+                              ...prev.requirements.runtime,
+                              strict: checked
+                            }
                           }
-                        }
-                      }))
-                    }
-                  >
-                    <option value="false">{tx('Não', 'No')}</option>
-                    <option value="true">{tx('Sim', 'Yes')}</option>
-                  </Select>
-                </div>
+                        }))
+                      }
+                    >
+                      <SwitchInput />
+                      <SwitchControl>
+                        <SwitchThumb />
+                      </SwitchControl>
+                    </Switch>
+                  </div>
 
-                <div class="grid gap-1.5">
-                  <label class="text-xs font-medium text-muted-foreground">
-                    {tx('Auto update', 'Auto update')}
-                  </label>
-                  <Select
-                    value={config().runner.auto_update ? 'true' : 'false'}
-                    onInput={(e) =>
-                      patchConfig((prev) => ({
-                        ...prev,
-                        runner: {
-                          ...prev.runner,
-                          auto_update: e.currentTarget.value === 'true'
-                        }
-                      }))
-                    }
-                  >
-                    <option value="false">{tx('Não', 'No')}</option>
-                    <option value="true">{tx('Sim', 'Yes')}</option>
-                  </Select>
+                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium">{tx('Auto update', 'Auto update')}</p>
+                      <p class="text-xs text-muted-foreground">
+                        {config().runner.auto_update ? tx('Sim', 'Yes') : tx('Não', 'No')}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config().runner.auto_update}
+                      onChange={(checked) =>
+                        patchConfig((prev) => ({
+                          ...prev,
+                          runner: {
+                            ...prev.runner,
+                            auto_update: checked
+                          }
+                        }))
+                      }
+                    >
+                      <SwitchInput />
+                      <SwitchControl>
+                        <SwitchThumb />
+                      </SwitchControl>
+                    </Switch>
+                  </div>
                 </div>
               </div>
             </FieldShell>

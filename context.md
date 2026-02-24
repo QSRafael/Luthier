@@ -1839,6 +1839,15 @@ Observacao de arquitetura:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 36
+Escopo implementado:
+- UX do item `Versão de runtime` refinada na aba `Runtime`:
+  - `Versão obrigatória` e `Auto update` trocaram de `select` para `switch`;
+  - layout consolidado em painel lateral de toggles, reduzindo aperto visual no item combinado.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27
