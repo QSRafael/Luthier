@@ -395,8 +395,8 @@ export default function CreatorPage() {
                   />
                 </ItemContent>
 
-                <ItemActions class="grid content-start gap-3 sm:grid-cols-2">
-                  <div class="flex items-center justify-between gap-3">
+                <ItemActions class="grid gap-3 sm:grid-cols-2 md:self-end">
+                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
                     <div class="min-w-0">
                       <p class="text-sm font-medium">{tx('Versão obrigatória', 'Required version')}</p>
                       <p class="text-xs text-muted-foreground">
@@ -425,7 +425,7 @@ export default function CreatorPage() {
                     </Switch>
                   </div>
 
-                  <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
                     <div class="min-w-0">
                       <p class="text-sm font-medium">{tx('Auto update', 'Auto update')}</p>
                       <p class="text-xs text-muted-foreground">
