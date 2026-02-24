@@ -13,7 +13,10 @@ use clap::Parser;
 use orchestrator_core::observability::{new_trace_id, LogLevel};
 
 use crate::cli::Cli;
-use crate::commands::{run_config_command, run_doctor_command, run_play, run_show_embedded_config};
+use crate::commands::{
+    run_config_command, run_doctor_command, run_play, run_show_embedded_config,
+    run_winecfg_command,
+};
 use crate::logging::log_event;
 
 #[tokio::main]
@@ -39,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
             "play": cli.play,
             "config": cli.config,
             "doctor": cli.doctor,
+            "winecfg": cli.winecfg,
             "show_config": cli.show_config,
             "lang": cli.lang,
             "verbose": cli.verbose,
@@ -59,6 +63,11 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if cli.winecfg {
+        run_winecfg_command(&trace_id).context("winecfg command failed")?;
+        return Ok(());
+    }
+
     if cli.config {
         run_config_command(&trace_id, &cli).context("config command failed")?;
         return Ok(());
@@ -69,6 +78,6 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    println!("Nada para executar. Use --show-config, --doctor, --config ou --play.");
+    println!("Nada para executar. Use --show-config, --doctor, --winecfg, --config ou --play.");
     Ok(())
 }

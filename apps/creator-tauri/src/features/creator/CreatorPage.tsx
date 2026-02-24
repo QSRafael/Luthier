@@ -1,5 +1,5 @@
-import { createMemo, createSignal, For, Show } from 'solid-js'
-import { IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
+import { createMemo, createSignal, For, JSX, Show } from 'solid-js'
+import { IconChevronDown, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
 import { invokeCommand } from '../../api/tauri'
 import {
@@ -52,6 +52,30 @@ function tabLabel(tab: CreatorTab, controller: CreatorController) {
   if (tab === 'wrappers') return tx('Wrappers e Ambiente', 'Wrappers and Environment')
   if (tab === 'scripts') return tx('Scripts', 'Scripts')
   return tx('Revisão e Gerar', 'Review and Generate')
+}
+
+type AccordionSectionProps = {
+  title: string
+  description?: string
+  defaultOpen?: boolean
+  children: JSX.Element
+}
+
+function AccordionSection(props: AccordionSectionProps) {
+  return (
+    <details open={props.defaultOpen ?? false} class="group rounded-xl border border-border/70 bg-card/80">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold">{props.title}</p>
+          <Show when={props.description}>
+            <p class="text-xs text-muted-foreground">{props.description}</p>
+          </Show>
+        </div>
+        <IconChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div class="border-t border-border/60 px-4 py-3">{props.children}</div>
+    </details>
+  )
 }
 
 type SwitchChoiceCardProps = {
@@ -148,6 +172,23 @@ function basenamePath(path: string): string {
   const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
   const idx = normalized.lastIndexOf('/')
   return idx >= 0 ? normalized.slice(idx + 1) : normalized
+}
+
+function parseWxH(raw: string | null): { width: string; height: string } {
+  if (!raw) return { width: '', height: '' }
+  const [width, height] = raw.split('x')
+  return { width: width ?? '', height: height ?? '' }
+}
+
+function buildWxH(width: string, height: string): string | null {
+  const w = width.trim()
+  const h = height.trim()
+  if (!w || !h) return null
+  return `${w}x${h}`
+}
+
+function featureStateEnabled(value: FeatureState): boolean {
+  return value === 'MandatoryOn' || value === 'OptionalOn'
 }
 
 export default function CreatorPage() {
@@ -266,6 +307,87 @@ export default function CreatorPage() {
     env_vars: '',
     paths: ''
   })
+  const [wineDesktopFolderDialogOpen, setWineDesktopFolderDialogOpen] = createSignal(false)
+  const [wineDesktopFolderDraft, setWineDesktopFolderDraft] = createSignal({
+    folder_key: 'desktop',
+    shortcut_name: '',
+    linux_path: ''
+  })
+  const [wineDriveDialogOpen, setWineDriveDialogOpen] = createSignal(false)
+  const [wineDriveDraft, setWineDriveDraft] = createSignal({
+    letter: 'D',
+    host_path: '',
+    drive_type: 'auto',
+    label: '',
+    serial: ''
+  })
+
+  const wineWindowsVersionOptions = [
+    { value: '__default__', label: tx('Padrão do runtime (não alterar)', 'Runtime default (do not override)') },
+    { value: 'win11', label: 'Windows 11' },
+    { value: 'win10', label: 'Windows 10' },
+    { value: 'win81', label: 'Windows 8.1' },
+    { value: 'win8', label: 'Windows 8' },
+    { value: 'win7', label: 'Windows 7' },
+    { value: 'vista', label: 'Windows Vista' },
+    { value: 'winxp', label: 'Windows XP' }
+  ] as const
+
+  const wineDesktopFolderKeyOptions = [
+    { value: 'desktop', label: tx('Desktop', 'Desktop') },
+    { value: 'documents', label: tx('Documentos', 'Documents') },
+    { value: 'downloads', label: tx('Downloads', 'Downloads') },
+    { value: 'music', label: tx('Músicas', 'Music') },
+    { value: 'pictures', label: tx('Imagens', 'Pictures') },
+    { value: 'videos', label: tx('Vídeos', 'Videos') }
+  ] as const
+
+  const wineDriveTypeOptions = [
+    { value: 'auto', label: tx('Auto detectar', 'Auto detect') },
+    { value: 'local_disk', label: tx('Disco rígido local', 'Local hard disk') },
+    { value: 'network_share', label: tx('Compartilhamento de rede', 'Network share') },
+    { value: 'floppy', label: tx('Disquete', 'Floppy disk') },
+    { value: 'cdrom', label: tx('CD-ROM', 'CD-ROM') }
+  ] as const
+
+  const allWineDriveLetters = 'DEFGHIJKLMNOPQRSTUVWXY'.split('')
+  const availableWineDriveLetters = createMemo(() => {
+    const used = new Set(
+      config()
+        .winecfg.drives.map((item) => item.letter.trim().toUpperCase())
+        .filter(Boolean)
+    )
+    return allWineDriveLetters.filter((letter) => !used.has(letter))
+  })
+
+  const winecfgVirtualDesktopEnabled = createMemo(() =>
+    featureStateEnabled(config().winecfg.virtual_desktop.state)
+  )
+
+  const winecfgVirtualDesktopResolution = createMemo(() =>
+    parseWxH(config().winecfg.virtual_desktop.resolution)
+  )
+
+  const setWinecfgVirtualDesktopResolutionPart = (part: 'width' | 'height', value: string) => {
+    patchConfig((prev) => {
+      const current = parseWxH(prev.winecfg.virtual_desktop.resolution)
+      const next = {
+        width: part === 'width' ? value : current.width,
+        height: part === 'height' ? value : current.height
+      }
+
+      return {
+        ...prev,
+        winecfg: {
+          ...prev.winecfg,
+          virtual_desktop: {
+            ...prev.winecfg.virtual_desktop,
+            resolution: buildWxH(next.width, next.height)
+          }
+        }
+      }
+    })
+  }
 
   const runtimeVersionFieldLabel = () => {
     const preference = config().runner.runtime_preference
@@ -2217,42 +2339,75 @@ export default function CreatorPage() {
               help={tx('Configura overrides por DLL como native/builtin.', 'Configures per-DLL overrides such as native/builtin.')}
               controlClass="flex justify-end"
               footer={
-                <div class="grid gap-2">
-                  <Show
-                    when={config().winecfg.dll_overrides.length > 0}
-                    fallback={
-                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {tx('Nenhum override adicionado.', 'No override added.')}
-                      </div>
-                    }
-                  >
-                    <For each={config().winecfg.dll_overrides}>
-                      {(item, index) => (
-                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_180px_auto]">
-                          <span class="truncate text-sm font-medium">{item.dll}</span>
-                          <span class="truncate text-xs text-muted-foreground">{item.mode}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              patchConfig((prev) => ({
-                                ...prev,
-                                winecfg: {
-                                  ...prev.winecfg,
-                                  dll_overrides: removeAt(prev.winecfg.dll_overrides, index())
-                                }
-                              }))
-                            }
-                            title={tx('Remover', 'Remove')}
-                          >
-                            <IconTrash class="size-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </div>
+                <Show
+                  when={config().winecfg.dll_overrides.length > 0}
+                  fallback={
+                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      {tx('Nenhum override adicionado.', 'No override added.')}
+                    </div>
+                  }
+                >
+                  <div class="rounded-md border border-border/60 bg-background/40">
+                    <Table>
+                      <TableHeader>
+                        <TableRow class="hover:bg-transparent">
+                          <TableHead>{tx('DLL', 'DLL')}</TableHead>
+                          <TableHead>{tx('Modo', 'Mode')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <For each={config().winecfg.dll_overrides}>
+                          {(item, index) => (
+                            <TableRow>
+                              <TableCell class="max-w-[260px] truncate font-medium">{item.dll}</TableCell>
+                              <TableCell class="w-[220px]">
+                                <Select
+                                  value={item.mode}
+                                  onInput={(e) =>
+                                    patchConfig((prev) => ({
+                                      ...prev,
+                                      winecfg: {
+                                        ...prev.winecfg,
+                                        dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
+                                          ...prev.winecfg.dll_overrides[index()],
+                                          mode: e.currentTarget.value
+                                        })
+                                      }
+                                    }))
+                                  }
+                                >
+                                  <For each={dllModeOptions()}>
+                                    {(option) => <option value={option.value}>{option.label}</option>}
+                                  </For>
+                                </Select>
+                              </TableCell>
+                              <TableCell class="text-right">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() =>
+                                    patchConfig((prev) => ({
+                                      ...prev,
+                                      winecfg: {
+                                        ...prev.winecfg,
+                                        dll_overrides: removeAt(prev.winecfg.dll_overrides, index())
+                                      }
+                                    }))
+                                  }
+                                  title={tx('Remover', 'Remove')}
+                                >
+                                  <IconTrash class="size-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </For>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Show>
               }
             >
               <Dialog open={dllDialogOpen()} onOpenChange={setDllDialogOpen}>
@@ -2321,204 +2476,613 @@ export default function CreatorPage() {
               </Dialog>
             </FieldShell>
 
-            <FeatureStateField
-              label={tx('Capturar mouse automaticamente', 'Auto capture mouse')}
-              help={tx('Equivalente à opção de captura automática do winecfg.', 'Equivalent to winecfg auto capture mouse option.')}
-              value={config().winecfg.auto_capture_mouse}
-              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, auto_capture_mouse: value } }))}
-            />
-
-            <FeatureStateField
-              label={tx('Permitir decoração de janelas (WM)', 'Allow window decorations (WM)')}
-              help={tx('Controla se o gerenciador de janelas decora janelas do jogo.', 'Controls whether window manager decorates game windows.')}
-              value={config().winecfg.window_decorations}
-              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_decorations: value } }))}
-            />
-
-            <FeatureStateField
-              label={tx('Permitir controle de janelas (WM)', 'Allow window control (WM)')}
-              help={tx('Controla se o WM pode gerenciar posição/estado das janelas.', 'Controls whether WM can manage window position/state.')}
-              value={config().winecfg.window_manager_control}
-              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_manager_control: value } }))}
-            />
-
-            <FeatureStateField
-              label={tx('Desktop virtual (estado)', 'Virtual desktop (state)')}
-              help={tx('Ativa/desativa emulação de desktop virtual no Wine.', 'Enables/disables virtual desktop emulation in Wine.')}
-              value={config().winecfg.virtual_desktop.state}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  winecfg: {
-                    ...prev.winecfg,
-                    virtual_desktop: {
-                      ...prev.winecfg.virtual_desktop,
-                      state: value
-                    }
-                  }
-                }))
-              }
-            />
-
-            <TextInputField
-              label={tx('Resolução do desktop virtual', 'Virtual desktop resolution')}
-              help={tx('Formato sugerido: 1280x720 ou 1920x1080.', 'Suggested format: 1280x720 or 1920x1080.')}
-              value={config().winecfg.virtual_desktop.resolution ?? ''}
-              onInput={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  winecfg: {
-                    ...prev.winecfg,
-                    virtual_desktop: {
-                      ...prev.winecfg.virtual_desktop,
-                      resolution: value.trim() ? value : null
-                    }
-                  }
-                }))
-              }
-            />
-
-            <FeatureStateField
-              label={tx('Integração com desktop', 'Desktop integration')}
-              help={tx('Controla integração Wine com shell/desktop do Linux.', 'Controls Wine integration with Linux shell/desktop.')}
-              value={config().winecfg.desktop_integration}
-              onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, desktop_integration: value } }))}
-            />
-
             <FieldShell
-              label={tx('Unidades (drives)', 'Drives')}
-              help={tx('Mapeia letras de unidade para paths relativos da pasta do jogo.', 'Maps drive letters to relative paths inside game folder.')}
+              label={tx('Versão do Windows (winecfg)', 'Windows version (winecfg)')}
+              help={tx(
+                'Override opcional da versão do Windows reportada pelo prefixo. Se não configurar, mantém o padrão do runtime/prefixo.',
+                'Optional override for the Windows version reported by the prefix. If unset, runtime/prefix defaults are kept.'
+              )}
+              compact
             >
-              <div class="info-card">
-                <span>
-                  <strong>C:</strong> {tx('fixo em drive_c (interno)', 'fixed to drive_c (internal)')}
-                </span>
-                <span>
-                  <strong>Z:</strong> {tx('padrão de compatibilidade (ativado por padrão)', 'compatibility default (enabled by default)')}
-                </span>
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={() =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      winecfg: {
-                        ...prev.winecfg,
-                        drives: [{ letter: 'Z', source_relative_path: '.', state: 'OptionalOn' }]
-                      }
-                    }))
-                  }
-                >
-                  {tx('Restaurar padrão de drives', 'Restore default drives')}
-                </Button>
-              </div>
+              <Select
+                value={config().winecfg.windows_version ?? '__default__'}
+                onInput={(e) =>
+                  patchConfig((prev) => ({
+                    ...prev,
+                    winecfg: {
+                      ...prev.winecfg,
+                      windows_version: e.currentTarget.value === '__default__' ? null : e.currentTarget.value
+                    }
+                  }))
+                }
+              >
+                <For each={wineWindowsVersionOptions}>
+                  {(option) => <option value={option.value}>{option.label}</option>}
+                </For>
+              </Select>
+            </FieldShell>
 
-              <div class="table-list">
-                <For each={config().winecfg.drives}>
-                  {(item, index) => (
-                    <div class="table-row table-row-three">
-                      <Input
-                        value={item.letter}
-                        placeholder="D"
-                        onInput={(e) =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            winecfg: {
-                              ...prev.winecfg,
-                              drives: replaceAt(prev.winecfg.drives, index(), {
-                                ...prev.winecfg.drives[index()],
-                                letter: e.currentTarget.value
-                              })
-                            }
-                          }))
-                        }
-                      />
-                      <Input
-                        value={item.source_relative_path}
-                        placeholder={tx('Path relativo (ex.: data)', 'Relative path (e.g. data)')}
-                        onInput={(e) =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            winecfg: {
-                              ...prev.winecfg,
-                              drives: replaceAt(prev.winecfg.drives, index(), {
-                                ...prev.winecfg.drives[index()],
-                                source_relative_path: e.currentTarget.value
-                              })
-                            }
-                          }))
-                        }
-                      />
-                      <Select
-                        value={item.state}
-                        onInput={(e) =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            winecfg: {
-                              ...prev.winecfg,
-                              drives: replaceAt(prev.winecfg.drives, index(), {
-                                ...prev.winecfg.drives[index()],
-                                state: e.currentTarget.value as FeatureState
-                              })
-                            }
-                          }))
-                        }
-                      >
-                        <For each={featureStateOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
-                      </Select>
+            <div class="grid gap-3">
+              <AccordionSection
+                defaultOpen
+                title={tx('Gráficos', 'Graphics')}
+                description={tx(
+                  'Equivalente à aba Gráficos do winecfg. Tudo aqui é adicional ao padrão do prefixo.',
+                  'Equivalent to the Graphics tab in winecfg. Everything here is an additive override to prefix defaults.'
+                )}
+              >
+                <div class="grid gap-3">
+                  <FeatureStateField
+                    label={tx('Capturar o mouse automaticamente em janelas em tela cheia', 'Automatically capture mouse in fullscreen windows')}
+                    help={tx('Equivalente à opção de captura automática do winecfg.', 'Equivalent to winecfg auto-capture mouse option.')}
+                    value={config().winecfg.auto_capture_mouse}
+                    onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, auto_capture_mouse: value } }))}
+                  />
 
+                  <FeatureStateField
+                    label={tx('Permitir que o gerenciador de janelas decore as janelas', 'Allow the window manager to decorate windows')}
+                    help={tx('Controla decorações de janela gerenciadas pelo WM.', 'Controls window decorations managed by the WM.')}
+                    value={config().winecfg.window_decorations}
+                    onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_decorations: value } }))}
+                  />
+
+                  <FeatureStateField
+                    label={tx('Permitir que o gerenciador de janelas controle as janelas', 'Allow the window manager to control windows')}
+                    help={tx('Permite que o WM controle posição/foco/estado das janelas.', 'Lets the WM control window position/focus/state.')}
+                    value={config().winecfg.window_manager_control}
+                    onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_manager_control: value } }))}
+                  />
+
+                  <FeatureStateField
+                    label={tx('Emular uma área de trabalho virtual', 'Emulate a virtual desktop')}
+                    help={tx('Quando ativo, o jogo roda dentro de um desktop virtual do Wine.', 'When enabled, the game runs inside a Wine virtual desktop.')}
+                    value={config().winecfg.virtual_desktop.state}
+                    onChange={(value) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        winecfg: {
+                          ...prev.winecfg,
+                          virtual_desktop: {
+                            ...prev.winecfg.virtual_desktop,
+                            state: value
+                          }
+                        }
+                      }))
+                    }
+                  />
+
+                  <Show when={winecfgVirtualDesktopEnabled()}>
+                    <div class="rounded-md border border-border/60 bg-muted/20 p-3">
+                      <div class="space-y-1.5">
+                        <p class="text-sm font-medium">{tx('Tamanho da área de trabalho virtual', 'Virtual desktop size')}</p>
+                        <p class="text-xs text-muted-foreground">
+                          {tx('Informe largura x altura (ex.: 1280 x 720).', 'Set width x height (e.g. 1280 x 720).')}
+                        </p>
+                      </div>
+                      <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                        <Input
+                          value={winecfgVirtualDesktopResolution().width}
+                          placeholder="1280"
+                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('width', e.currentTarget.value)}
+                        />
+                        <span class="text-sm font-semibold text-muted-foreground">x</span>
+                        <Input
+                          value={winecfgVirtualDesktopResolution().height}
+                          placeholder="720"
+                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('height', e.currentTarget.value)}
+                        />
+                      </div>
+                    </div>
+                  </Show>
+
+                  <div class="rounded-md border border-border/60 bg-muted/20 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="space-y-1.5">
+                        <p class="text-sm font-medium">{tx('Resolução da tela (DPI)', 'Screen resolution (DPI)')}</p>
+                        <p class="text-xs text-muted-foreground">
+                          {tx('Slider de 96 ppp até 480 ppp. Se não configurar, usa o padrão do Wine.', 'Slider from 96 DPI to 480 DPI. If unset, Wine default is used.')}
+                        </p>
+                      </div>
                       <Button
                         type="button"
-                        class="btn-danger"
+                        variant="outline"
+                        size="sm"
                         onClick={() =>
                           patchConfig((prev) => ({
                             ...prev,
                             winecfg: {
                               ...prev.winecfg,
-                              drives: removeAt(prev.winecfg.drives, index())
+                              screen_dpi: null
                             }
                           }))
                         }
                       >
-                        {tx('Remover', 'Remove')}
+                        {tx('Usar padrão', 'Use default')}
                       </Button>
                     </div>
-                  )}
-                </For>
+                    <div class="mt-3 grid gap-2">
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground">96 ppp</span>
+                        <span class="font-medium">
+                          {(config().winecfg.screen_dpi ?? 96).toString()} ppp
+                          <Show when={config().winecfg.screen_dpi == null}>
+                            <span class="text-muted-foreground"> ({tx('padrão', 'default')})</span>
+                          </Show>
+                        </span>
+                        <span class="text-muted-foreground">480 ppp</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="96"
+                        max="480"
+                        step="1"
+                        value={(config().winecfg.screen_dpi ?? 96).toString()}
+                        class="w-full accent-primary"
+                        onInput={(e) => {
+                          const parsed = Number.parseInt(e.currentTarget.value, 10)
+                          patchConfig((prev) => ({
+                            ...prev,
+                            winecfg: {
+                              ...prev.winecfg,
+                              screen_dpi: Number.isFinite(parsed) ? parsed : 96
+                            }
+                          }))
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </AccordionSection>
 
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={() =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      winecfg: {
-                        ...prev.winecfg,
-                        drives: [...prev.winecfg.drives, { letter: '', source_relative_path: '', state: 'OptionalOff' }]
-                      }
-                    }))
-                  }
-                >
-                  {tx('Adicionar unidade', 'Add drive')}
-                </Button>
-              </div>
-            </FieldShell>
+              <AccordionSection
+                title={tx('Integração com área de trabalho', 'Desktop integration')}
+                description={tx(
+                  'Associações de arquivo/protocolo e mapeamentos de pastas especiais do Wine.',
+                  'File/protocol associations and Wine special desktop folder mappings.'
+                )}
+              >
+                <div class="grid gap-3">
+                  <FeatureStateField
+                    label={tx('Integração com desktop (geral)', 'Desktop integration (general)')}
+                    help={tx('Controla integração do Wine com shell/desktop do Linux.', 'Controls Wine integration with the Linux shell/desktop.')}
+                    value={config().winecfg.desktop_integration}
+                    onChange={(value) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        winecfg: { ...prev.winecfg, desktop_integration: value }
+                      }))
+                    }
+                  />
 
-            <SelectField<AudioDriverOption>
-              label={tx('Driver de áudio', 'Audio driver')}
-              help={tx('Seleciona backend de áudio preferido no Wine.', 'Selects preferred Wine audio backend.')}
-              value={audioDriverValue()}
-              options={audioDriverOptions()}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  winecfg: {
-                    ...prev.winecfg,
-                    audio_driver: value === '__none__' ? null : value
-                  }
-                }))
-              }
-            />
+                  <FeatureStateField
+                    label={tx('Tipos MIME (associações de arquivo e protocolo)', 'MIME types (file/protocol associations)')}
+                    help={tx('Equivalente a "Manage file and protocol associations".', 'Equivalent to "Manage file and protocol associations".')}
+                    value={config().winecfg.mime_associations}
+                    onChange={(value) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        winecfg: { ...prev.winecfg, mime_associations: value }
+                      }))
+                    }
+                  />
+
+                  <div class="rounded-xl border border-border/70 bg-card/70 p-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p class="text-sm font-semibold">{tx('Pastas especiais', 'Special folders')}</p>
+                        <p class="text-xs text-muted-foreground">
+                          {tx('Adicione mapeamentos de pasta e atalho para o Wine (override opcional).', 'Add folder + shortcut mappings for Wine (optional override).')}
+                        </p>
+                      </div>
+                      <Dialog open={wineDesktopFolderDialogOpen()} onOpenChange={setWineDesktopFolderDialogOpen}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          class="inline-flex items-center gap-1.5"
+                          onClick={() => setWineDesktopFolderDialogOpen(true)}
+                        >
+                          <IconPlus class="size-4" />
+                          {tx('Adicionar pasta', 'Add folder')}
+                        </Button>
+
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>{tx('Adicionar pasta especial do Wine', 'Add Wine special folder')}</DialogTitle>
+                            <DialogDescription>
+                              {tx('Defina o tipo da pasta, nome do atalho e caminho Linux.', 'Set folder type, shortcut name and Linux path.')}
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div class="grid gap-2">
+                            <Select
+                              value={wineDesktopFolderDraft().folder_key}
+                              onInput={(e) =>
+                                setWineDesktopFolderDraft((prev) => ({ ...prev, folder_key: e.currentTarget.value }))
+                              }
+                            >
+                              <For each={wineDesktopFolderKeyOptions}>
+                                {(option) => <option value={option.value}>{option.label}</option>}
+                              </For>
+                            </Select>
+                            <Input
+                              value={wineDesktopFolderDraft().shortcut_name}
+                              placeholder={tx('Nome do atalho no Wine', 'Shortcut name in Wine')}
+                              onInput={(e) =>
+                                setWineDesktopFolderDraft((prev) => ({ ...prev, shortcut_name: e.currentTarget.value }))
+                              }
+                            />
+                            <Input
+                              value={wineDesktopFolderDraft().linux_path}
+                              placeholder="/mnt/games/shared"
+                              onInput={(e) =>
+                                setWineDesktopFolderDraft((prev) => ({ ...prev, linux_path: e.currentTarget.value }))
+                              }
+                            />
+                            <p class="text-xs text-muted-foreground">
+                              {tx('Prefira caminhos genéricos (sem nome de usuário fixo), quando possível.', 'Prefer generic paths (without a fixed username) when possible.')}
+                            </p>
+                          </div>
+
+                          <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setWineDesktopFolderDialogOpen(false)}>
+                              {tx('Cancelar', 'Cancel')}
+                            </Button>
+                            <Button
+                              type="button"
+                              disabled={!wineDesktopFolderDraft().shortcut_name.trim() || !wineDesktopFolderDraft().linux_path.trim()}
+                              onClick={() => {
+                                const draft = wineDesktopFolderDraft()
+                                if (!draft.shortcut_name.trim() || !draft.linux_path.trim()) return
+                                patchConfig((prev) => ({
+                                  ...prev,
+                                  winecfg: {
+                                    ...prev.winecfg,
+                                    desktop_folders: [
+                                      ...prev.winecfg.desktop_folders,
+                                      {
+                                        folder_key: draft.folder_key,
+                                        shortcut_name: draft.shortcut_name.trim(),
+                                        linux_path: draft.linux_path.trim()
+                                      }
+                                    ]
+                                  }
+                                }))
+                                setWineDesktopFolderDraft({ folder_key: 'desktop', shortcut_name: '', linux_path: '' })
+                                setWineDesktopFolderDialogOpen(false)
+                              }}
+                            >
+                              {tx('Confirmar', 'Confirm')}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
+                    <div class="mt-3">
+                      <Show
+                        when={config().winecfg.desktop_folders.length > 0}
+                        fallback={
+                          <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                            {tx('Nenhuma pasta especial adicionada.', 'No special folder added.')}
+                          </div>
+                        }
+                      >
+                        <div class="rounded-md border border-border/60 bg-background/40">
+                          <Table>
+                            <TableHeader>
+                              <TableRow class="hover:bg-transparent">
+                                <TableHead>{tx('Tipo', 'Type')}</TableHead>
+                                <TableHead>{tx('Atalho', 'Shortcut')}</TableHead>
+                                <TableHead>{tx('Caminho Linux', 'Linux path')}</TableHead>
+                                <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <For each={config().winecfg.desktop_folders}>
+                                {(item, index) => (
+                                  <TableRow>
+                                    <TableCell class="max-w-[120px] truncate font-medium">{item.folder_key}</TableCell>
+                                    <TableCell class="max-w-[180px] truncate">{item.shortcut_name}</TableCell>
+                                    <TableCell class="max-w-[320px] truncate text-muted-foreground">{item.linux_path}</TableCell>
+                                    <TableCell class="text-right">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                        onClick={() =>
+                                          patchConfig((prev) => ({
+                                            ...prev,
+                                            winecfg: {
+                                              ...prev.winecfg,
+                                              desktop_folders: removeAt(prev.winecfg.desktop_folders, index())
+                                            }
+                                          }))
+                                        }
+                                      >
+                                        <IconTrash class="size-4" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </For>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+                </div>
+              </AccordionSection>
+
+              <AccordionSection
+                title={tx('Unidades', 'Drives')}
+                description={tx(
+                  'Unidades adicionais do Wine como overrides. C: e Z geralmente já existem no prefixo padrão.',
+                  'Additional Wine drives as overrides. C: and Z: usually already exist in the default prefix.'
+                )}
+              >
+                <div class="grid gap-3">
+                  <div class="rounded-md border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
+                    <div class="grid gap-1">
+                      <p>
+                        <strong class="text-foreground">C:</strong>{' '}
+                        {tx('normalmente aponta para drive_c (interno do prefixo).', 'usually points to drive_c (internal prefix path).')}
+                      </p>
+                      <p>
+                        <strong class="text-foreground">Z:</strong>{' '}
+                        {tx('geralmente expõe a raiz do filesystem Linux por compatibilidade.', 'usually exposes the Linux filesystem root for compatibility.')}
+                      </p>
+                    </div>
+                    <div class="mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            winecfg: {
+                              ...prev.winecfg,
+                              drives: [
+                                {
+                                  letter: 'Z',
+                                  source_relative_path: '.',
+                                  state: 'OptionalOn',
+                                  host_path: null,
+                                  drive_type: 'auto',
+                                  label: null,
+                                  serial: null
+                                }
+                              ]
+                            }
+                          }))
+                        }
+                      >
+                        {tx('Restaurar padrão exibido (Z:)', 'Restore shown default (Z:)')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end">
+                    <Dialog open={wineDriveDialogOpen()} onOpenChange={setWineDriveDialogOpen}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        class="inline-flex items-center gap-1.5"
+                        onClick={() => {
+                          const nextLetter = availableWineDriveLetters()[0] ?? 'D'
+                          setWineDriveDraft({
+                            letter: nextLetter,
+                            host_path: '',
+                            drive_type: 'auto',
+                            label: '',
+                            serial: ''
+                          })
+                          setWineDriveDialogOpen(true)
+                        }}
+                      >
+                        <IconPlus class="size-4" />
+                        {tx('Adicionar unidade', 'Add drive')}
+                      </Button>
+
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{tx('Adicionar unidade do Wine', 'Add Wine drive')}</DialogTitle>
+                          <DialogDescription>
+                            {tx('Escolha uma letra disponível e configure os metadados da unidade.', 'Choose an available letter and configure drive metadata.')}
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div class="grid gap-2">
+                          <Select
+                            value={wineDriveDraft().letter}
+                            onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, letter: e.currentTarget.value }))}
+                          >
+                            <For each={availableWineDriveLetters().length > 0 ? availableWineDriveLetters() : [wineDriveDraft().letter]}>
+                              {(letter) => <option value={letter}>{letter}:</option>}
+                            </For>
+                          </Select>
+
+                          <Input
+                            value={wineDriveDraft().host_path}
+                            placeholder="/mnt/storage/shared"
+                            onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, host_path: e.currentTarget.value }))}
+                          />
+
+                          <Select
+                            value={wineDriveDraft().drive_type}
+                            onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, drive_type: e.currentTarget.value }))}
+                          >
+                            <For each={wineDriveTypeOptions}>
+                              {(option) => <option value={option.value}>{option.label}</option>}
+                            </For>
+                          </Select>
+
+                          <div class="grid gap-2 md:grid-cols-2">
+                            <Input
+                              value={wineDriveDraft().label}
+                              placeholder={tx('Rótulo (opcional)', 'Label (optional)')}
+                              onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, label: e.currentTarget.value }))}
+                            />
+                            <Input
+                              value={wineDriveDraft().serial}
+                              placeholder={tx('Serial (opcional)', 'Serial (optional)')}
+                              onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, serial: e.currentTarget.value }))}
+                            />
+                          </div>
+
+                          <p class="text-xs text-muted-foreground">
+                            {tx('Use um diretório Linux genérico quando possível (evite paths fixos com nome de usuário).', 'Use a generic Linux directory when possible (avoid user-specific absolute paths).')}
+                          </p>
+                        </div>
+
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setWineDriveDialogOpen(false)}>
+                            {tx('Cancelar', 'Cancel')}
+                          </Button>
+                          <Button
+                            type="button"
+                            disabled={!wineDriveDraft().letter.trim() || !wineDriveDraft().host_path.trim()}
+                            onClick={() => {
+                              const draft = wineDriveDraft()
+                              const letter = draft.letter.trim().toUpperCase()
+                              if (!letter || !draft.host_path.trim()) return
+                              if (config().winecfg.drives.some((item) => item.letter.trim().toUpperCase() === letter)) {
+                                setStatusMessage(tx('Essa letra de unidade já está em uso.', 'That drive letter is already in use.'))
+                                return
+                              }
+                              patchConfig((prev) => ({
+                                ...prev,
+                                winecfg: {
+                                  ...prev.winecfg,
+                                  drives: [
+                                    ...prev.winecfg.drives,
+                                    {
+                                      letter,
+                                      source_relative_path: '',
+                                      state: 'OptionalOn',
+                                      host_path: draft.host_path.trim(),
+                                      drive_type: draft.drive_type as 'auto' | 'local_disk' | 'network_share' | 'floppy' | 'cdrom',
+                                      label: draft.label.trim() ? draft.label.trim() : null,
+                                      serial: draft.serial.trim() ? draft.serial.trim() : null
+                                    }
+                                  ]
+                                }
+                              }))
+                              setWineDriveDialogOpen(false)
+                            }}
+                          >
+                            {tx('Confirmar', 'Confirm')}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  <Show
+                    when={config().winecfg.drives.length > 0}
+                    fallback={
+                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        {tx('Nenhuma unidade adicional configurada.', 'No additional drive configured.')}
+                      </div>
+                    }
+                  >
+                    <div class="rounded-md border border-border/60 bg-background/40">
+                      <Table>
+                        <TableHeader>
+                          <TableRow class="hover:bg-transparent">
+                            <TableHead>{tx('Letra', 'Letter')}</TableHead>
+                            <TableHead>{tx('Caminho Linux', 'Linux path')}</TableHead>
+                            <TableHead>{tx('Tipo', 'Type')}</TableHead>
+                            <TableHead>{tx('Rótulo', 'Label')}</TableHead>
+                            <TableHead>{tx('Serial', 'Serial')}</TableHead>
+                            <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <For each={config().winecfg.drives}>
+                            {(item, index) => (
+                              <TableRow>
+                                <TableCell class="font-medium">{item.letter}:</TableCell>
+                                <TableCell class="max-w-[260px] truncate text-muted-foreground">
+                                  {(item.host_path ?? item.source_relative_path) || '—'}
+                                </TableCell>
+                                <TableCell class="max-w-[160px] truncate text-muted-foreground">
+                                  {item.drive_type ?? 'auto'}
+                                </TableCell>
+                                <TableCell class="max-w-[160px] truncate text-muted-foreground">
+                                  {item.label ?? '—'}
+                                </TableCell>
+                                <TableCell class="max-w-[140px] truncate text-muted-foreground">
+                                  {item.serial ?? '—'}
+                                </TableCell>
+                                <TableCell class="text-right">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={() =>
+                                      patchConfig((prev) => ({
+                                        ...prev,
+                                        winecfg: {
+                                          ...prev.winecfg,
+                                          drives: removeAt(prev.winecfg.drives, index())
+                                        }
+                                      }))
+                                    }
+                                  >
+                                    <IconTrash class="size-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </For>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </Show>
+                </div>
+              </AccordionSection>
+
+              <AccordionSection
+                title={tx('Áudio', 'Audio')}
+                description={tx(
+                  'Configurações adicionais de áudio do winecfg. O padrão do runtime continua válido se nada for alterado.',
+                  'Additional audio settings from winecfg. Runtime defaults remain valid if nothing is changed.'
+                )}
+              >
+                <div class="grid gap-3">
+                  <div class="rounded-md border border-border/60 bg-muted/20 p-3">
+                    <div class="space-y-1.5">
+                      <p class="text-sm font-medium">{tx('Driver de áudio', 'Audio driver')}</p>
+                      <p class="text-xs text-muted-foreground">
+                        {tx('Selecione o backend preferido. "Padrão do runtime" mantém o comportamento padrão do Wine.', 'Select the preferred backend. "Runtime default" keeps Wine default behavior.')}
+                      </p>
+                    </div>
+                    <div class="mt-3 max-w-sm">
+                      <Select
+                        value={audioDriverValue()}
+                        onInput={(e) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            winecfg: {
+                              ...prev.winecfg,
+                              audio_driver: e.currentTarget.value === '__none__' ? null : e.currentTarget.value
+                            }
+                          }))
+                        }
+                      >
+                        <For each={audioDriverOptions()}>
+                          {(option) => <option value={option.value}>{option.label}</option>}
+                        </For>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </AccordionSection>
+            </div>
           </section>
         </Show>
 

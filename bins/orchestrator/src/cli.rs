@@ -14,6 +14,9 @@ pub struct Cli {
     pub doctor: bool,
 
     #[arg(long)]
+    pub winecfg: bool,
+
+    #[arg(long)]
     pub verbose: bool,
 
     #[arg(long)]

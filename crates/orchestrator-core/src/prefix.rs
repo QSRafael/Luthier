@@ -179,6 +179,7 @@ mod tests {
                 wrapper_commands: vec![],
             },
             winecfg: WinecfgConfig {
+                windows_version: None,
                 dll_overrides: vec![],
                 auto_capture_mouse: FeatureState::OptionalOn,
                 window_decorations: FeatureState::OptionalOn,
@@ -187,7 +188,10 @@ mod tests {
                     state: FeatureState::OptionalOff,
                     resolution: None,
                 },
+                screen_dpi: None,
                 desktop_integration: FeatureState::OptionalOn,
+                mime_associations: FeatureState::OptionalOff,
+                desktop_folders: vec![],
                 drives: vec![],
                 audio_driver: None,
             },

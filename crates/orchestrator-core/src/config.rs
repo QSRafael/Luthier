@@ -55,12 +55,20 @@ pub struct CompatibilityConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WinecfgConfig {
+    #[serde(default)]
+    pub windows_version: Option<String>,
     pub dll_overrides: Vec<DllOverrideRule>,
     pub auto_capture_mouse: FeatureState,
     pub window_decorations: FeatureState,
     pub window_manager_control: FeatureState,
     pub virtual_desktop: VirtualDesktopConfig,
+    #[serde(default)]
+    pub screen_dpi: Option<u16>,
     pub desktop_integration: FeatureState,
+    #[serde(default = "default_feature_state_optional_off")]
+    pub mime_associations: FeatureState,
+    #[serde(default)]
+    pub desktop_folders: Vec<WineDesktopFolderMapping>,
     pub drives: Vec<WineDriveMapping>,
     pub audio_driver: Option<String>,
 }
@@ -153,6 +161,21 @@ pub struct WineDriveMapping {
     pub letter: String,
     pub source_relative_path: String,
     pub state: FeatureState,
+    #[serde(default)]
+    pub host_path: Option<String>,
+    #[serde(default)]
+    pub drive_type: Option<String>,
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub serial: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WineDesktopFolderMapping {
+    pub folder_key: String,
+    pub shortcut_name: String,
+    pub linux_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -203,6 +226,10 @@ where
         Compat::Bool(false) => Ok(FeatureState::OptionalOff),
         Compat::State(state) => Ok(state),
     }
+}
+
+fn default_feature_state_optional_off() -> FeatureState {
+    FeatureState::OptionalOff
 }
 
 #[cfg(test)]

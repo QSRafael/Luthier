@@ -154,6 +154,81 @@ pub fn build_launch_command(
     })
 }
 
+pub fn build_winecfg_command(
+    config: &GameConfig,
+    report: &DoctorReport,
+    prefix_path: &Path,
+) -> anyhow::Result<LaunchCommandPlan> {
+    let selected_runtime = report
+        .runtime
+        .selected_runtime
+        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
+
+    let mut command_tokens = match selected_runtime {
+        RuntimeCandidate::ProtonUmu => {
+            let umu = report
+                .runtime
+                .umu_run
+                .clone()
+                .ok_or_else(|| anyhow!("selected runtime ProtonUmu but umu-run path is missing"))?;
+            vec![umu, "winecfg".to_string()]
+        }
+        RuntimeCandidate::ProtonNative => {
+            let proton = report
+                .runtime
+                .proton
+                .clone()
+                .ok_or_else(|| anyhow!("selected runtime ProtonNative but proton path is missing"))?;
+            vec![proton, "run".to_string(), "winecfg".to_string()]
+        }
+        RuntimeCandidate::Wine => {
+            let wine = report
+                .runtime
+                .wine
+                .clone()
+                .ok_or_else(|| anyhow!("selected runtime Wine but wine path is missing"))?;
+            let winecfg_program = std::path::Path::new(&wine)
+                .parent()
+                .map(|parent| parent.join("winecfg"))
+                .filter(|candidate| candidate.exists())
+                .map(|candidate| candidate.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "winecfg".to_string());
+            vec![winecfg_program]
+        }
+    };
+
+    let (program, args) = split_program_and_args(std::mem::take(&mut command_tokens))
+        .ok_or_else(|| anyhow!("failed to build winecfg command"))?;
+
+    let mut env_pairs = base_env_for_prefix(prefix_path);
+    if matches!(selected_runtime, RuntimeCandidate::ProtonUmu) {
+        if let Some(proton_path) = &report.runtime.proton {
+            upsert_env(&mut env_pairs, "PROTONPATH", proton_path);
+        }
+    }
+
+    if config.environment.prime_offload.is_enabled() {
+        upsert_env(&mut env_pairs, "__NV_PRIME_RENDER_OFFLOAD", "1");
+        upsert_env(&mut env_pairs, "__GLX_VENDOR_LIBRARY_NAME", "nvidia");
+        upsert_env(&mut env_pairs, "DRI_PRIME", "1");
+    }
+
+    for (key, value) in &config.environment.custom_vars {
+        if is_protected_env_key(key) {
+            continue;
+        }
+        upsert_env(&mut env_pairs, key, value);
+    }
+
+    Ok(LaunchCommandPlan {
+        program,
+        args,
+        cwd: prefix_path.to_string_lossy().into_owned(),
+        runtime: format!("{:?}", selected_runtime),
+        env: env_pairs,
+    })
+}
+
 pub fn execute_script_if_present(
     name: &str,
     script: &str,

@@ -1867,6 +1867,52 @@ Regra de UX:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 38
+Escopo implementado:
+- Reestruturacao da aba `winecfg` (Creator):
+  - `Substituicao de DLL` agora usa tabela com cabecalho;
+  - coluna `Modo` (builtin/native/etc.) passou a ser editavel diretamente na tabela;
+  - adicionada configuracao de `Versao do Windows (winecfg)` como override opcional (select com "Padrao do runtime").
+- Novo layout por acordeao na aba `winecfg` (inspirado nas abas do winecfg original):
+  - `Graficos`
+  - `Integracao com area de trabalho`
+  - `Unidades`
+  - `Audio`
+- `Graficos`:
+  - cards/politicas para captura de mouse, decoracao de janelas, controle de janelas e desktop virtual;
+  - quando desktop virtual esta ativo, aparecem campos `largura x altura`;
+  - adicionado slider de DPI (`96` a `480 ppp`) com opcao `Usar padrao`.
+- `Integracao com area de trabalho`:
+  - politica geral de integracao com desktop;
+  - politica de MIME / associacoes de arquivo e protocolo;
+  - tabela de `Pastas especiais` com dialog para adicionar `tipo + atalho + caminho Linux`.
+- `Unidades`:
+  - tabela com cabecalho (letra, caminho Linux, tipo, rotulo, serial);
+  - dialog de adicao com letra restrita a valores ainda nao utilizados;
+  - metadados de tipo/rotulo/serial incluidos no payload (como overrides adicionais).
+- `Audio`:
+  - bloco no acordeao com seletor de backend de audio (`pipewire`, `pulseaudio`, `alsa` ou padrao do runtime).
+
+- Schema expandido (TS + Rust / serde compativel):
+  - `winecfg.windows_version`
+  - `winecfg.screen_dpi`
+  - `winecfg.mime_associations`
+  - `winecfg.desktop_folders[]`
+  - metadados opcionais em `winecfg.drives[]` (`host_path`, `drive_type`, `label`, `serial`)
+  - campos novos no Rust usam `serde(default)` para manter compatibilidade com payloads antigos.
+
+- Orquestrador CLI:
+  - adicionado parametro `--winecfg`;
+  - fluxo executa `Doctor`, setup de prefixo (se necessario) e abre `winecfg` no runtime selecionado;
+  - gera saida JSON com plano/comando/resultados (seguindo padrao dos outros comandos).
+
+Observacao de implementacao:
+- Varias opcoes de `winecfg` ainda sao tratadas como payload/UI e schema (MVP visual/contrato). Aplicacao detalhada dessas chaves no setup real do prefixo permanece fase seguinte.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo build --workspace`
+
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
 - Layout do item `Versão de runtime` reorganizado:

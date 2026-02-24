@@ -257,6 +257,7 @@ mod tests {
                 wrapper_commands: Vec::new(),
             },
             winecfg: WinecfgConfig {
+                windows_version: None,
                 dll_overrides: Vec::new(),
                 auto_capture_mouse: FeatureState::OptionalOn,
                 window_decorations: FeatureState::OptionalOn,
@@ -265,7 +266,10 @@ mod tests {
                     state: FeatureState::OptionalOff,
                     resolution: None,
                 },
+                screen_dpi: None,
                 desktop_integration: FeatureState::OptionalOn,
+                mime_associations: FeatureState::OptionalOff,
+                desktop_folders: Vec::new(),
                 drives: Vec::new(),
                 audio_driver: None,
             },

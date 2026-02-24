@@ -60,13 +60,25 @@ export type GameConfig = {
     wrapper_commands: Array<{ state: FeatureState; executable: string; args: string }>
   }
   winecfg: {
+    windows_version: string | null
     dll_overrides: Array<{ dll: string; mode: string }>
     auto_capture_mouse: FeatureState
     window_decorations: FeatureState
     window_manager_control: FeatureState
     virtual_desktop: { state: FeatureState; resolution: string | null }
+    screen_dpi: number | null
     desktop_integration: FeatureState
-    drives: Array<{ letter: string; source_relative_path: string; state: FeatureState }>
+    mime_associations: FeatureState
+    desktop_folders: Array<{ folder_key: string; shortcut_name: string; linux_path: string }>
+    drives: Array<{
+      letter: string
+      source_relative_path: string
+      state: FeatureState
+      host_path: string | null
+      drive_type: 'auto' | 'local_disk' | 'network_share' | 'floppy' | 'cdrom' | null
+      label: string | null
+      serial: string | null
+    }>
     audio_driver: string | null
   }
   dependencies: string[]
@@ -150,13 +162,27 @@ export function defaultGameConfig(): GameConfig {
       wrapper_commands: []
     },
     winecfg: {
+      windows_version: null,
       dll_overrides: [],
       auto_capture_mouse: 'OptionalOn',
       window_decorations: 'OptionalOn',
       window_manager_control: 'OptionalOn',
       virtual_desktop: { state: 'OptionalOff', resolution: null },
+      screen_dpi: null,
       desktop_integration: 'OptionalOn',
-      drives: [{ letter: 'Z', source_relative_path: '.', state: 'OptionalOn' }],
+      mime_associations: 'OptionalOff',
+      desktop_folders: [],
+      drives: [
+        {
+          letter: 'Z',
+          source_relative_path: '.',
+          state: 'OptionalOn',
+          host_path: null,
+          drive_type: 'auto',
+          label: null,
+          serial: null
+        }
+      ],
       audio_driver: null
     },
     dependencies: [],
