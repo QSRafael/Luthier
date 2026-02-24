@@ -750,6 +750,17 @@ export default function CreatorPage() {
             onClick={() => setMobileSidebarOpen(false)}
           />
           <div class="fixed inset-y-0 left-0 z-50 w-[min(88vw,320px)] p-3 lg:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              class="absolute right-5 top-5 z-10 h-8 w-8"
+              onClick={() => setMobileSidebarOpen(false)}
+              aria-label={tx('Fechar menu', 'Close menu')}
+              title={tx('Fechar menu', 'Close menu')}
+            >
+              <IconX class="size-4" />
+            </Button>
             <AppSidebar
               class="h-full min-h-0 max-w-none"
               appName="Game Orchestrator"
@@ -766,35 +777,24 @@ export default function CreatorPage() {
 
         <Card>
           <CardContent class="pt-5">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div class="flex min-w-0 items-center gap-2">
+        <div class="relative mb-4 flex min-h-10 items-center justify-center">
             <Button
               type="button"
               variant="outline"
               size="icon"
-              class="lg:hidden"
+              class="absolute left-0 h-10 w-10 lg:hidden"
               onClick={() => setMobileSidebarOpen(true)}
               aria-label={tx('Abrir menu', 'Open menu')}
               title={tx('Abrir menu', 'Open menu')}
             >
               <IconMenu2 class="size-4" />
             </Button>
-            <div class="min-w-0">
+            <div class="min-w-0 px-12 text-center lg:px-0">
               <p class="truncate text-sm font-semibold">{tabLabel(activeTab(), controller)}</p>
               <p class="text-xs text-muted-foreground">
                 {tx('Etapa', 'Step')} {Math.max(tabIndex(), 0) + 1}/{tabs.length}
               </p>
             </div>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={goPrevTab} disabled={!canGoPrevTab()}>
-              {tx('Retornar', 'Back')}
-            </Button>
-            <Button type="button" onClick={goNextTab} disabled={!canGoNextTab()}>
-              {tx('Avançar', 'Next')}
-            </Button>
-          </div>
         </div>
         <Show when={activeTab() === 'game'}>
           <section class="stack">
@@ -3584,6 +3584,23 @@ export default function CreatorPage() {
             </section>
           </section>
         </Show>
+
+        <div class="mt-4 grid grid-cols-2 gap-2 border-t border-border/60 pt-4">
+          <div class="flex justify-start">
+            <Show when={canGoPrevTab()}>
+              <Button type="button" variant="outline" class="h-10" onClick={goPrevTab}>
+                {tx('Retornar', 'Back')}
+              </Button>
+            </Show>
+          </div>
+          <div class="flex justify-end">
+            <Show when={canGoNextTab()}>
+              <Button type="button" class="h-10" onClick={goNextTab}>
+                {tx('Avançar', 'Next')}
+              </Button>
+            </Show>
+          </div>
+        </div>
           </CardContent>
         </Card>
       </div>

@@ -1822,6 +1822,22 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 60
+Escopo implementado:
+- Refinos de layout/navegacao no bloco principal:
+  - botoes `Retornar`/`Avançar` movidos do topo para o rodape do bloco principal de conteudo;
+  - `Retornar` fica oculto na primeira aba;
+  - `Avançar` fica oculto na ultima aba;
+  - ambos usam a mesma altura visual (`h-10`).
+- Header interno da etapa (topo do bloco principal):
+  - titulo da aba atual + subtitulo `Etapa x/N` centralizados;
+  - botao de menu mobile reposicionado para nao colidir visualmente com o titulo.
+- Sidebar mobile (drawer):
+  - adicionado botao `X` para fechar o drawer, alem do clique no overlay.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 59
 Escopo implementado:
 - Layout geral do Creator (UI):
