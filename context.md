@@ -1984,6 +1984,18 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
+- Refinamento visual do tema dark para reduzir "preto puro" nos controles:
+  - `Button variant="outline"` passou a usar fundo suavizado no dark (`dark:bg-muted/30`, hover `dark:bg-muted/50`);
+  - `Input`, `Select` e `Textarea` passaram a usar fundo suavizado no dark (`dark:bg-muted/20`).
+- Objetivo:
+  - manter a paleta/tokens do tema shadcn;
+  - reduzir contraste excessivo entre cards e controles secundarios, melhorando consistencia visual.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 37
+Escopo implementado:
 - Itens de listas do Creator migrados de "cards/linhas soltas" para tabelas simples com cabecalho (melhor legibilidade de colunas):
   - `Argumentos de launch`
   - `Arquivos obrigatorios (integrity_files)`
