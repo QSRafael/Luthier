@@ -1475,3 +1475,37 @@ Validacao do checkpoint:
 - `./scripts/check-frontend-quality.sh`
 - `./scripts/check-rust-quality.sh --exclude-tauri`
 - `./scripts/check-quality.sh`
+
+### 2026-02-24 - Checkpoint 46
+Escopo implementado:
+- Fluxo de geracao do Creator reforcado para uso real (Tauri app / build empacotado):
+  - backend Tauri (`apps/creator-tauri/src-tauri/src/lib.rs`) ganhou resolucao robusta do binario base do orquestrador com busca por:
+    - `GAME_ORCH_BASE_ORCHESTRATOR` (env var),
+    - caminho solicitado pelo frontend,
+    - candidatos comuns (`target/debug`, `target/release`),
+    - recurso empacotado do Tauri (`resources/orchestrator-base/orchestrator`);
+  - comandos do backend passaram a emitir logs estruturados JSON (`creator-tauri-backend`, `event_code`, `context`) para debug humano/IA.
+- Wrapper Tauri (`apps/creator-tauri/src-tauri/src/main.rs`) atualizado:
+  - `cmd_create_executable` agora injeta hints reais de path (`resolve_resource`, `resource_dir`, `app_data_dir`) ao backend na hora da geracao.
+- Empacotamento Tauri preparado para distribuir o binario base:
+  - `tauri.conf.json` inclui `bundle.resources = ["resources/orchestrator-base/orchestrator"]`.
+- Scripts de build/dev do Creator agora preparam automaticamente o orquestrador base:
+  - novo script `apps/creator-tauri/scripts/prepare-orchestrator-base.sh` (debug/release);
+  - `package.json` (`tauri:dev`, `tauri:build`, `tauri:bundle`) executa esse script antes do Tauri;
+  - `build-creator-e-abrir.sh` tambem compila/copia o orquestrador base para recursos.
+- Validacao pratica da injecao de payload:
+  - `creator-cli create` gerou um executavel ELF do orquestrador com payload embutido;
+  - o binario gerado respondeu corretamente a `--show-config`, confirmando leitura do trailer/config embutida.
+
+Observacoes:
+- A validacao acima prova o pipeline de `copy + inject JSON` mesmo antes de concluir a UX final do orquestrador (splash/config nativa).
+- O Creator UI continua usando um `base_binary_path` legado na requisicao, mas o backend agora resolve esse valor de forma tolerante e registra o caminho final usado (`resolved_base_binary_path`).
+
+Validacao do checkpoint:
+- `/home/rafael/.cargo/bin/cargo build -p orchestrator`
+- `./apps/creator-tauri/scripts/prepare-orchestrator-base.sh debug`
+- `/home/rafael/.cargo/bin/cargo build -p creator-tauri-backend`
+- `cargo check` do `creator-tauri-backend` com `--features tauri-commands` (via compat shims)
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
+- `creator-cli create ...` + `orchestrator-generated --show-config`

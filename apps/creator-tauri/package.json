@@ -10,9 +10,9 @@
     "lint": "npm run typecheck",
     "quality": "npm run typecheck && npm run build",
     "preview": "vite preview",
-    "tauri:dev": "./scripts/prepare-linux-compat.sh && PKG_CONFIG_PATH=\"$(cd ../../pkgconfig && pwd):$PKG_CONFIG_PATH\" RUSTFLAGS=\"-L native=$(cd ../../libshims && pwd) $RUSTFLAGS\" npm exec -- tauri dev --features tauri-commands",
-    "tauri:build": "./scripts/prepare-linux-compat.sh && PKG_CONFIG_PATH=\"$(cd ../../pkgconfig && pwd):$PKG_CONFIG_PATH\" RUSTFLAGS=\"-L native=$(cd ../../libshims && pwd) $RUSTFLAGS\" npm exec -- tauri build -b none --features tauri-commands,custom-protocol",
-    "tauri:bundle": "./scripts/prepare-linux-compat.sh && PKG_CONFIG_PATH=\"$(cd ../../pkgconfig && pwd):$PKG_CONFIG_PATH\" RUSTFLAGS=\"-L native=$(cd ../../libshims && pwd) $RUSTFLAGS\" npm exec -- tauri build --features tauri-commands,custom-protocol"
+    "tauri:dev": "./scripts/prepare-linux-compat.sh && ./scripts/prepare-orchestrator-base.sh debug && PKG_CONFIG_PATH=\"$(cd ../../pkgconfig && pwd):$PKG_CONFIG_PATH\" RUSTFLAGS=\"-L native=$(cd ../../libshims && pwd) $RUSTFLAGS\" npm exec -- tauri dev --features tauri-commands",
+    "tauri:build": "./scripts/prepare-linux-compat.sh && ./scripts/prepare-orchestrator-base.sh release && PKG_CONFIG_PATH=\"$(cd ../../pkgconfig && pwd):$PKG_CONFIG_PATH\" RUSTFLAGS=\"-L native=$(cd ../../libshims && pwd) $RUSTFLAGS\" npm exec -- tauri build -b none --features tauri-commands,custom-protocol",
+    "tauri:bundle": "./scripts/prepare-linux-compat.sh && ./scripts/prepare-orchestrator-base.sh release && PKG_CONFIG_PATH=\"$(cd ../../pkgconfig && pwd):$PKG_CONFIG_PATH\" RUSTFLAGS=\"-L native=$(cd ../../libshims && pwd) $RUSTFLAGS\" npm exec -- tauri build --features tauri-commands,custom-protocol"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.11",

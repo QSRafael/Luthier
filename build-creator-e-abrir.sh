@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$ROOT_DIR/apps/creator-tauri"
 RELEASE_DIR="$APP_DIR/src-tauri/target/release"
+ORCH_RESOURCE_DIR="$APP_DIR/src-tauri/resources/orchestrator-base"
+ORCH_RESOURCE_BIN="$ORCH_RESOURCE_DIR/orchestrator"
 
 find_mise() {
   if command -v mise >/dev/null 2>&1; then
@@ -38,6 +40,17 @@ fi
 
 export PATH="$HOME/.cargo/bin:$PATH"
 
+echo "Compilando orquestrador base (release)..."
+cd "$ROOT_DIR"
+cargo build -p orchestrator --release
+
+mkdir -p "$ORCH_RESOURCE_DIR"
+cp "$ROOT_DIR/target/release/orchestrator" "$ORCH_RESOURCE_BIN"
+chmod +x "$ORCH_RESOURCE_BIN" || true
+echo "Orquestrador base copiado para recurso do Creator:"
+echo "  $ORCH_RESOURCE_BIN"
+echo
+
 cd "$APP_DIR"
 
 if [[ ! -d node_modules ]]; then
@@ -60,4 +73,3 @@ fi
 if ! open_in_file_manager "$RELEASE_DIR"; then
   echo "Aviso: não foi possível abrir o navegador de arquivos automaticamente." >&2
 fi
-

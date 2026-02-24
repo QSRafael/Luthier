@@ -31,6 +31,7 @@
       "active": true,
       "targets": ["appimage", "deb", "rpm"],
       "icon": ["icons/icon.png"],
+      "resources": ["resources/orchestrator-base/orchestrator"],
       "identifier": "com.gameorchestrator.creator"
     }
   }

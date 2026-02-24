@@ -2,6 +2,7 @@
 node_modules
 /dist
 /apps/creator-tauri/dist
+/apps/creator-tauri/src-tauri/resources/orchestrator-base/orchestrator
 /pkgconfig
 /libshims
 .DS_Store

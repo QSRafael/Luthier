@@ -1,18 +1,33 @@
 #[cfg(feature = "tauri-commands")]
 fn main() {
-    use creator_tauri_backend::{
-        create_executable, hash_executable, import_registry_file, list_child_directories,
-        test_configuration, winetricks_available, CreateExecutableInput, CreateExecutableOutput,
-        HashExeInput, HashExeOutput, ImportRegistryFileInput, ImportRegistryFileOutput,
-        ListChildDirectoriesInput, ListChildDirectoriesOutput, TestConfigurationInput,
-        TestConfigurationOutput, WinetricksAvailableOutput,
-    };
+    use std::path::PathBuf;
 
+    use creator_tauri_backend::{
+        create_executable_with_base_hints, hash_executable, import_registry_file,
+        list_child_directories, test_configuration, winetricks_available, CreateExecutableInput,
+        CreateExecutableOutput, HashExeInput, HashExeOutput, ImportRegistryFileInput,
+        ImportRegistryFileOutput, ListChildDirectoriesInput, ListChildDirectoriesOutput,
+        TestConfigurationInput, TestConfigurationOutput, WinetricksAvailableOutput,
+    };
     #[tauri::command]
     fn cmd_create_executable(
+        app: tauri::AppHandle,
         input: CreateExecutableInput,
     ) -> Result<CreateExecutableOutput, String> {
-        create_executable(input)
+        let resolver = app.path_resolver();
+        let mut hints = Vec::<PathBuf>::new();
+
+        if let Some(path) = resolver.resolve_resource("orchestrator-base/orchestrator") {
+            hints.push(path);
+        }
+        if let Some(path) = resolver.resource_dir() {
+            hints.push(path.join("orchestrator-base/orchestrator"));
+        }
+        if let Some(path) = resolver.app_data_dir() {
+            hints.push(path.join("orchestrator-base/orchestrator"));
+        }
+
+        create_executable_with_base_hints(input, &hints)
     }
 
     #[tauri::command]

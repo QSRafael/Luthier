@@ -1,7 +1,9 @@
 use std::collections::BTreeSet;
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
 use orchestrator_core::{
@@ -23,6 +25,7 @@ pub struct CreateExecutableOutput {
     pub output_path: String,
     pub config_size_bytes: usize,
     pub config_sha256_hex: String,
+    pub resolved_base_binary_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -78,29 +81,98 @@ pub struct ListChildDirectoriesOutput {
 }
 
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
+    create_executable_with_base_hints(input, &[])
+}
+
+pub fn create_executable_with_base_hints(
+    input: CreateExecutableInput,
+    base_binary_hints: &[PathBuf],
+) -> Result<CreateExecutableOutput, String> {
+    log_backend_event(
+        "INFO",
+        "GO-CR-001",
+        "create_executable_requested",
+        serde_json::json!({
+            "requested_base_binary_path": input.base_binary_path,
+            "output_path": input.output_path,
+            "backup_existing": input.backup_existing,
+            "make_executable": input.make_executable,
+            "hints_count": base_binary_hints.len(),
+        }),
+    );
+
     let config: GameConfig = serde_json::from_str(&input.config_json)
         .map_err(|err| format!("invalid config JSON: {err}"))?;
+    let resolved_base_binary_path =
+        resolve_base_orchestrator_binary(&input.base_binary_path, base_binary_hints)?;
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-010",
+        "base_orchestrator_binary_resolved",
+        serde_json::json!({
+            "resolved_base_binary_path": resolved_base_binary_path,
+        }),
+    );
 
     let request = CreateOrchestratorRequest {
-        base_binary_path: PathBuf::from(input.base_binary_path),
+        base_binary_path: resolved_base_binary_path.clone(),
         output_path: PathBuf::from(input.output_path),
         config,
         backup_existing: input.backup_existing,
         make_executable: input.make_executable,
     };
 
-    let result = create_orchestrator_binary(&request).map_err(|err| err.to_string())?;
+    let result = create_orchestrator_binary(&request).map_err(|err| {
+        let message = err.to_string();
+        log_backend_event(
+            "ERROR",
+            "GO-CR-090",
+            "create_executable_failed",
+            serde_json::json!({
+                "error": message,
+                "base_binary_path": request.base_binary_path,
+                "output_path": request.output_path,
+            }),
+        );
+        message
+    })?;
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-020",
+        "create_executable_completed",
+        serde_json::json!({
+            "output_path": result.output_path,
+            "config_size_bytes": result.config_size_bytes,
+            "config_sha256_hex": result.config_sha256_hex,
+            "resolved_base_binary_path": resolved_base_binary_path,
+        }),
+    );
 
     Ok(CreateExecutableOutput {
         output_path: result.output_path,
         config_size_bytes: result.config_size_bytes,
         config_sha256_hex: result.config_sha256_hex,
+        resolved_base_binary_path: request.base_binary_path.to_string_lossy().into_owned(),
     })
 }
 
 pub fn hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
     let path = PathBuf::from(input.executable_path);
+    log_backend_event(
+        "INFO",
+        "GO-CR-101",
+        "hash_executable_requested",
+        serde_json::json!({ "path": path }),
+    );
     let hash = sha256_file(&path).map_err(|err| err.to_string())?;
+    log_backend_event(
+        "INFO",
+        "GO-CR-102",
+        "hash_executable_completed",
+        serde_json::json!({ "path": path, "sha256_hex": hash }),
+    );
 
     Ok(HashExeOutput { sha256_hex: hash })
 }
@@ -108,6 +180,15 @@ pub fn hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
 pub fn test_configuration(
     input: TestConfigurationInput,
 ) -> Result<TestConfigurationOutput, String> {
+    log_backend_event(
+        "INFO",
+        "GO-CR-201",
+        "test_configuration_requested",
+        serde_json::json!({
+            "game_root": input.game_root,
+            "config_json_len": input.config_json.len(),
+        }),
+    );
     let config: GameConfig = serde_json::from_str(&input.config_json)
         .map_err(|err| format!("invalid config JSON: {err}"))?;
 
@@ -128,21 +209,46 @@ pub fn test_configuration(
         "OK"
     };
 
-    Ok(TestConfigurationOutput {
+    let out = TestConfigurationOutput {
         status: status.to_string(),
         missing_files,
         doctor: serde_json::to_value(doctor).map_err(|err| err.to_string())?,
         prefix_setup_plan: serde_json::to_value(prefix_plan).map_err(|err| err.to_string())?,
-    })
+    };
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-202",
+        "test_configuration_completed",
+        serde_json::json!({
+            "status": out.status,
+            "missing_files_count": out.missing_files.len(),
+        }),
+    );
+
+    Ok(out)
 }
 
 pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
+    log_backend_event(
+        "INFO",
+        "GO-CR-301",
+        "winetricks_catalog_requested",
+        serde_json::json!({}),
+    );
     let fallback = fallback_winetricks_components();
     let Some(binary) = find_executable_in_path("winetricks") else {
-        return Ok(WinetricksAvailableOutput {
+        let out = WinetricksAvailableOutput {
             source: "fallback".to_string(),
             components: fallback,
-        });
+        };
+        log_backend_event(
+            "WARN",
+            "GO-CR-302",
+            "winetricks_not_found_using_fallback_catalog",
+            serde_json::json!({ "components_count": out.components.len() }),
+        );
+        return Ok(out);
     };
 
     let mut components = BTreeSet::new();
@@ -164,21 +270,41 @@ pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
 
     let parsed = components.into_iter().collect::<Vec<String>>();
     if parsed.is_empty() {
-        return Ok(WinetricksAvailableOutput {
+        let out = WinetricksAvailableOutput {
             source: "fallback".to_string(),
             components: fallback,
-        });
+        };
+        log_backend_event(
+            "WARN",
+            "GO-CR-303",
+            "winetricks_catalog_parse_empty_using_fallback",
+            serde_json::json!({ "binary": binary, "components_count": out.components.len() }),
+        );
+        return Ok(out);
     }
 
-    Ok(WinetricksAvailableOutput {
+    let out = WinetricksAvailableOutput {
         source: "winetricks".to_string(),
         components: parsed,
-    })
+    };
+    log_backend_event(
+        "INFO",
+        "GO-CR-304",
+        "winetricks_catalog_loaded",
+        serde_json::json!({ "binary": binary, "components_count": out.components.len() }),
+    );
+    Ok(out)
 }
 
 pub fn import_registry_file(
     input: ImportRegistryFileInput,
 ) -> Result<ImportRegistryFileOutput, String> {
+    log_backend_event(
+        "INFO",
+        "GO-CR-401",
+        "import_registry_file_requested",
+        serde_json::json!({ "path": input.path }),
+    );
     let bytes = fs::read(&input.path).map_err(|err| format!("failed to read .reg file: {err}"))?;
     let raw = decode_reg_file_text(&bytes)?;
     let (entries, warnings) = parse_reg_file_entries(&raw);
@@ -187,12 +313,29 @@ pub fn import_registry_file(
         return Err("no importable registry entries found in .reg file".to_string());
     }
 
-    Ok(ImportRegistryFileOutput { entries, warnings })
+    let out = ImportRegistryFileOutput { entries, warnings };
+    log_backend_event(
+        "INFO",
+        "GO-CR-402",
+        "import_registry_file_completed",
+        serde_json::json!({
+            "path": input.path,
+            "entries_count": out.entries.len(),
+            "warnings_count": out.warnings.len(),
+        }),
+    );
+    Ok(out)
 }
 
 pub fn list_child_directories(
     input: ListChildDirectoriesInput,
 ) -> Result<ListChildDirectoriesOutput, String> {
+    log_backend_event(
+        "INFO",
+        "GO-CR-501",
+        "list_child_directories_requested",
+        serde_json::json!({ "path": input.path }),
+    );
     let root = PathBuf::from(&input.path);
     let entries = fs::read_dir(&root).map_err(|err| format!("failed to list directory: {err}"))?;
 
@@ -207,10 +350,125 @@ pub fn list_child_directories(
 
     directories.sort_by_key(|value| value.to_ascii_lowercase());
 
-    Ok(ListChildDirectoriesOutput {
+    let out = ListChildDirectoriesOutput {
         path: input.path,
         directories,
-    })
+    };
+    log_backend_event(
+        "INFO",
+        "GO-CR-502",
+        "list_child_directories_completed",
+        serde_json::json!({
+            "path": out.path,
+            "directories_count": out.directories.len(),
+        }),
+    );
+    Ok(out)
+}
+
+fn resolve_base_orchestrator_binary(
+    requested: &str,
+    extra_hints: &[PathBuf],
+) -> Result<PathBuf, String> {
+    let mut candidates = Vec::<PathBuf>::new();
+    let mut seen = BTreeSet::<String>::new();
+
+    let mut push_candidate = |path: PathBuf| {
+        let key = path.to_string_lossy().into_owned();
+        if seen.insert(key) {
+            candidates.push(path);
+        }
+    };
+
+    if let Ok(path) = env::var("GAME_ORCH_BASE_ORCHESTRATOR") {
+        let trimmed = path.trim();
+        if !trimmed.is_empty() {
+            push_candidate(PathBuf::from(trimmed));
+        }
+    }
+
+    let requested_trimmed = requested.trim();
+    if !requested_trimmed.is_empty() {
+        push_candidate(PathBuf::from(requested_trimmed));
+        if let Ok(cwd) = env::current_dir() {
+            push_candidate(cwd.join(requested_trimmed));
+        }
+    }
+
+    for hint in extra_hints {
+        if !hint.as_os_str().is_empty() {
+            push_candidate(hint.clone());
+        }
+    }
+
+    let common_relative_candidates = [
+        "target/debug/orchestrator",
+        "target/release/orchestrator",
+        "apps/creator-tauri/src-tauri/resources/orchestrator-base/orchestrator",
+        "src-tauri/resources/orchestrator-base/orchestrator",
+        "resources/orchestrator-base/orchestrator",
+        "orchestrator-base/orchestrator",
+    ];
+
+    if let Ok(cwd) = env::current_dir() {
+        for ancestor in cwd.ancestors() {
+            for rel in common_relative_candidates {
+                push_candidate(ancestor.join(rel));
+            }
+        }
+    }
+
+    if let Ok(exe) = env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            for ancestor in exe_dir.ancestors() {
+                for rel in common_relative_candidates {
+                    push_candidate(ancestor.join(rel));
+                }
+            }
+        }
+    }
+
+    let attempted = candidates
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-011",
+        "resolving_base_orchestrator_binary",
+        serde_json::json!({
+            "requested": requested_trimmed,
+            "extra_hints_count": extra_hints.len(),
+            "attempted_candidates": attempted,
+        }),
+    );
+
+    if let Some(found) = candidates.into_iter().find(|path| path.is_file()) {
+        return Ok(found);
+    }
+
+    Err(format!(
+        "base orchestrator binary not found. Tried {} candidate(s). Build the 'orchestrator' binary (debug/release) or package it as a Tauri resource.",
+        attempted.len()
+    ))
+}
+
+fn log_backend_event(level: &str, event_code: &str, message: &str, context: serde_json::Value) {
+    let ts_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let payload = serde_json::json!({
+        "ts_ms": ts_ms,
+        "level": level,
+        "component": "creator-tauri-backend",
+        "event_code": event_code,
+        "message": message,
+        "pid": std::process::id(),
+        "context": context,
+    });
+    eprintln!("{}", payload);
 }
 
 fn collect_missing_files(config: &GameConfig, game_root: &Path) -> Result<Vec<String>, String> {

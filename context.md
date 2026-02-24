@@ -1280,5 +1280,8 @@ Regras desta separacao:
 Resumo do estado atual (alto nivel):
 - Creator UI: robusto, multiaba, i18n (`pt-BR`/`en-US`), tabelas/dialogs, selectors guiados de pasta, import `.reg`, testes locais, geracao de payload e UX refinada.
 - Creator backend: hash, teste de configuracao, import `.reg`, listagem de subpastas e injecao de payload no binario base funcionando.
+- Creator build/runtime: resolucao robusta do binario base do orquestrador (env var, path solicitado, candidatos comuns, recurso empacotado no Tauri) + logs estruturados JSON no backend para debug AI-first.
+- Empacotamento do Creator: `tauri.conf` preparado para incluir `resources/orchestrator-base/orchestrator` e scripts de build/dev preparam automaticamente esse binario base antes de subir/compilar o app.
+- Validacao pratica: pipeline de injecao foi validado localmente via `creator-cli create` gerando um ELF do orquestrador com payload embutido, confirmado por `--show-config`.
 - Orquestrador CLI: `--show-config`, `--doctor`, `--config`, `--winecfg`, `--play` com pipeline basico (doctor -> prefix -> mounts -> scripts -> launch) e logs NDJSON.
 - Qualidade: scripts locais de qualidade + CI com checks separados de frontend e Rust core.
