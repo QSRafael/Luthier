@@ -1817,3 +1817,17 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
+
+### 2026-02-24 - Checkpoint 27
+Escopo implementado:
+- Tema visual do Creator migrado para dark mode inspirado no shadcn:
+  - tokens globais (`--background`, `--foreground`, `--card`, `--input`, `--border`, etc.) alterados para paleta escura;
+  - `color-scheme: dark` habilitado no `:root`;
+  - gradientes de fundo ajustados para contraste em ambiente escuro.
+- Ajustes de contraste em estados auxiliares:
+  - botao de acao secundaria de teste (`.btn-test`) adaptado para dark;
+  - botao de remocao/perigo (`.btn-danger`) adaptado para dark;
+  - toasts (`info/success/error`) ajustados para fundo/texto de alto contraste no tema escuro.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
