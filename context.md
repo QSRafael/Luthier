@@ -2017,6 +2017,27 @@ Observacao:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 39
+Escopo implementado:
+- Revisao de textos (copy) no Creator com foco em linguagem de usuario final:
+  - removidos/ocultados termos internos de schema em labels visiveis (ex.: `integrity_files`, `folder_mounts`, `custom_vars`, `payload`);
+  - textos da aba `Execucao e Ambiente` e `Revisao e Gerar` ajustados para nomes mais claros (`Comandos de wrapper`, `Resumo da configuracao`, `Resultado da ultima acao`, etc.);
+  - textos de ajuda revisados para explicar impacto ao usuario em vez de nomenclatura interna.
+- Internacionalizacao dos componentes de formulario (`FormControls`):
+  - criado `FormControlsI18nProvider` para evitar strings hardcoded em componentes reutilizaveis;
+  - labels/padroes de cards e dialogs (Ativado, Obrigatorio, Cancelar, Confirmar, Acoes, etc.) agora recebem traducao do `CreatorPage`.
+- Dicionario `i18n.ts` revisado:
+  - melhorias de copy (pt-BR/en-US), acentos e consistencia;
+  - `statusReady` alinhado com o texto usado para suprimir toast de "pronto/ready".
+
+Observacao de arquitetura (i18n):
+- O projeto JA usa i18n (arquivo `src/i18n.ts`) + `tx(pt,en)` inline.
+- Ainda existe bastante texto inline com `tx(...)` dentro do `CreatorPage`, o que funciona bem para 2 idiomas, mas nao eh o ideal para escalar.
+- Para adicionar varios idiomas no futuro, o proximo passo recomendado eh migrar textos inline para chaves tipadas em dicionario (mantendo `tx` apenas para prototipagem).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
 - Itens de listas do Creator migrados de "cards/linhas soltas" para tabelas simples com cabecalho (melhor legibilidade de colunas):

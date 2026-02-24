@@ -6,6 +6,7 @@ import { invokeCommand } from '../../api/tauri'
 import {
   FeatureStateField,
   FieldShell,
+  FormControlsI18nProvider,
   KeyValueListField,
   SegmentedField,
   SelectField,
@@ -699,6 +700,36 @@ export default function CreatorPage() {
     return `${tx('Tema', 'Theme')}: ${label}`
   })
 
+  const formControlsI18n = createMemo(() => ({
+    enabled: tx('Ativado', 'Enabled'),
+    disabled: tx('Desativado', 'Disabled'),
+    mandatory: tx('Obrigatório', 'Mandatory'),
+    wineDefault: tx('Padrão do Wine', 'Use Wine default'),
+    actions: tx('Ações', 'Actions'),
+    action: tx('Ação', 'Action'),
+    add: tx('Adicionar', 'Add'),
+    addItem: tx('Adicionar item', 'Add item'),
+    addListDialogDescription: tx(
+      'Informe um valor e confirme para adicioná-lo à lista.',
+      'Enter a value and confirm to add it to the list.'
+    ),
+    addKeyValueDialogDescription: tx(
+      'Preencha chave e valor para adicionar uma nova linha.',
+      'Fill in key and value to add a new row.'
+    ),
+    pickFile: tx('Escolher arquivo', 'Choose file'),
+    pickFileHint: tx(
+      'Selecione um arquivo para preencher este campo automaticamente.',
+      'Select a file to fill this field automatically.'
+    ),
+    cancel: tx('Cancelar', 'Cancel'),
+    confirm: tx('Confirmar', 'Confirm'),
+    remove: tx('Remover', 'Remove'),
+    noItemAdded: tx('Nenhum item adicionado.', 'No item added.'),
+    keyPlaceholder: tx('Chave', 'Key'),
+    valuePlaceholder: tx('Valor', 'Value')
+  }))
+
   const tabIndex = createMemo(() => tabs.indexOf(activeTab()))
   const canGoPrevTab = createMemo(() => tabIndex() > 0)
   const canGoNextTab = createMemo(() => tabIndex() >= 0 && tabIndex() < tabs.length - 1)
@@ -742,6 +773,7 @@ export default function CreatorPage() {
   })
 
   return (
+    <FormControlsI18nProvider value={formControlsI18n()}>
     <div class="creator-page">
       <div class="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div class="hidden h-fit lg:sticky lg:top-4 lg:block">
@@ -1057,8 +1089,11 @@ export default function CreatorPage() {
             />
 
             <StringListField
-              label={tx('Arquivos obrigatórios (integrity_files)', 'Required files (integrity_files)')}
-              help={tx('Se algum item faltar, o launch é bloqueado.', 'If any item is missing, launch is blocked.')}
+              label={tx('Arquivos obrigatórios', 'Required files')}
+              help={tx(
+                'Se algum arquivo listado não existir na pasta do jogo, a inicialização é bloqueada.',
+                'If any listed file is missing from the game folder, startup is blocked.'
+              )}
               items={config().integrity_files}
               onChange={(items) => patchConfig((prev) => ({ ...prev, integrity_files: items }))}
               placeholder={tx('./data/core.dll', './data/core.dll')}
@@ -1071,8 +1106,11 @@ export default function CreatorPage() {
             />
 
             <FieldShell
-              label={tx('Pastas montadas (folder_mounts)', 'Mounted folders (folder_mounts)')}
-              help={tx('Mapeia pasta relativa do jogo para destino Windows dentro do prefixo.', 'Maps game-relative folder to Windows target path inside prefix.')}
+              label={tx('Pastas montadas', 'Mounted folders')}
+              help={tx(
+                'Mapeia uma pasta dentro do jogo para um destino Windows dentro do prefixo (ex.: saves em Documentos).',
+                'Maps a folder inside the game to a Windows target inside the prefix (e.g. saves under Documents).'
+              )}
               controlClass="flex justify-end"
               footer={
                 <Show
@@ -3288,8 +3326,11 @@ export default function CreatorPage() {
         <Show when={activeTab() === 'wrappers' || activeTab() === 'scripts'}>
           <section class="stack">
             <FieldShell
-              label={tx('Wrapper commands', 'Wrapper commands')}
-              help={tx('Comandos extras de wrapper antes do runtime final.', 'Extra wrapper commands before final runtime.')}
+              label={tx('Comandos de wrapper', 'Wrapper commands')}
+              help={tx(
+                'Comandos executados antes do runtime principal (ex.: gamescope, gamemoderun, mangohud).',
+                'Commands executed before the main runtime (e.g. gamescope, gamemoderun, mangohud).'
+              )}
               controlClass="flex justify-end"
               footer={
                 <div class="grid gap-2">
@@ -3297,7 +3338,7 @@ export default function CreatorPage() {
                     when={config().compatibility.wrapper_commands.length > 0}
                     fallback={
                       <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {tx('Nenhum wrapper adicionado.', 'No wrapper added.')}
+                      {tx('Nenhum comando de wrapper adicionado.', 'No wrapper command added.')}
                       </div>
                     }
                   >
@@ -3462,8 +3503,8 @@ export default function CreatorPage() {
               <AlertDescription>
                 <span class="block">
                   {tx(
-                    'As chaves abaixo são reservadas e qualquer override em custom_vars será ignorado.',
-                    'The keys below are reserved and any custom_vars override will be ignored.'
+                    'As chaves abaixo são reservadas. Se forem adicionadas na lista acima, serão ignoradas pelo orquestrador.',
+                    'The keys below are reserved. If added above, they will be ignored by the orchestrator.'
                   )}
                 </span>
                 <span class="mt-1 block font-mono text-[11px]">WINEPREFIX · PROTON_VERB</span>
@@ -3471,14 +3512,14 @@ export default function CreatorPage() {
             </Alert>
 
             <FieldShell
-              label={tx('Script pre-launch (bash)', 'Pre-launch script (bash)')}
-              help={tx('Executado antes do comando principal do jogo.', 'Executed before main game command.')}
+              label={tx('Script antes de iniciar o jogo (bash)', 'Pre-launch script (bash)')}
+              help={tx('Executado antes de iniciar o jogo.', 'Executed before starting the game.')}
               controlClass="hidden"
               footer={
                 <Textarea
                   rows={8}
                   value={config().scripts.pre_launch}
-                  placeholder="#!/usr/bin/env bash\necho preparing..."
+                  placeholder="#!/usr/bin/env bash\necho Preparando..."
                   onInput={(e) =>
                     patchConfig((prev) => ({
                       ...prev,
@@ -3492,14 +3533,14 @@ export default function CreatorPage() {
             </FieldShell>
 
             <FieldShell
-              label={tx('Script post-launch (bash)', 'Post-launch script (bash)')}
-              help={tx('Executado após o encerramento do processo do jogo.', 'Executed after game process exits.')}
+              label={tx('Script após fechar o jogo (bash)', 'Post-launch script (bash)')}
+              help={tx('Executado após o jogo ser encerrado.', 'Executed after the game exits.')}
               controlClass="hidden"
               footer={
                 <Textarea
                   rows={8}
                   value={config().scripts.post_launch}
-                  placeholder="#!/usr/bin/env bash\necho finished..."
+                  placeholder="#!/usr/bin/env bash\necho Finalizado..."
                   onInput={(e) =>
                     patchConfig((prev) => ({
                       ...prev,
@@ -3536,14 +3577,17 @@ export default function CreatorPage() {
         <Show when={activeTab() === 'review'}>
           <section class="stack">
             <FieldShell
-              label={tx('Resumo do payload', 'Payload summary')}
-              help={tx('Visão rápida de quantos itens foram configurados por seção.', 'Quick view of how many items were configured per section.')}
+              label={tx('Resumo da configuração', 'Configuration summary')}
+              help={tx(
+                'Visão rápida da quantidade de itens configurados em cada seção.',
+                'Quick view of how many items were configured in each section.'
+              )}
               controlClass="hidden"
               footer={
                 <div class="summary-grid">
                   <div>
                     <strong>{payloadSummary().launchArgs}</strong>
-                    <span>{tx('Launch args', 'Launch args')}</span>
+                    <span>{tx('Argumentos de inicialização', 'Launch arguments')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().integrityFiles}</strong>
@@ -3555,7 +3599,7 @@ export default function CreatorPage() {
                   </div>
                   <div>
                     <strong>{payloadSummary().registry}</strong>
-                    <span>{tx('Registro', 'Registry')}</span>
+                    <span>{tx('Registro do Windows', 'Windows Registry')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().mounts}</strong>
@@ -3563,11 +3607,11 @@ export default function CreatorPage() {
                   </div>
                   <div>
                     <strong>{payloadSummary().wrappers}</strong>
-                    <span>Wrappers</span>
+                    <span>{tx('Wrappers', 'Wrappers')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().envVars}</strong>
-                    <span>{tx('Variáveis', 'Variables')}</span>
+                    <span>{tx('Variáveis de ambiente', 'Environment variables')}</span>
                   </div>
                 </div>
               }
@@ -3576,7 +3620,7 @@ export default function CreatorPage() {
             </FieldShell>
 
             <section class="preview">
-              <h3>{tx('Preview do Payload JSON', 'Payload JSON Preview')}</h3>
+              <h3>{tx('Pré-visualização da configuração (JSON)', 'Configuration preview (JSON)')}</h3>
               <pre>{configPreview()}</pre>
             </section>
 
@@ -3590,7 +3634,7 @@ export default function CreatorPage() {
             </div>
 
             <section class="preview">
-              <h3>{tx('Resultado', 'Result')}</h3>
+              <h3>{tx('Resultado da última ação', 'Last action result')}</h3>
               <pre>{resultJson() || t('noResult')}</pre>
             </section>
           </section>
@@ -3626,5 +3670,6 @@ export default function CreatorPage() {
         visibleToasts={5}
       />
     </div>
+    </FormControlsI18nProvider>
   )
 }

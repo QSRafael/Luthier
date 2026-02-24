@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, JSX, Show } from 'solid-js'
+import { createContext, createMemo, createSignal, For, JSX, Show, useContext } from 'solid-js'
 import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import type { FeatureState } from '../../models/config'
@@ -27,6 +27,58 @@ import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 import { Textarea } from '../ui/textarea'
+
+export type FormControlsI18n = {
+  enabled: string
+  disabled: string
+  mandatory: string
+  wineDefault: string
+  actions: string
+  action: string
+  add: string
+  addItem: string
+  addListDialogDescription: string
+  addKeyValueDialogDescription: string
+  pickFile: string
+  pickFileHint: string
+  cancel: string
+  confirm: string
+  remove: string
+  noItemAdded: string
+  keyPlaceholder: string
+  valuePlaceholder: string
+}
+
+const defaultFormControlsI18n: FormControlsI18n = {
+  enabled: 'Ativado',
+  disabled: 'Desativado',
+  mandatory: 'Obrigatório',
+  wineDefault: 'Padrão do Wine',
+  actions: 'Ações',
+  action: 'Ação',
+  add: 'Adicionar',
+  addItem: 'Adicionar item',
+  addListDialogDescription: 'Insira um novo valor para esta lista.',
+  addKeyValueDialogDescription: 'Defina chave e valor para adicionar uma nova linha.',
+  pickFile: 'Escolher arquivo',
+  pickFileHint: 'Selecione um arquivo para preencher este campo automaticamente.',
+  cancel: 'Cancelar',
+  confirm: 'Confirmar',
+  remove: 'Remover',
+  noItemAdded: 'Nenhum item adicionado.',
+  keyPlaceholder: 'Chave',
+  valuePlaceholder: 'Valor'
+}
+
+const FormControlsI18nContext = createContext<FormControlsI18n>(defaultFormControlsI18n)
+
+export function FormControlsI18nProvider(props: { value: FormControlsI18n; children: JSX.Element }) {
+  return <FormControlsI18nContext.Provider value={props.value}>{props.children}</FormControlsI18nContext.Provider>
+}
+
+function useFormControlsI18n() {
+  return useContext(FormControlsI18nContext) ?? defaultFormControlsI18n
+}
 
 export type SelectOption<T extends string> = {
   value: T
@@ -173,11 +225,12 @@ type ToggleFieldProps = {
 }
 
 export function ToggleField(props: ToggleFieldProps) {
+  const i18n = useFormControlsI18n()
   return (
     <FieldShell label={props.label} help={props.help} compact>
       <div class="flex items-center justify-end gap-3">
         <span class="text-xs font-medium text-muted-foreground">
-          {props.checked ? props.yesLabel ?? 'Ativado' : props.noLabel ?? 'Desativado'}
+          {props.checked ? props.yesLabel ?? i18n.enabled : props.noLabel ?? i18n.disabled}
         </span>
         <Switch checked={props.checked} onChange={props.onChange}>
           <SwitchInput />
@@ -262,18 +315,19 @@ function FeatureToggleCard(props: FeatureToggleCardProps) {
 }
 
 export function FeatureStateField(props: FeatureStateFieldProps) {
+  const i18n = useFormControlsI18n()
   const state = createMemo(() => decodeFeatureState(props.value))
 
   return (
     <FieldShell label={props.label} help={props.help} controlClass="grid gap-2 md:grid-cols-2" footer={props.footer}>
       <>
         <FeatureToggleCard
-          title="Ativado"
+          title={i18n.enabled}
           checked={state().enabled}
           onChange={(enabled) => props.onChange(encodeFeatureState(enabled, state().mandatory))}
         />
         <FeatureToggleCard
-          title="Obrigatório"
+          title={i18n.mandatory}
           checked={state().mandatory}
           onChange={(mandatory) => props.onChange(encodeFeatureState(state().enabled, mandatory))}
         />
@@ -296,6 +350,7 @@ type WinecfgFeatureStateFieldProps = {
 }
 
 export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
+  const i18n = useFormControlsI18n()
   const decoded = createMemo(() => decodeFeatureState(props.value.state))
 
   return (
@@ -307,12 +362,12 @@ export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
     >
       <>
         <FeatureToggleCard
-          title="Padrão do Wine"
+          title={i18n.wineDefault}
           checked={props.value.use_wine_default}
           onChange={(use_wine_default) => props.onChange({ ...props.value, use_wine_default })}
         />
         <FeatureToggleCard
-          title="Ativado"
+          title={i18n.enabled}
           checked={decoded().enabled}
           disabled={props.value.use_wine_default}
           onChange={(enabled) =>
@@ -323,7 +378,7 @@ export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
           }
         />
         <FeatureToggleCard
-          title="Obrigatório"
+          title={i18n.mandatory}
           checked={decoded().mandatory}
           onChange={(mandatory) =>
             props.onChange({
@@ -353,6 +408,7 @@ type StringListFieldProps = {
 }
 
 export function StringListField(props: StringListFieldProps) {
+  const i18n = useFormControlsI18n()
   const [open, setOpen] = createSignal(false)
   const [draft, setDraft] = createSignal('')
 
@@ -383,7 +439,7 @@ export function StringListField(props: StringListFieldProps) {
                 <TableHeader>
                   <TableRow class="hover:bg-transparent">
                     <TableHead>{props.tableValueHeader}</TableHead>
-                    <TableHead class="w-[72px] text-right">Ações</TableHead>
+                    <TableHead class="w-[72px] text-right">{i18n.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -397,7 +453,7 @@ export function StringListField(props: StringListFieldProps) {
                             variant="ghost"
                             class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                             onClick={() => removeItem(index())}
-                            title="Remover"
+                            title={i18n.remove}
                           >
                             <IconTrash class="size-4" />
                           </Button>
@@ -420,7 +476,7 @@ export function StringListField(props: StringListFieldProps) {
                         variant="ghost"
                         class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => removeItem(index())}
-                        title="Remover"
+                        title={i18n.remove}
                       >
                         <IconTrash class="size-4" />
                       </Button>
@@ -445,13 +501,13 @@ export function StringListField(props: StringListFieldProps) {
           disabled={props.addDisabled}
         >
           <IconPlus class="size-4" />
-          {props.addLabel ?? 'Adicionar'}
+          {props.addLabel ?? i18n.add}
         </Button>
 
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{props.addLabel ?? 'Adicionar item'}</DialogTitle>
-            <DialogDescription>Insira um novo valor para esta lista.</DialogDescription>
+            <DialogTitle>{props.addLabel ?? i18n.addItem}</DialogTitle>
+            <DialogDescription>{i18n.addListDialogDescription}</DialogDescription>
           </DialogHeader>
 
           <Show
@@ -493,21 +549,21 @@ export function StringListField(props: StringListFieldProps) {
                     setDraft(picked)
                   }}
                 >
-                  {props.pickerLabel ?? 'Escolher arquivo'}
+                  {props.pickerLabel ?? i18n.pickFile}
                 </Button>
               </div>
               <p class="text-xs text-muted-foreground">
-                Selecione um arquivo para preencher este campo automaticamente.
+                {i18n.pickFileHint}
               </p>
             </div>
           </Show>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
+              {i18n.cancel}
             </Button>
             <Button type="button" onClick={addItem} disabled={!cleanDraft()}>
-              Confirmar
+              {i18n.confirm}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -538,6 +594,7 @@ type KeyValueListFieldProps = {
 }
 
 export function KeyValueListField(props: KeyValueListFieldProps) {
+  const i18n = useFormControlsI18n()
   const [open, setOpen] = createSignal(false)
   const [draftKey, setDraftKey] = createSignal('')
   const [draftValue, setDraftValue] = createSignal('')
@@ -568,7 +625,7 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
           when={props.items.length > 0}
           fallback={
             <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-              {props.emptyMessage ?? 'Nenhum item adicionado.'}
+              {props.emptyMessage ?? i18n.noItemAdded}
             </div>
           }
         >
@@ -586,7 +643,7 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
                         variant="ghost"
                         class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => removeItem(index())}
-                        title={props.removeLabel ?? 'Remover'}
+                        title={props.removeLabel ?? i18n.remove}
                       >
                         <IconTrash class="size-4" />
                       </Button>
@@ -602,7 +659,7 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
                   <TableRow class="hover:bg-transparent">
                     <TableHead>{props.tableHeaders?.key}</TableHead>
                     <TableHead>{props.tableHeaders?.value}</TableHead>
-                    <TableHead class="w-14 text-right">{props.removeLabel ?? 'Ação'}</TableHead>
+                    <TableHead class="w-14 text-right">{props.removeLabel ?? i18n.action}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -617,7 +674,7 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
                             variant="ghost"
                             class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                             onClick={() => removeItem(index())}
-                            title={props.removeLabel ?? 'Remover'}
+                            title={props.removeLabel ?? i18n.remove}
                           >
                             <IconTrash class="size-4" />
                           </Button>
@@ -641,34 +698,34 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
           onClick={() => setOpen(true)}
         >
           <IconPlus class="size-4" />
-          {props.addLabel ?? 'Adicionar'}
+          {props.addLabel ?? i18n.add}
         </Button>
 
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{props.addLabel ?? 'Adicionar item'}</DialogTitle>
-            <DialogDescription>Defina chave e valor para adicionar uma nova linha.</DialogDescription>
+            <DialogTitle>{props.addLabel ?? i18n.addItem}</DialogTitle>
+            <DialogDescription>{i18n.addKeyValueDialogDescription}</DialogDescription>
           </DialogHeader>
 
           <div class="grid gap-2">
             <Input
               value={draftKey()}
-              placeholder={props.keyPlaceholder ?? 'KEY'}
+              placeholder={props.keyPlaceholder ?? i18n.keyPlaceholder}
               onInput={(e) => setDraftKey(e.currentTarget.value)}
             />
             <Input
               value={draftValue()}
-              placeholder={props.valuePlaceholder ?? 'VALUE'}
+              placeholder={props.valuePlaceholder ?? i18n.valuePlaceholder}
               onInput={(e) => setDraftValue(e.currentTarget.value)}
             />
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
+              {i18n.cancel}
             </Button>
             <Button type="button" onClick={addItem} disabled={!canAdd()}>
-              Confirmar
+              {i18n.confirm}
             </Button>
           </DialogFooter>
         </DialogContent>
