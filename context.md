@@ -1848,6 +1848,15 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 37
+Escopo implementado:
+- Layout do item `Versão de runtime` reorganizado:
+  - campo de versão foi movido para a coluna esquerda, logo abaixo da descrição do item;
+  - coluna direita ficou dedicada ao painel com os switches (`Versão obrigatória` e `Auto update`), melhorando uso de espaço.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

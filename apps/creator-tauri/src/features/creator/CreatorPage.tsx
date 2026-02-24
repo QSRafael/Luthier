@@ -23,6 +23,7 @@ import {
   DialogTitle
 } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMain, ItemTitle } from '../../components/ui/item'
 import { Select } from '../../components/ui/select'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
 import type { Theme } from '../../components/theme-provider'
@@ -364,16 +365,19 @@ export default function CreatorPage() {
               }
             />
 
-            <FieldShell
-              label={runtimeVersionFieldLabel()}
-              help={runtimeVersionFieldHelp()}
-              controlClass="w-full"
-            >
-              <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
-                <div class="grid gap-1.5">
-                  <label class="text-xs font-medium text-muted-foreground">
-                    {runtimeVersionFieldLabel()}
-                  </label>
+            <Item>
+              <ItemMain class="xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
+                <ItemContent class="space-y-3">
+                  <div class="flex items-center gap-2">
+                    <ItemTitle>{runtimeVersionFieldLabel()}</ItemTitle>
+                    <span
+                      class="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-medium text-muted-foreground"
+                      title={runtimeVersionFieldHelp()}
+                    >
+                      ?
+                    </span>
+                  </div>
+                  <ItemDescription>{runtimeVersionFieldHelp()}</ItemDescription>
                   <Input
                     value={config().runner.proton_version}
                     placeholder={
@@ -389,9 +393,9 @@ export default function CreatorPage() {
                       }))
                     }
                   />
-                </div>
+                </ItemContent>
 
-                <div class="grid content-start gap-2.5 rounded-md border border-border/80 bg-muted/20 p-3">
+                <ItemActions class="grid content-start gap-2.5 rounded-md border border-border/80 bg-muted/20 p-3">
                   <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
                     <div class="min-w-0">
                       <p class="text-sm font-medium">{tx('Versão obrigatória', 'Required version')}</p>
@@ -446,9 +450,9 @@ export default function CreatorPage() {
                       </SwitchControl>
                     </Switch>
                   </div>
-                </div>
-              </div>
-            </FieldShell>
+                </ItemActions>
+              </ItemMain>
+            </Item>
 
             <ToggleField
               label="ESYNC"
