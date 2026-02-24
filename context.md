@@ -1886,6 +1886,15 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 41
+Escopo implementado:
+- `ESYNC` e `FSYNC` consolidados em um unico item na aba `Runtime`:
+  - dois cards lado a lado (esquerda/direita), no mesmo estilo visual dos toggles do item de versao de runtime;
+  - cada card mostra apenas titulo + descricao + switch (sem texto `Ativado/Desativado`).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

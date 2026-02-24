@@ -448,35 +448,64 @@ export default function CreatorPage() {
               </ItemMain>
             </Item>
 
-            <ToggleField
-              label="ESYNC"
-              help={tx('Ativa otimizações de sincronização no runtime.', 'Enables synchronization optimizations in runtime.')}
-              checked={config().runner.esync}
-              onChange={(checked) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  runner: {
-                    ...prev.runner,
-                    esync: checked
-                  }
-                }))
-              }
-            />
+            <Item>
+              <div class="grid gap-3 md:grid-cols-2">
+                <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium">ESYNC</p>
+                    <p class="text-xs text-muted-foreground">
+                      {tx(
+                        'Ativa otimizações de sincronização no runtime.',
+                        'Enables synchronization optimizations in runtime.'
+                      )}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={config().runner.esync}
+                    onChange={(checked) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        runner: {
+                          ...prev.runner,
+                          esync: checked
+                        }
+                      }))
+                    }
+                  >
+                    <SwitchInput />
+                    <SwitchControl>
+                      <SwitchThumb />
+                    </SwitchControl>
+                  </Switch>
+                </div>
 
-            <ToggleField
-              label="FSYNC"
-              help={tx('Ativa otimizações FSYNC quando suportado.', 'Enables FSYNC optimizations when supported.')}
-              checked={config().runner.fsync}
-              onChange={(checked) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  runner: {
-                    ...prev.runner,
-                    fsync: checked
-                  }
-                }))
-              }
-            />
+                <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium">FSYNC</p>
+                    <p class="text-xs text-muted-foreground">
+                      {tx('Ativa otimizações FSYNC quando suportado.', 'Enables FSYNC optimizations when supported.')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={config().runner.fsync}
+                    onChange={(checked) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        runner: {
+                          ...prev.runner,
+                          fsync: checked
+                        }
+                      }))
+                    }
+                  >
+                    <SwitchInput />
+                    <SwitchControl>
+                      <SwitchThumb />
+                    </SwitchControl>
+                  </Switch>
+                </div>
+              </div>
+            </Item>
 
             <SelectField<FeatureState>
               label="UMU"
