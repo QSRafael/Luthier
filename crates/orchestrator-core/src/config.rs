@@ -1,0 +1,188 @@
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GameConfig {
+    pub config_version: u32,
+    pub created_by: String,
+    pub game_name: String,
+    pub exe_hash: String,
+    pub relative_exe_path: String,
+    pub launch_args: Vec<String>,
+    pub runner: RunnerConfig,
+    pub environment: EnvConfig,
+    pub compatibility: CompatibilityConfig,
+    pub winecfg: WinecfgConfig,
+    pub dependencies: Vec<String>,
+    pub extra_system_dependencies: Vec<SystemDependency>,
+    pub requirements: RequirementsConfig,
+    pub registry_keys: Vec<RegistryKey>,
+    pub integrity_files: Vec<String>,
+    pub folder_mounts: Vec<FolderMount>,
+    pub scripts: ScriptsConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RunnerConfig {
+    pub proton_version: String,
+    pub auto_update: bool,
+    pub esync: bool,
+    pub fsync: bool,
+    pub runtime_preference: RuntimePreference,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EnvConfig {
+    pub gamemode: FeatureState,
+    pub gamescope: GamescopeConfig,
+    pub mangohud: FeatureState,
+    pub prime_offload: bool,
+    pub custom_vars: HashMap<String, String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CompatibilityConfig {
+    pub wine_wayland: FeatureState,
+    pub hdr: FeatureState,
+    pub auto_dxvk_nvapi: FeatureState,
+    pub easy_anti_cheat_runtime: FeatureState,
+    pub battleye_runtime: FeatureState,
+    pub staging: FeatureState,
+    pub wrapper_commands: Vec<WrapperCommand>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WinecfgConfig {
+    pub dll_overrides: Vec<DllOverrideRule>,
+    pub auto_capture_mouse: FeatureState,
+    pub window_decorations: FeatureState,
+    pub window_manager_control: FeatureState,
+    pub virtual_desktop: VirtualDesktopConfig,
+    pub desktop_integration: FeatureState,
+    pub drives: Vec<WineDriveMapping>,
+    pub audio_driver: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AppSettings {
+    pub schema_version: u32,
+    pub preferred_locale: String,
+    pub telemetry_opt_in: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum FeatureState {
+    MandatoryOn,
+    MandatoryOff,
+    OptionalOn,
+    OptionalOff,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimePreference {
+    Auto,
+    Proton,
+    Wine,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeCandidate {
+    ProtonUmu,
+    ProtonNative,
+    Wine,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RequirementsConfig {
+    pub runtime: RuntimePolicy,
+    pub umu: FeatureState,
+    pub winetricks: FeatureState,
+    pub gamescope: FeatureState,
+    pub gamemode: FeatureState,
+    pub mangohud: FeatureState,
+    pub steam_runtime: FeatureState,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RuntimePolicy {
+    pub strict: bool,
+    pub primary: RuntimeCandidate,
+    pub fallback_order: Vec<RuntimeCandidate>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GamescopeConfig {
+    pub state: FeatureState,
+    pub resolution: Option<String>,
+    pub fsr: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WrapperCommand {
+    pub state: FeatureState,
+    pub executable: String,
+    pub args: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DllOverrideRule {
+    pub dll: String,
+    pub mode: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VirtualDesktopConfig {
+    pub state: FeatureState,
+    pub resolution: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WineDriveMapping {
+    pub letter: String,
+    pub source_relative_path: String,
+    pub state: FeatureState,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RegistryKey {
+    pub path: String,
+    pub name: String,
+    pub value_type: String,
+    pub value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ScriptsConfig {
+    pub pre_launch: String,
+    pub post_launch: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FolderMount {
+    pub source_relative_path: String,
+    pub target_windows_path: String,
+    pub create_source_if_missing: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SystemDependency {
+    pub name: String,
+    pub state: FeatureState,
+    pub check_commands: Vec<String>,
+    pub check_env_vars: Vec<String>,
+    pub check_paths: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn feature_state_roundtrip() {
+        let state = FeatureState::OptionalOn;
+        let raw = serde_json::to_string(&state).expect("serialize");
+        let parsed: FeatureState = serde_json::from_str(&raw).expect("deserialize");
+        assert_eq!(parsed, state);
+    }
+}

@@ -1,0 +1,10 @@
+/target
+/node_modules
+/dist
+.DS_Store
+*.AppImage
+*.rpm
+*.deb
+*.log
+
+/Referencia
