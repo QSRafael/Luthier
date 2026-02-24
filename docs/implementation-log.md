@@ -192,3 +192,34 @@
   - adicionada dependência `serde` no binário `orchestrator` para serialização de `LaunchCommandPlan`.
 - Validação:
   - `cargo build --workspace` concluindo com sucesso no ambiente local.
+
+## 2026-02-24 (checkpoint 16)
+- Correções de revisão técnica e dívida:
+  - `clippy -D warnings` limpo em todo workspace;
+  - API de log refatorada com `LogIdentity`.
+- Hardening de segurança em paths:
+  - validação defensiva no `orchestrator` para impedir path absoluto/traversal em payload;
+  - mesma normalização aplicada em `creator-cli` e backend `src-tauri` no comando de teste.
+- `--config` implementado no orquestrador:
+  - suporte a overrides opcionais por jogo:
+    - `--set-mangohud on|off|default`
+    - `--set-gamescope on|off|default`
+    - `--set-gamemode on|off|default`
+  - persistência em `~/.local/share/GameOrchestrator/overrides/<exe_hash>.json`;
+  - aplicação automática dos overrides no `--play`.
+- Wrappers e prefix:
+  - wrapper custom `MandatoryOn` ausente agora bloqueia com erro explícito;
+  - wrapper opcional ausente é ignorado sem quebrar o launch;
+  - `build_prefix_setup_plan` passou a respeitar `winetricks OptionalOff/MandatoryOff`.
+- Discovery/doctor:
+  - busca de Proton ampliada para roots `steamapps/common`;
+  - escolha de candidato melhorada por metadata de modificação;
+  - validação de executabilidade para `wine`, `umu-run` e binários em `PATH`.
+- Tauri alignment:
+  - frontend ajustado para `@tauri-apps/api` v1;
+  - `tauri.conf.json` migrado para schema v1 para compatibilidade com backend atual.
+- Validação executada:
+  - `cargo fmt --all`
+  - `cargo build --workspace`
+  - `cargo test --workspace --all-targets`
+  - `cargo clippy --workspace --all-targets -- -D warnings`

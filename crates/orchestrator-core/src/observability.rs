@@ -28,15 +28,36 @@ pub struct LogEvent {
     pub context: Value,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LogIdentity {
+    pub trace_id: String,
+    pub span_id: String,
+    pub exe_hash: String,
+    pub component: String,
+}
+
+impl LogIdentity {
+    pub fn new(
+        trace_id: impl Into<String>,
+        span_id: impl Into<String>,
+        exe_hash: impl Into<String>,
+        component: impl Into<String>,
+    ) -> Self {
+        Self {
+            trace_id: trace_id.into(),
+            span_id: span_id.into(),
+            exe_hash: exe_hash.into(),
+            component: component.into(),
+        }
+    }
+}
+
 impl LogEvent {
     pub fn new(
         level: LogLevel,
         event_code: impl Into<String>,
         message: impl Into<String>,
-        trace_id: impl Into<String>,
-        span_id: impl Into<String>,
-        exe_hash: impl Into<String>,
-        component: impl Into<String>,
+        identity: LogIdentity,
         context: Value,
     ) -> Self {
         Self {
@@ -44,10 +65,10 @@ impl LogEvent {
             level,
             event_code: event_code.into(),
             message: message.into(),
-            trace_id: trace_id.into(),
-            span_id: span_id.into(),
-            exe_hash: exe_hash.into(),
-            component: component.into(),
+            trace_id: identity.trace_id,
+            span_id: identity.span_id,
+            exe_hash: identity.exe_hash,
+            component: identity.component,
             context,
         }
     }
@@ -79,10 +100,7 @@ mod tests {
             LogLevel::Info,
             "GO-DR-001",
             "doctor_started",
-            "trace-1",
-            "doctor",
-            "hash-1",
-            "doctor",
+            LogIdentity::new("trace-1", "doctor", "hash-1", "doctor"),
             serde_json::json!({"stage": "runtime"}),
         );
 

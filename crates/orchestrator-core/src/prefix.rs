@@ -48,17 +48,33 @@ pub fn build_prefix_setup_plan(config: &GameConfig) -> Result<PrefixSetupPlan, O
     }
 
     if !config.dependencies.is_empty() {
-        let mandatory = matches!(config.requirements.winetricks, FeatureState::MandatoryOn);
-        let mut args = vec!["-q".to_string()];
-        args.extend(config.dependencies.clone());
+        match config.requirements.winetricks {
+            FeatureState::MandatoryOn | FeatureState::OptionalOn => {
+                let mandatory = matches!(config.requirements.winetricks, FeatureState::MandatoryOn);
+                let mut args = vec!["-q".to_string()];
+                args.extend(config.dependencies.clone());
 
-        commands.push(PlannedCommand {
-            name: "winetricks".to_string(),
-            program: "winetricks".to_string(),
-            args,
-            timeout_secs: 900,
-            mandatory,
-        });
+                commands.push(PlannedCommand {
+                    name: "winetricks".to_string(),
+                    program: "winetricks".to_string(),
+                    args,
+                    timeout_secs: 900,
+                    mandatory,
+                });
+            }
+            FeatureState::MandatoryOff => {
+                notes.push(
+                    "winetricks disabled by policy; dependencies list will not be installed"
+                        .to_string(),
+                );
+            }
+            FeatureState::OptionalOff => {
+                notes.push(
+                    "winetricks optional-off by default; dependencies list not installed unless override is provided"
+                        .to_string(),
+                );
+            }
+        }
     }
 
     if !config.registry_keys.is_empty() {
@@ -106,6 +122,18 @@ mod tests {
             .find(|cmd| cmd.program == "winetricks")
             .expect("winetricks command exists");
         assert!(cmd.mandatory);
+    }
+
+    #[test]
+    fn plan_skips_winetricks_when_policy_is_off() {
+        let mut cfg = sample_config();
+        cfg.dependencies = vec!["corefonts".to_string()];
+        cfg.requirements.winetricks = FeatureState::OptionalOff;
+
+        let plan = build_prefix_setup_plan(&cfg).expect("build plan");
+
+        assert!(!plan.commands.iter().any(|cmd| cmd.program == "winetricks"));
+        assert!(plan.notes.iter().any(|note| note.contains("optional-off")));
     }
 
     #[test]

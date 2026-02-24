@@ -369,6 +369,8 @@ Beneficios:
 - Todos os paths de jogo no payload devem ser relativos ao diretorio do Orquestrador.
 - Prefix por hash: `~/.local/share/GameOrchestrator/prefixes/<exe_hash>/`.
 - Resolver base em runtime com `current_exe().parent()`.
+- Runtime deve validar paths do payload novamente (defesa em profundidade):
+  - recusar path absoluto Linux (`/`), absoluto Windows (`C:\...`) e traversal (`..`) inclusive com separador `\`.
 - Em `folder_mounts`, a origem deve estar sempre dentro da pasta raiz do jogo (com validacao de symlink/realpath).
 - Nao persistir caminho absoluto manual para runtime no payload.
 - Descoberta de runtime deve usar `PATH`, env vars conhecidas e caminhos padrao do sistema.
@@ -391,7 +393,13 @@ Beneficios:
 
 2. CLI check:
 - `--play`: inicia silencioso.
-- `--config`: menu nativo leve para toggles permitidos.
+- `--config`: gerencia overrides locais de features opcionais (`mangohud`, `gamescope`, `gamemode`).
+- `--config` suporta:
+  - `--set-mangohud on|off|default`
+  - `--set-gamescope on|off|default`
+  - `--set-gamemode on|off|default`
+- Overrides sao persistidos por jogo em:
+  - `~/.local/share/GameOrchestrator/overrides/<exe_hash>.json`
 - `--doctor`: valida ambiente sem launch.
 - `--verbose`: logs detalhados.
 - `--show-config`: imprime configuracao embutida.
@@ -409,8 +417,12 @@ Beneficios:
   - `~/.local/share/Steam/compatibilitytools.d/`
   - `~/.steam/root/compatibilitytools.d/`
   - `~/.steam/steam/compatibilitytools.d/`
+  - `~/.local/share/Steam/steamapps/common/`
+  - `~/.steam/root/steamapps/common/`
+  - `~/.steam/steam/steamapps/common/`
 - Procurar Wine via `PATH`, `/usr/bin/wine`, `/usr/local/bin/wine`, `~/.local/bin/wine`.
 - Procurar `umu-run` via `PATH` e fallback local.
+- Validar binarios encontrados como executaveis (nao apenas existencia de arquivo).
 - Montar um `ExecutionPlan` com status por item:
   - `BLOCKER` (violou `MandatoryOn`)
   - `WARN` (item opcional indisponivel, sera desativado/fallback)
@@ -546,7 +558,7 @@ Beneficios:
   - `OptionalOn`/`OptionalOff`: ativa/desativa conforme disponibilidade.
 - `wrapper_commands`:
   - entradas `MandatoryOn` ausentes/invalidas: bloqueiam.
-  - entradas opcionais invalidas: `WARN` e sao ignoradas.
+  - entradas opcionais invalidas: sao ignoradas (degradacao controlada, sem bloquear launch).
 - `extra_system_dependencies`:
   - `MandatoryOn` ausente: bloqueia.
   - `MandatoryOff`: ignora.
@@ -559,6 +571,9 @@ Beneficios:
 ## 8) CLI do Orquestrador (MVP)
 - `--play`
 - `--config`
+- `--set-mangohud on|off|default` (com `--config`)
+- `--set-gamescope on|off|default` (com `--config`)
+- `--set-gamemode on|off|default` (com `--config`)
 - `--doctor`
 - `--verbose`
 - `--show-config`
@@ -1524,3 +1539,35 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Internacionalizar respostas do backend (`src-tauri`) e mapear `error_code` para UI.
 - Expandir UI para incluir mais configurações avançadas por aba.
+
+### 2026-02-24 - Checkpoint 16
+Escopo implementado:
+- Revisao tecnica e hardening dos pontos criticos:
+  - corrigidos erros de `clippy -D warnings` no workspace;
+  - refatorada API de observabilidade para reduzir acoplamento de argumentos.
+- Orquestrador (`--play`) reforcado com validacao defensiva de paths:
+  - bloqueia path absoluto Linux/Windows e traversal (`..`) inclusive com `\`;
+  - mesma regra aplicada em validacao de integridade e resolucao do exe.
+- `--config` deixou de ser placeholder:
+  - agora gerencia overrides opcionais por jogo para `mangohud`, `gamescope`, `gamemode`;
+  - suporte a `--set-mangohud`, `--set-gamescope`, `--set-gamemode`;
+  - overrides persistidos em `~/.local/share/GameOrchestrator/overrides/<exe_hash>.json`;
+  - `--play` aplica automaticamente os overrides persistidos.
+- Wrappers customizados:
+  - `MandatoryOn` ausente/invalido agora bloqueia com erro explicito;
+  - opcionais ausentes/invalidos sao ignorados sem derrubar launch.
+- Prefix setup:
+  - politica de `winetricks` respeita `MandatoryOff`/`OptionalOff` (nao instala por padrao).
+- Doctor/discovery:
+  - discovery de Proton expandido para `steamapps/common` alem de `compatibilitytools.d`;
+  - selecao do Proton melhorada (prioriza candidato mais recente por metadata);
+  - checagem de executabilidade para `wine`, `umu-run` e binarios descobertos no `PATH`.
+- Alinhamento Tauri:
+  - frontend ajustado para `@tauri-apps/api` v1;
+  - `tauri.conf.json` alinhado ao schema v1 para compatibilidade com backend Rust atual.
+
+Validacao do checkpoint:
+- `cargo fmt --all`
+- `cargo build --workspace`
+- `cargo test --workspace --all-targets`
+- `cargo clippy --workspace --all-targets -- -D warnings`

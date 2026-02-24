@@ -73,7 +73,7 @@ pub fn inject_from_parts(
     Ok(InjectionResult {
         output_path: output_path.to_path_buf(),
         config_len: config_bytes.len(),
-        config_sha256_hex: sha256_hex(&config_bytes),
+        config_sha256_hex: sha256_hex(config_bytes),
     })
 }
 

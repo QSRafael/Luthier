@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
 use orchestrator_core::{doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig};
@@ -81,7 +81,7 @@ pub fn test_configuration(
     creator_core::validate_game_config_relative_paths(&config).map_err(|err| err.to_string())?;
 
     let game_root = PathBuf::from(&input.game_root);
-    let missing_files = collect_missing_files(&config, &game_root);
+    let missing_files = collect_missing_files(&config, &game_root)?;
     let doctor = run_doctor(Some(&config));
     let prefix_plan = build_prefix_setup_plan(&config).map_err(|err| err.to_string())?;
 
@@ -122,27 +122,63 @@ pub fn cmd_test_configuration(
     test_configuration(input)
 }
 
-fn collect_missing_files(config: &GameConfig, game_root: &PathBuf) -> Vec<String> {
+fn collect_missing_files(config: &GameConfig, game_root: &Path) -> Result<Vec<String>, String> {
     let mut missing = Vec::new();
 
-    let exe_path = resolve_relative_path(game_root, &config.relative_exe_path);
+    let exe_path = resolve_relative_path(game_root, &config.relative_exe_path)?;
     if !exe_path.exists() {
         missing.push(config.relative_exe_path.clone());
     }
 
     for file in &config.integrity_files {
-        let path = resolve_relative_path(game_root, file);
+        let path = resolve_relative_path(game_root, file)?;
         if !path.exists() {
             missing.push(file.clone());
         }
     }
 
-    missing
+    Ok(missing)
 }
 
-fn resolve_relative_path(base: &PathBuf, relative: &str) -> PathBuf {
-    let clean = relative.strip_prefix("./").unwrap_or(relative);
-    base.join(clean)
+fn resolve_relative_path(base: &Path, relative: &str) -> Result<PathBuf, String> {
+    let normalized = normalize_relative_payload_path(relative)?;
+    Ok(base.join(normalized))
+}
+
+fn normalize_relative_payload_path(raw: &str) -> Result<PathBuf, String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err("path is empty".to_string());
+    }
+
+    let normalized = trimmed.replace('\\', "/");
+    if normalized.starts_with('/') || has_windows_drive_prefix(&normalized) {
+        return Err(format!("absolute path is not allowed: {raw}"));
+    }
+
+    let mut out = PathBuf::new();
+    for part in normalized.split('/') {
+        if part.is_empty() || part == "." {
+            continue;
+        }
+
+        if part == ".." {
+            return Err(format!("path traversal is not allowed: {raw}"));
+        }
+
+        out.push(part);
+    }
+
+    if out.as_os_str().is_empty() {
+        return Err(format!("path resolves to empty value: {raw}"));
+    }
+
+    Ok(out)
+}
+
+fn has_windows_drive_prefix(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic()
 }
 
 #[cfg(test)]

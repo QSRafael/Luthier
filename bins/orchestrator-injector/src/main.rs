@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use anyhow::Context;
 use clap::Parser;
 use orchestrator_core::injector::{inject_from_files, InjectOptions};
-use orchestrator_core::observability::{emit_ndjson, new_trace_id, LogEvent, LogLevel};
+use orchestrator_core::observability::{
+    emit_ndjson, new_trace_id, LogEvent, LogIdentity, LogLevel,
+};
 
 #[derive(Debug, Parser)]
 #[command(name = "orchestrator-injector")]
@@ -77,7 +79,11 @@ fn log_event(
     context: serde_json::Value,
 ) {
     let event = LogEvent::new(
-        level, code, message, trace_id, "injector", "unknown", "creator", context,
+        level,
+        code,
+        message,
+        LogIdentity::new(trace_id, "injector", "unknown", "creator"),
+        context,
     );
 
     let mut stderr = io::stderr();

@@ -4,10 +4,10 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use orchestrator_core::{
     doctor::{run_doctor, CheckStatus, DoctorReport},
-    observability::{emit_ndjson, new_trace_id, LogEvent, LogLevel},
+    observability::{emit_ndjson, new_trace_id, LogEvent, LogIdentity, LogLevel},
     prefix::{base_env_for_prefix, build_prefix_setup_plan},
     process::{
         execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
@@ -16,7 +16,7 @@ use orchestrator_core::{
     trailer::extract_config_json,
     FeatureState, GameConfig, OrchestratorError, RuntimeCandidate,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Parser)]
 #[command(name = "orchestrator")]
@@ -39,6 +39,15 @@ struct Cli {
 
     #[arg(long)]
     lang: Option<String>,
+
+    #[arg(long, value_enum)]
+    set_mangohud: Option<OptionalToggle>,
+
+    #[arg(long, value_enum)]
+    set_gamescope: Option<OptionalToggle>,
+
+    #[arg(long, value_enum)]
+    set_gamemode: Option<OptionalToggle>,
 }
 
 #[derive(Debug, Serialize)]
@@ -50,10 +59,42 @@ struct LaunchCommandPlan {
     env: Vec<(String, String)>,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum OptionalToggle {
+    On,
+    Off,
+    Default,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+struct RuntimeOverrides {
+    mangohud: Option<bool>,
+    gamescope: Option<bool>,
+    gamemode: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+struct ConfigFeatureView {
+    feature: &'static str,
+    policy_state: FeatureState,
+    overridable: bool,
+    default_enabled: bool,
+    effective_enabled: bool,
+    override_value: Option<bool>,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let trace_id = new_trace_id();
+    let has_config_override_flags =
+        cli.set_mangohud.is_some() || cli.set_gamescope.is_some() || cli.set_gamemode.is_some();
+
+    if has_config_override_flags && !cli.config {
+        return Err(anyhow!(
+            "override flags require --config (use --config --set-<feature> ...)"
+        ));
+    }
 
     log_event(
         &trace_id,
@@ -68,6 +109,9 @@ async fn main() -> anyhow::Result<()> {
             "show_config": cli.show_config,
             "lang": cli.lang,
             "verbose": cli.verbose,
+            "set_mangohud": cli.set_mangohud.as_ref().map(|v| format!("{v:?}")),
+            "set_gamescope": cli.set_gamescope.as_ref().map(|v| format!("{v:?}")),
+            "set_gamemode": cli.set_gamemode.as_ref().map(|v| format!("{v:?}")),
         }),
     );
 
@@ -83,15 +127,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if cli.config {
-        log_event(
-            &trace_id,
-            LogLevel::Info,
-            "config",
-            "GO-UI-002",
-            "config_ui_requested_but_not_implemented",
-            serde_json::json!({}),
-        );
-        println!("--config ainda nao implementado.");
+        run_config_command(&trace_id, &cli).context("config command failed")?;
         return Ok(());
     }
 
@@ -171,12 +207,106 @@ fn run_doctor_command(trace_id: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn run_play(trace_id: &str) -> anyhow::Result<()> {
+fn run_config_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
     let config = load_embedded_config_required()?;
+    let mut overrides = load_runtime_overrides(&config.exe_hash)?;
+    let mut changed = false;
+
+    changed |= apply_toggle_request(
+        "mangohud",
+        config.requirements.mangohud,
+        cli.set_mangohud,
+        &mut overrides.mangohud,
+    )?;
+    changed |= apply_toggle_request(
+        "gamemode",
+        config.requirements.gamemode,
+        cli.set_gamemode,
+        &mut overrides.gamemode,
+    )?;
+
+    if let Some(requested) = cli.set_gamescope {
+        if !feature_overridable(config.environment.gamescope.state)
+            || !feature_overridable(config.requirements.gamescope)
+        {
+            return Err(anyhow!(
+                "feature 'gamescope' is not overridable with current policy"
+            ));
+        }
+        changed |= set_optional_override(&mut overrides.gamescope, requested);
+    }
+
+    let override_path = if changed {
+        save_runtime_overrides(&config.exe_hash, &overrides)?
+    } else {
+        runtime_overrides_path(&config.exe_hash)?
+    };
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "config",
+        "GO-UI-002",
+        "config_overrides_loaded",
+        serde_json::json!({
+            "exe_hash": config.exe_hash,
+            "changed": changed,
+            "override_file": override_path,
+        }),
+    );
+
+    let features = vec![
+        build_feature_view("mangohud", config.requirements.mangohud, overrides.mangohud),
+        build_feature_view(
+            "gamescope",
+            config.environment.gamescope.state,
+            overrides.gamescope,
+        ),
+        build_feature_view("gamemode", config.requirements.gamemode, overrides.gamemode),
+    ];
+
+    let output = serde_json::json!({
+        "status": "OK",
+        "override_file": override_path,
+        "changed": changed,
+        "features": features,
+        "usage": {
+            "set": "--config --set-mangohud on|off|default --set-gamescope on|off|default --set-gamemode on|off|default",
+            "play": "--play"
+        }
+    });
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&output).context("failed to serialize config output")?
+    );
+
+    Ok(())
+}
+
+fn run_play(trace_id: &str) -> anyhow::Result<()> {
+    let mut config = load_embedded_config_required()?;
+    let overrides = load_runtime_overrides(&config.exe_hash)?;
+    apply_runtime_overrides(&mut config, &overrides);
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "config",
+        "GO-CFG-021",
+        "runtime_overrides_applied",
+        serde_json::json!({
+            "mangohud": overrides.mangohud,
+            "gamescope": overrides.gamescope,
+            "gamemode": overrides.gamemode,
+        }),
+    );
+
     let game_root = resolve_game_root().context("failed to resolve game root")?;
     let dry_run = dry_run_enabled();
 
-    let missing_files = validate_integrity(&config, &game_root);
+    let missing_files =
+        validate_integrity(&config, &game_root).context("invalid integrity path in payload")?;
     if !missing_files.is_empty() {
         let output = serde_json::json!({
             "integrity": {
@@ -442,7 +572,8 @@ fn build_launch_command(
                 .ok_or_else(|| anyhow!("selected runtime Wine but wine path is missing"))?,
         };
 
-    let game_exe = resolve_relative_path(game_root, &config.relative_exe_path);
+    let game_exe = resolve_relative_path(game_root, &config.relative_exe_path)
+        .context("invalid relative_exe_path in payload")?;
     let game_exe_str = game_exe.to_string_lossy().into_owned();
 
     let mut runtime_args = vec![game_exe_str];
@@ -468,8 +599,18 @@ fn build_launch_command(
 
     for wrapper in config.compatibility.wrapper_commands.iter().rev() {
         if feature_enabled(wrapper.state) {
+            let Some(wrapper_program) = resolve_wrapper_executable(&wrapper.executable) else {
+                if matches!(wrapper.state, FeatureState::MandatoryOn) {
+                    return Err(anyhow!(
+                        "mandatory wrapper command '{}' is not available",
+                        wrapper.executable
+                    ));
+                }
+                continue;
+            };
+
             let args = split_wrapper_args(&wrapper.args);
-            command_tokens = wrap_command(wrapper.executable.clone(), args, command_tokens);
+            command_tokens = wrap_command(wrapper_program, args, command_tokens);
         }
     }
 
@@ -558,22 +699,24 @@ fn execute_script_if_present(
     Some(execute_external_command(&command, env_pairs, dry_run))
 }
 
-fn validate_integrity(config: &GameConfig, game_root: &Path) -> Vec<String> {
+fn validate_integrity(config: &GameConfig, game_root: &Path) -> anyhow::Result<Vec<String>> {
     let mut missing = Vec::new();
 
-    let exe_path = resolve_relative_path(game_root, &config.relative_exe_path);
+    let exe_path = resolve_relative_path(game_root, &config.relative_exe_path)
+        .with_context(|| format!("invalid relative_exe_path '{}'", config.relative_exe_path))?;
     if !exe_path.exists() {
         missing.push(config.relative_exe_path.clone());
     }
 
     for file in &config.integrity_files {
-        let path = resolve_relative_path(game_root, file);
+        let path = resolve_relative_path(game_root, file)
+            .with_context(|| format!("invalid path '{file}'"))?;
         if !path.exists() {
             missing.push(file.clone());
         }
     }
 
-    missing
+    Ok(missing)
 }
 
 fn resolve_game_root() -> anyhow::Result<PathBuf> {
@@ -584,13 +727,170 @@ fn resolve_game_root() -> anyhow::Result<PathBuf> {
     Ok(root.to_path_buf())
 }
 
-fn resolve_relative_path(base: &Path, relative: &str) -> PathBuf {
-    let clean = relative.strip_prefix("./").unwrap_or(relative);
-    base.join(clean)
+fn resolve_relative_path(base: &Path, relative: &str) -> anyhow::Result<PathBuf> {
+    let normalized = normalize_relative_payload_path(relative)?;
+    Ok(base.join(normalized))
+}
+
+fn normalize_relative_payload_path(raw: &str) -> anyhow::Result<PathBuf> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(anyhow!("path is empty"));
+    }
+
+    let normalized = trimmed.replace('\\', "/");
+    if normalized.starts_with('/') || has_windows_drive_prefix(&normalized) {
+        return Err(anyhow!("absolute path is not allowed: {raw}"));
+    }
+
+    let mut out = PathBuf::new();
+    for part in normalized.split('/') {
+        if part.is_empty() || part == "." {
+            continue;
+        }
+
+        if part == ".." {
+            return Err(anyhow!("path traversal is not allowed: {raw}"));
+        }
+
+        out.push(part);
+    }
+
+    if out.as_os_str().is_empty() {
+        return Err(anyhow!("path resolves to empty value: {raw}"));
+    }
+
+    Ok(out)
+}
+
+fn has_windows_drive_prefix(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic()
 }
 
 fn feature_enabled(state: FeatureState) -> bool {
     matches!(state, FeatureState::MandatoryOn | FeatureState::OptionalOn)
+}
+
+fn feature_overridable(state: FeatureState) -> bool {
+    matches!(state, FeatureState::OptionalOn | FeatureState::OptionalOff)
+}
+
+fn feature_default_enabled(state: FeatureState) -> bool {
+    matches!(state, FeatureState::MandatoryOn | FeatureState::OptionalOn)
+}
+
+fn effective_feature_enabled(state: FeatureState, override_value: Option<bool>) -> bool {
+    if feature_overridable(state) {
+        override_value.unwrap_or_else(|| feature_default_enabled(state))
+    } else {
+        feature_default_enabled(state)
+    }
+}
+
+fn build_feature_view(
+    feature: &'static str,
+    policy_state: FeatureState,
+    override_value: Option<bool>,
+) -> ConfigFeatureView {
+    ConfigFeatureView {
+        feature,
+        policy_state,
+        overridable: feature_overridable(policy_state),
+        default_enabled: feature_default_enabled(policy_state),
+        effective_enabled: effective_feature_enabled(policy_state, override_value),
+        override_value,
+    }
+}
+
+fn apply_toggle_request(
+    feature_name: &str,
+    state: FeatureState,
+    requested: Option<OptionalToggle>,
+    target: &mut Option<bool>,
+) -> anyhow::Result<bool> {
+    let Some(requested) = requested else {
+        return Ok(false);
+    };
+
+    if !feature_overridable(state) {
+        return Err(anyhow!(
+            "feature '{}' is not overridable with current policy",
+            feature_name
+        ));
+    }
+
+    Ok(set_optional_override(target, requested))
+}
+
+fn set_optional_override(target: &mut Option<bool>, requested: OptionalToggle) -> bool {
+    let next = match requested {
+        OptionalToggle::On => Some(true),
+        OptionalToggle::Off => Some(false),
+        OptionalToggle::Default => None,
+    };
+
+    let changed = *target != next;
+    *target = next;
+    changed
+}
+
+fn runtime_overrides_path(exe_hash: &str) -> anyhow::Result<PathBuf> {
+    let home = std::env::var_os("HOME").ok_or_else(|| anyhow!("HOME is not set"))?;
+    Ok(PathBuf::from(home)
+        .join(".local/share/GameOrchestrator/overrides")
+        .join(format!("{exe_hash}.json")))
+}
+
+fn load_runtime_overrides(exe_hash: &str) -> anyhow::Result<RuntimeOverrides> {
+    let path = runtime_overrides_path(exe_hash)?;
+    if !path.exists() {
+        return Ok(RuntimeOverrides::default());
+    }
+
+    let raw = fs::read_to_string(&path)
+        .with_context(|| format!("failed to read runtime overrides at {}", path.display()))?;
+    let parsed = serde_json::from_str::<RuntimeOverrides>(&raw)
+        .with_context(|| format!("invalid runtime overrides at {}", path.display()))?;
+    Ok(parsed)
+}
+
+fn save_runtime_overrides(exe_hash: &str, overrides: &RuntimeOverrides) -> anyhow::Result<PathBuf> {
+    let path = runtime_overrides_path(exe_hash)?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| anyhow!("runtime override path has no parent"))?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("failed to create overrides directory {}", parent.display()))?;
+
+    let payload =
+        serde_json::to_vec_pretty(overrides).context("failed to serialize runtime overrides")?;
+    fs::write(&path, payload)
+        .with_context(|| format!("failed to write runtime overrides to {}", path.display()))?;
+    Ok(path)
+}
+
+fn apply_runtime_overrides(config: &mut GameConfig, overrides: &RuntimeOverrides) {
+    apply_optional_override(&mut config.requirements.mangohud, overrides.mangohud);
+    apply_optional_override(&mut config.requirements.gamemode, overrides.gamemode);
+    apply_optional_override(&mut config.environment.gamescope.state, overrides.gamescope);
+    apply_optional_override(&mut config.requirements.gamescope, overrides.gamescope);
+}
+
+fn apply_optional_override(state: &mut FeatureState, override_value: Option<bool>) {
+    let Some(override_value) = override_value else {
+        return;
+    };
+
+    if !feature_overridable(*state) {
+        return;
+    }
+
+    *state = if override_value {
+        FeatureState::OptionalOn
+    } else {
+        FeatureState::OptionalOff
+    };
 }
 
 fn dependency_path(report: &DoctorReport, name: &str) -> Option<String> {
@@ -599,6 +899,47 @@ fn dependency_path(report: &DoctorReport, name: &str) -> Option<String> {
         .iter()
         .find(|dep| dep.name == name && dep.found)
         .and_then(|dep| dep.resolved_path.clone())
+}
+
+fn resolve_wrapper_executable(executable: &str) -> Option<String> {
+    let path = Path::new(executable);
+    if executable.contains('/') || path.is_absolute() {
+        return is_executable_file(path).then(|| path.to_string_lossy().into_owned());
+    }
+
+    find_in_path(executable)
+        .filter(|path| is_executable_file(path))
+        .map(|path| path.to_string_lossy().into_owned())
+}
+
+fn find_in_path(bin_name: &str) -> Option<PathBuf> {
+    let paths = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&paths) {
+        let candidate = dir.join(bin_name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    if !path.is_file() {
+        return false;
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::metadata(path)
+            .map(|meta| meta.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(unix))]
+    {
+        true
+    }
 }
 
 fn split_wrapper_args(raw: &str) -> Vec<String> {
@@ -692,10 +1033,7 @@ fn log_event(
         level,
         code,
         message,
-        trace_id,
-        span_id,
-        "unknown",
-        "orchestrator",
+        LogIdentity::new(trace_id, span_id, "unknown", "orchestrator"),
         context,
     );
 

@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
@@ -146,37 +147,33 @@ fn evaluate_runtime(
 }
 
 fn evaluate_dependencies(config: Option<&GameConfig>) -> Vec<DependencyStatus> {
-    let mut out = Vec::new();
-
-    out.push(evaluate_component(
-        "gamescope",
-        config.map(|cfg| cfg.requirements.gamescope),
-        find_in_path("gamescope"),
-    ));
-
-    out.push(evaluate_component(
-        "gamemoderun",
-        config.map(|cfg| cfg.requirements.gamemode),
-        find_in_path("gamemoderun"),
-    ));
-
-    out.push(evaluate_component(
-        "mangohud",
-        config.map(|cfg| cfg.requirements.mangohud),
-        find_in_path("mangohud"),
-    ));
-
-    out.push(evaluate_component(
-        "winetricks",
-        config.map(|cfg| cfg.requirements.winetricks),
-        find_in_path("winetricks"),
-    ));
-
-    out.push(evaluate_component(
-        "umu-run",
-        config.map(|cfg| cfg.requirements.umu),
-        discover_umu(),
-    ));
+    let mut out = vec![
+        evaluate_component(
+            "gamescope",
+            config.map(|cfg| cfg.requirements.gamescope),
+            find_in_path("gamescope"),
+        ),
+        evaluate_component(
+            "gamemoderun",
+            config.map(|cfg| cfg.requirements.gamemode),
+            find_in_path("gamemoderun"),
+        ),
+        evaluate_component(
+            "mangohud",
+            config.map(|cfg| cfg.requirements.mangohud),
+            find_in_path("mangohud"),
+        ),
+        evaluate_component(
+            "winetricks",
+            config.map(|cfg| cfg.requirements.winetricks),
+            find_in_path("winetricks"),
+        ),
+        evaluate_component(
+            "umu-run",
+            config.map(|cfg| cfg.requirements.umu),
+            discover_umu(),
+        ),
+    ];
 
     let steam_runtime_found = env::var_os("STEAM_RUNTIME")
         .and_then(|v| if v.is_empty() { None } else { Some(v) })
@@ -289,7 +286,7 @@ fn candidate_available(
 fn discover_umu() -> Option<PathBuf> {
     if let Some(from_env) = env::var_os("UMU_RUNTIME") {
         let candidate = PathBuf::from(from_env);
-        if candidate.exists() {
+        if is_executable_file(&candidate) {
             return Some(candidate);
         }
     }
@@ -300,15 +297,15 @@ fn discover_umu() -> Option<PathBuf> {
 fn discover_wine() -> Option<PathBuf> {
     if let Some(from_env) = env::var_os("WINE") {
         let candidate = PathBuf::from(from_env);
-        if candidate.exists() {
+        if is_executable_file(&candidate) {
             return Some(candidate);
         }
     }
 
     find_in_path("wine")
-        .or_else(|| existing_path("/usr/bin/wine"))
-        .or_else(|| existing_path("/usr/local/bin/wine"))
-        .or_else(|| home_relative(".local/bin/wine"))
+        .or_else(|| existing_executable_path("/usr/bin/wine"))
+        .or_else(|| existing_executable_path("/usr/local/bin/wine"))
+        .or_else(|| home_relative_executable(".local/bin/wine"))
 }
 
 fn discover_proton() -> Option<PathBuf> {
@@ -343,18 +340,21 @@ fn known_proton_roots() -> Vec<PathBuf> {
         out.push(home.join(".local/share/Steam/compatibilitytools.d"));
         out.push(home.join(".steam/root/compatibilitytools.d"));
         out.push(home.join(".steam/steam/compatibilitytools.d"));
+        out.push(home.join(".local/share/Steam/steamapps/common"));
+        out.push(home.join(".steam/root/steamapps/common"));
+        out.push(home.join(".steam/steam/steamapps/common"));
     }
 
     out
 }
 
 fn proton_from_path(path: PathBuf) -> Option<PathBuf> {
-    if path.is_file() {
+    if is_executable_file(&path) {
         return Some(path);
     }
 
     let proton = path.join("proton");
-    if proton.is_file() {
+    if is_executable_file(&proton) {
         return Some(proton);
     }
 
@@ -363,17 +363,22 @@ fn proton_from_path(path: PathBuf) -> Option<PathBuf> {
 
 fn find_latest_proton_from_root(root: &Path) -> Option<PathBuf> {
     let entries = fs::read_dir(root).ok()?;
-    let mut candidates = Vec::<PathBuf>::new();
+    let mut best: Option<(SystemTime, PathBuf)> = None;
 
     for entry in entries.flatten() {
         let path = entry.path();
         if let Some(proton) = proton_from_path(path) {
-            candidates.push(proton);
+            let modified = path_modified_or_epoch(&proton);
+            match &best {
+                Some((best_modified, best_path))
+                    if modified < *best_modified
+                        || (modified == *best_modified && proton <= *best_path) => {}
+                _ => best = Some((modified, proton)),
+            }
         }
     }
 
-    candidates.sort_by(|a, b| b.cmp(a));
-    candidates.into_iter().next()
+    best.map(|(_, path)| path)
 }
 
 fn find_in_path(bin_name: &str) -> Option<PathBuf> {
@@ -381,7 +386,7 @@ fn find_in_path(bin_name: &str) -> Option<PathBuf> {
 
     for dir in env::split_paths(&paths) {
         let candidate = dir.join(bin_name);
-        if candidate.is_file() {
+        if is_executable_file(&candidate) {
             return Some(candidate);
         }
     }
@@ -389,23 +394,49 @@ fn find_in_path(bin_name: &str) -> Option<PathBuf> {
     None
 }
 
-fn existing_path(path: &str) -> Option<PathBuf> {
+fn existing_executable_path(path: &str) -> Option<PathBuf> {
     let path = PathBuf::from(path);
-    if path.exists() {
+    if is_executable_file(&path) {
         Some(path)
     } else {
         None
     }
 }
 
-fn home_relative(path: &str) -> Option<PathBuf> {
+fn home_relative_executable(path: &str) -> Option<PathBuf> {
     let home = env::var_os("HOME")?;
     let full = PathBuf::from(home).join(path);
-    if full.exists() {
+    if is_executable_file(&full) {
         Some(full)
     } else {
         None
     }
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    if !path.is_file() {
+        return false;
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::metadata(path)
+            .map(|meta| meta.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
+fn path_modified_or_epoch(path: &Path) -> SystemTime {
+    path.parent()
+        .and_then(|parent| fs::metadata(parent).ok())
+        .and_then(|meta| meta.modified().ok())
+        .unwrap_or(UNIX_EPOCH)
 }
 
 fn path_to_string(path: PathBuf) -> String {

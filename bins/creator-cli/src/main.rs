@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
@@ -63,7 +63,7 @@ fn run_test(config_path: PathBuf, game_root: PathBuf) -> anyhow::Result<()> {
     let config: GameConfig = load_config(&config_path)?;
     validate_game_config_relative_paths(&config)?;
 
-    let missing_files = collect_missing_files(&config, &game_root);
+    let missing_files = collect_missing_files(&config, &game_root)?;
     let doctor = run_doctor(Some(&config));
     let prefix_plan = build_prefix_setup_plan(&config)?;
 
@@ -111,25 +111,61 @@ fn load_config(path: &PathBuf) -> anyhow::Result<GameConfig> {
     Ok(cfg)
 }
 
-fn collect_missing_files(config: &GameConfig, game_root: &PathBuf) -> Vec<String> {
+fn collect_missing_files(config: &GameConfig, game_root: &Path) -> anyhow::Result<Vec<String>> {
     let mut missing = Vec::new();
 
-    let exe_path = resolve_relative_path(game_root, &config.relative_exe_path);
+    let exe_path = resolve_relative_path(game_root, &config.relative_exe_path)?;
     if !exe_path.exists() {
         missing.push(config.relative_exe_path.clone());
     }
 
     for file in &config.integrity_files {
-        let path = resolve_relative_path(game_root, file);
+        let path = resolve_relative_path(game_root, file)?;
         if !path.exists() {
             missing.push(file.clone());
         }
     }
 
-    missing
+    Ok(missing)
 }
 
-fn resolve_relative_path(base: &PathBuf, relative: &str) -> PathBuf {
-    let clean = relative.strip_prefix("./").unwrap_or(relative);
-    base.join(clean)
+fn resolve_relative_path(base: &Path, relative: &str) -> anyhow::Result<PathBuf> {
+    let normalized = normalize_relative_payload_path(relative)?;
+    Ok(base.join(normalized))
+}
+
+fn normalize_relative_payload_path(raw: &str) -> anyhow::Result<PathBuf> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!("path is empty");
+    }
+
+    let normalized = trimmed.replace('\\', "/");
+    if normalized.starts_with('/') || has_windows_drive_prefix(&normalized) {
+        anyhow::bail!("absolute path is not allowed: {raw}");
+    }
+
+    let mut out = PathBuf::new();
+    for part in normalized.split('/') {
+        if part.is_empty() || part == "." {
+            continue;
+        }
+
+        if part == ".." {
+            anyhow::bail!("path traversal is not allowed: {raw}");
+        }
+
+        out.push(part);
+    }
+
+    if out.as_os_str().is_empty() {
+        anyhow::bail!("path resolves to empty value: {raw}");
+    }
+
+    Ok(out)
+}
+
+fn has_windows_drive_prefix(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic()
 }
