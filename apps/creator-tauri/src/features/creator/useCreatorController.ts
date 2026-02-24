@@ -3,6 +3,7 @@ import { createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
 import { invokeCommand, pickFile, pickFolder } from '../../api/tauri'
 import type { SelectOption } from '../../components/form/FormControls'
 import { detectLocale, Locale, translate } from '../../i18n'
+import { creatorFormat, creatorTranslate, type CreatorCopyKey } from './creator-copy'
 import {
   CreatorTab,
   defaultGameConfig,
@@ -164,7 +165,9 @@ export function useCreatorController() {
 
   const configPreview = createMemo(() => JSON.stringify(config(), null, 2))
   const t = (key: string) => translate(locale(), key)
-  const tx = (pt: string, en: string) => (locale() === 'pt-BR' ? pt : en)
+  const ct = (key: CreatorCopyKey) => creatorTranslate(locale(), key)
+  const ctf = (key: CreatorCopyKey, params: Record<string, string | number>) =>
+    creatorFormat(locale(), key, params)
 
   const tabs: CreatorTab[] = [
     'game',
@@ -179,19 +182,19 @@ export function useCreatorController() {
   const featureStateOptions = createMemo<SelectOption<FeatureState>[]>(() => [
     {
       value: 'MandatoryOn',
-      label: tx('Obrigatório: Ativado', 'Mandatory: Enabled')
+      label: ct('creator_mandatory_enabled')
     },
     {
       value: 'MandatoryOff',
-      label: tx('Obrigatório: Desativado', 'Mandatory: Disabled')
+      label: ct('creator_mandatory_disabled')
     },
     {
       value: 'OptionalOn',
-      label: tx('Opcional: Ativado', 'Optional: Enabled')
+      label: ct('creator_optional_enabled')
     },
     {
       value: 'OptionalOff',
-      label: tx('Opcional: Desativado', 'Optional: Disabled')
+      label: ct('creator_optional_disabled')
     }
   ])
 
@@ -206,7 +209,7 @@ export function useCreatorController() {
   const audioDriverOptions = createMemo<SelectOption<AudioDriverOption>[]>(() => [
     {
       value: '__none__',
-      label: tx('Padrão do runtime', 'Runtime default')
+      label: ct('creator_runtime_default')
     },
     { value: 'pipewire', label: 'pipewire' },
     { value: 'pulseaudio', label: 'pulseaudio' },
@@ -220,14 +223,14 @@ export function useCreatorController() {
   const upscaleMethodOptions = createMemo<SelectOption<UpscaleMethod>[]>(() => [
     { value: 'fsr', label: 'AMD FSR' },
     { value: 'nis', label: 'NVIDIA NIS' },
-    { value: 'integer', label: tx('Escala Inteira', 'Integer Scaling') },
-    { value: 'stretch', label: tx('Esticar imagem', 'Stretch image') }
+    { value: 'integer', label: ct('creator_integer_scaling') },
+    { value: 'stretch', label: ct('creator_stretch_image') }
   ])
 
   const windowTypeOptions = createMemo<SelectOption<GamescopeWindowType>[]>(() => [
-    { value: 'fullscreen', label: tx('Tela cheia', 'Fullscreen') },
-    { value: 'borderless', label: tx('Sem borda', 'Borderless') },
-    { value: 'windowed', label: tx('Janela', 'Windowed') }
+    { value: 'fullscreen', label: ct('creator_fullscreen') },
+    { value: 'borderless', label: ct('creator_borderless') },
+    { value: 'windowed', label: ct('creator_windowed_2') }
   ])
 
   const prefixPathPreview = createMemo(() => {
@@ -407,16 +410,13 @@ export function useCreatorController() {
 
   const runHash = async () => {
     if (!exePath().trim()) {
-      setStatusMessage(tx('Selecione um executável antes de calcular hash.', 'Select an executable before hashing.'))
+      setStatusMessage(ct('creator_select_an_executable_before_hashing'))
       return
     }
 
     if (!isLikelyAbsolutePath(exePath())) {
       setStatusMessage(
-        tx(
-          'Calcular hash requer caminho absoluto. No modo navegador (LAN), use o app Tauri local.',
-          'Hashing requires an absolute path. In browser/LAN mode, use the local Tauri app.'
-        )
+        ct('creator_hashing_requires_an_absolute_path_in_browser_lan_mode_us')
       )
       return
     }
@@ -472,23 +472,13 @@ export function useCreatorController() {
       setWinetricksSource(result.source)
       setWinetricksCatalogError(false)
       setWinetricksLoaded(true)
-      setStatusMessage(
-        tx(
-          `Catálogo Winetricks carregado (${result.components.length} itens).`,
-          `Winetricks catalog loaded (${result.components.length} items).`
-        )
-      )
+      setStatusMessage(ctf('creator_winetricks_catalog_loaded_count', { count: result.components.length }))
     } catch (error) {
       setWinetricksAvailable([])
       setWinetricksSource('fallback')
       setWinetricksCatalogError(true)
       setWinetricksLoaded(true)
-      setStatusMessage(
-        tx(
-          `Falha ao carregar catálogo Winetricks: ${String(error)}`,
-          `Failed to load Winetricks catalog: ${String(error)}`
-        )
-      )
+      setStatusMessage(ctf('creator_failed_to_load_winetricks_catalog_error', { error: String(error) }))
     } finally {
       setWinetricksLoading(false)
     }
@@ -504,7 +494,7 @@ export function useCreatorController() {
     })()
 
     const selected = await pickFile({
-      title: tx('Selecionar executável do jogo', 'Select game executable'),
+      title: ct('creator_select_game_executable'),
       filters: [{ name: 'Windows Launchers', extensions: ['exe', 'bat', 'cmd', 'com'] }],
       defaultPath: defaultPathCandidate
     })
@@ -512,10 +502,7 @@ export function useCreatorController() {
 
     if (!hasWindowsLauncherExtension(selected)) {
       setStatusMessage(
-        tx(
-          'Selecione um executável Windows válido (.exe, .bat, .cmd, .com).',
-          'Select a valid Windows launcher (.exe, .bat, .cmd, .com).'
-        )
+        ct('creator_select_a_valid_windows_launcher_exe_bat_cmd_com')
       )
       return
     }
@@ -535,7 +522,7 @@ export function useCreatorController() {
 
   const pickRegistryFile = async () => {
     const selected = await pickFile({
-      title: tx('Selecionar arquivo .reg', 'Select .reg file'),
+      title: ct('creator_select_reg_file'),
       filters: [{ name: 'Registry file', extensions: ['reg'] }]
     })
     if (!selected) return null
@@ -545,7 +532,7 @@ export function useCreatorController() {
 
   const pickGameRootOverride = async () => {
     const selected = await pickFolder({
-      title: tx('Selecionar pasta raiz do jogo', 'Select game root folder'),
+      title: ct('creator_select_game_root_folder'),
       defaultPath: (isLikelyAbsolutePath(exeDirectory()) ? exeDirectory() : undefined) ?? undefined
     })
     if (!selected) return
@@ -553,10 +540,7 @@ export function useCreatorController() {
     const currentExe = exePath().trim()
     if (currentExe && relativeFromRoot(selected, currentExe) === null) {
       setStatusMessage(
-        tx(
-          'A pasta raiz escolhida deve conter o executável principal.',
-          'The selected game root must contain the main executable.'
-        )
+        ct('creator_the_selected_game_root_must_contain_the_main_executable')
       )
       return
     }
@@ -567,7 +551,7 @@ export function useCreatorController() {
 
   const pickIntegrityFileRelative = async () => {
     const selected = await pickFile({
-      title: tx('Selecionar arquivo obrigatório', 'Select required file'),
+      title: ct('creator_select_required_file'),
       defaultPath: gameRoot() || undefined
     })
     if (!selected) return null
@@ -580,10 +564,7 @@ export function useCreatorController() {
     const relative = relativeFromRoot(gameRoot(), selected)
     if (!relative) {
       setStatusMessage(
-        tx(
-          'O arquivo selecionado precisa estar dentro da pasta raiz do jogo.',
-          'Selected file must be inside the game root folder.'
-        )
+        ct('creator_selected_file_must_be_inside_the_game_root_folder')
       )
       return null
     }
@@ -593,17 +574,14 @@ export function useCreatorController() {
 
   const pickMountFolder = async (index: number) => {
     const selected = await pickFolder({
-      title: tx('Selecionar pasta para montar', 'Select folder to mount')
+      title: ct('creator_select_folder_to_mount')
     })
     if (!selected) return
 
     const relative = relativeFromRoot(gameRoot(), selected)
     if (!relative) {
       setStatusMessage(
-        tx(
-          'A pasta selecionada precisa estar dentro da pasta raiz do jogo.',
-          'Selected folder must be inside game root folder.'
-        )
+        ct('creator_selected_folder_must_be_inside_game_root_folder')
       )
       return
     }
@@ -619,17 +597,14 @@ export function useCreatorController() {
 
   const pickMountSourceRelative = async () => {
     const selected = await pickFolder({
-      title: tx('Selecionar pasta para montar', 'Select folder to mount')
+      title: ct('creator_select_folder_to_mount')
     })
     if (!selected) return null
 
     const relative = relativeFromRoot(gameRoot(), selected)
     if (!relative) {
       setStatusMessage(
-        tx(
-          'A pasta selecionada precisa estar dentro da pasta raiz do jogo.',
-          'Selected folder must be inside game root folder.'
-        )
+        ct('creator_selected_folder_must_be_inside_game_root_folder')
       )
       return null
     }
@@ -639,10 +614,7 @@ export function useCreatorController() {
 
   const applyIconExtractionPlaceholder = () => {
     setStatusMessage(
-      tx(
-        'Extração de ícone será conectada ao backend na próxima etapa funcional.',
-        'Icon extraction will be wired to backend in the next functional step.'
-      )
+      ct('creator_icon_extraction_will_be_wired_to_backend_in_the_next_fun')
     )
     if (!iconPreviewPath()) {
       setIconPreviewPath('')
@@ -792,10 +764,7 @@ export function useCreatorController() {
     const exact = winetricksExactMatch()
     if (!exact) {
       setStatusMessage(
-        tx(
-          'Digite ao menos 2 caracteres e selecione um verbo válido do catálogo.',
-          'Type at least 2 characters and select a valid catalog verb.'
-        )
+        ct('creator_type_at_least_2_characters_and_select_a_valid_catalog_ve')
       )
       return
     }
@@ -848,7 +817,8 @@ export function useCreatorController() {
     patchConfig,
     configPreview,
     t,
-    tx,
+    ct,
+    ctf,
     featureStateOptions,
     runtimePrimaryOptions,
     runtimePreferenceOptions,

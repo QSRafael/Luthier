@@ -2102,6 +2102,25 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
 
+### 2026-02-24 - Checkpoint 40
+Escopo implementado:
+- Migracao estrutural de i18n no Creator (sem `tx(...)` inline na tela principal):
+  - `CreatorPage.tsx` e `useCreatorController.ts` agora usam chaves centralizadas (`ct(...)`) em vez de pares inline `tx('pt','en')`;
+  - casos dinamicos (contagem/erro/interpolacao) migrados para `ctf(...)` com placeholders (`{count}`, `{error}`, etc.).
+- Novo dicionario dedicado do Creator:
+  - arquivo `apps/creator-tauri/src/features/creator/creator-copy.ts` com `creatorMessages`, `creatorTranslate` e `creatorFormat`;
+  - centraliza textos de interface da feature Creator em um unico lugar.
+- Internacionalizacao pronta para escalar:
+  - para adicionar novo idioma do Creator, basta adicionar um novo bloco no dicionario da feature (e no `Locale` global), sem alterar componentes/tela;
+  - `FormControls` continua usando provider de i18n local (`FormControlsI18nProvider`) alimentado por chaves centralizadas.
+
+Observacao de arquitetura:
+- `i18n.ts` permanece para textos globais/status existentes.
+- `creator-copy.ts` concentra a copy extensa da feature Creator para reduzir ruido e facilitar manutencao.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 36
 Escopo implementado:
 - Padronizacao visual de botoes secundarios no Creator UI:

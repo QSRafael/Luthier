@@ -44,17 +44,18 @@ import {
   useCreatorController
 } from './useCreatorController'
 import { AppSidebar } from './AppSidebar'
+import type { CreatorCopyKey } from './creator-copy'
 
 function tabLabel(tab: CreatorTab, controller: CreatorController) {
-  const tx = controller.tx
-  if (tab === 'game') return tx('Jogo', 'Game')
-  if (tab === 'runtime') return tx('Runtime', 'Runtime')
-  if (tab === 'performance') return tx('Melhorias', 'Enhancements')
-  if (tab === 'prefix') return tx('Dependências', 'Dependencies')
+  const ct = controller.ct as (key: CreatorCopyKey) => string
+  if (tab === 'game') return ct('creator_label_game')
+  if (tab === 'runtime') return ct('creator_label_runtime')
+  if (tab === 'performance') return ct('creator_enhancements')
+  if (tab === 'prefix') return ct('creator_dependencies')
   if (tab === 'winecfg') return 'Winecfg'
-  if (tab === 'wrappers') return tx('Execução e Ambiente', 'Launch and Environment')
-  if (tab === 'scripts') return tx('Scripts', 'Scripts')
-  return tx('Revisão e Gerar', 'Review and Generate')
+  if (tab === 'wrappers') return ct('creator_launch_and_environment')
+  if (tab === 'scripts') return ct('creator_label_scripts')
+  return ct('creator_review_and_generate')
 }
 
 type AccordionSectionProps = {
@@ -255,7 +256,8 @@ export default function CreatorPage() {
     patchConfig,
     configPreview,
     t,
-    tx,
+    ct,
+    ctf,
     runtimePreferenceOptions,
     audioDriverOptions,
     dllModeOptions,
@@ -355,7 +357,7 @@ export default function CreatorPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = createSignal(false)
 
   const wineWindowsVersionOptions = [
-    { value: '__default__', label: tx('Padrão do runtime (não alterar)', 'Runtime default (do not override)') },
+    { value: '__default__', label: ct('creator_runtime_default_do_not_override') },
     { value: 'win11', label: 'Windows 11' },
     { value: 'win10', label: 'Windows 10' },
     { value: 'win81', label: 'Windows 8.1' },
@@ -366,20 +368,20 @@ export default function CreatorPage() {
   ] as const
 
   const wineDesktopFolderKeyOptions = [
-    { value: 'desktop', label: tx('Desktop', 'Desktop') },
-    { value: 'documents', label: tx('Documentos', 'Documents') },
-    { value: 'downloads', label: tx('Downloads', 'Downloads') },
-    { value: 'music', label: tx('Músicas', 'Music') },
-    { value: 'pictures', label: tx('Imagens', 'Pictures') },
-    { value: 'videos', label: tx('Vídeos', 'Videos') }
+    { value: 'desktop', label: ct('creator_desktop') },
+    { value: 'documents', label: ct('creator_documents') },
+    { value: 'downloads', label: ct('creator_downloads') },
+    { value: 'music', label: ct('creator_music') },
+    { value: 'pictures', label: ct('creator_pictures') },
+    { value: 'videos', label: ct('creator_videos') }
   ] as const
 
   const wineDriveTypeOptions = [
-    { value: 'auto', label: tx('Auto detectar', 'Auto detect') },
-    { value: 'local_disk', label: tx('Disco rígido local', 'Local hard disk') },
-    { value: 'network_share', label: tx('Compartilhamento de rede', 'Network share') },
-    { value: 'floppy', label: tx('Disquete', 'Floppy disk') },
-    { value: 'cdrom', label: tx('CD-ROM', 'CD-ROM') }
+    { value: 'auto', label: ct('creator_auto_detect') },
+    { value: 'local_disk', label: ct('creator_local_hard_disk') },
+    { value: 'network_share', label: ct('creator_network_share') },
+    { value: 'floppy', label: ct('creator_floppy_disk') },
+    { value: 'cdrom', label: ct('creator_cd_rom') }
   ] as const
 
   const allWineDriveLetters = 'DEFGHIJKLMNOPQRSTUVWXY'.split('')
@@ -423,29 +425,20 @@ export default function CreatorPage() {
 
   const runtimeVersionFieldLabel = () => {
     const preference = config().runner.runtime_preference
-    if (preference === 'Proton') return tx('Versão do Proton', 'Proton version')
-    if (preference === 'Wine') return tx('Versão do Wine', 'Wine version')
-    return tx('Versão de runtime (preferida)', 'Preferred runtime version')
+    if (preference === 'Proton') return ct('creator_proton_version')
+    if (preference === 'Wine') return ct('creator_wine_version')
+    return ct('creator_preferred_runtime_version')
   }
 
   const runtimeVersionFieldHelp = () => {
     const preference = config().runner.runtime_preference
     if (preference === 'Proton') {
-      return tx(
-        'Versão alvo do Proton usada pelo orquestrador quando a preferência está em Proton.',
-        'Target Proton version used by the orchestrator when preference is Proton.'
-      )
+      return ct('creator_target_proton_version_used_by_the_orchestrator_when_pref')
     }
     if (preference === 'Wine') {
-      return tx(
-        'Versão/identificador de Wine esperada quando a preferência está em Wine.',
-        'Expected Wine version/identifier when preference is Wine.'
-      )
+      return ct('creator_expected_wine_version_identifier_when_preference_is_wine')
     }
-    return tx(
-      'Versão preferida para runtime quando o modo Auto escolher Proton/Wine conforme disponibilidade.',
-      'Preferred runtime version when Auto mode picks Proton/Wine based on availability.'
-    )
+    return ct('creator_preferred_runtime_version_when_auto_mode_picks_proton_wi')
   }
 
   const gamescopeAdditionalOptionsList = createMemo(() => {
@@ -532,10 +525,7 @@ export default function CreatorPage() {
 
       if (!isLikelyAbsolutePath(selected)) {
         setStatusMessage(
-          tx(
-            'Importação de .reg requer caminho absoluto. No modo navegador (LAN), selecione no app Tauri local.',
-            'Importing .reg requires an absolute path. In browser/LAN mode, use the local Tauri app.'
-          )
+          ct('creator_importing_reg_requires_an_absolute_path_in_browser_lan_m')
         )
         return
       }
@@ -566,28 +556,20 @@ export default function CreatorPage() {
 
       const warningSuffix =
         result.warnings.length > 0
-          ? tx(
-              ` (${result.warnings.length} aviso(s) ao importar)`,
-              ` (${result.warnings.length} warning(s) while importing)`
-            )
+          ? ctf('creator_registry_import_warning_suffix_count', { count: result.warnings.length })
           : ''
 
       setStatusMessage(
-        tx(
-          `Importadas ${deduped.length} chave(s) de registro do arquivo .reg${warningSuffix}.`,
-          `Imported ${deduped.length} registry key(s) from .reg file${warningSuffix}.`
-        )
+        ctf('creator_imported_registry_keys_from_reg_file', {
+          count: deduped.length,
+          warningSuffix
+        })
       )
 
       setRegistryImportWarnings(result.warnings)
       setRegistryImportWarningsOpen(result.warnings.length > 0)
     } catch (error) {
-      setStatusMessage(
-        tx(
-          `Falha ao importar arquivo .reg: ${String(error)}`,
-          `Failed to import .reg file: ${String(error)}`
-        )
-      )
+      setStatusMessage(ctf('creator_failed_to_import_reg_file_error', { error: String(error) }))
     }
   }
 
@@ -604,10 +586,7 @@ export default function CreatorPage() {
   const loadMountBrowserDirs = async (absolutePath: string) => {
     if (!isLikelyAbsolutePath(absolutePath)) {
       setStatusMessage(
-        tx(
-          'Navegador de pastas montadas requer caminho absoluto da pasta do jogo. Use o app Tauri local.',
-          'Mounted-folder browser requires an absolute game root path. Use the local Tauri app.'
-        )
+        ct('creator_mounted_folder_browser_requires_an_absolute_game_root_pa')
       )
       return
     }
@@ -619,12 +598,7 @@ export default function CreatorPage() {
       setMountBrowserPath(result.path)
       setMountBrowserDirs(result.directories)
     } catch (error) {
-      setStatusMessage(
-        tx(
-          `Falha ao listar pastas: ${String(error)}`,
-          `Failed to list folders: ${String(error)}`
-        )
-      )
+      setStatusMessage(ctf('creator_failed_to_list_folders_error', { error: String(error) }))
     } finally {
       setMountBrowserLoading(false)
     }
@@ -633,15 +607,12 @@ export default function CreatorPage() {
   const openMountSourceBrowser = async () => {
     const root = gameRoot().trim()
     if (!root) {
-      setStatusMessage(tx('Selecione um executável primeiro para definir a pasta do jogo.', 'Select an executable first to define the game folder.'))
+      setStatusMessage(ct('creator_select_an_executable_first_to_define_the_game_folder'))
       return
     }
     if (!isLikelyAbsolutePath(root)) {
       setStatusMessage(
-        tx(
-          'No modo navegador (LAN), o mini navegador de pastas não consegue acessar o filesystem. Use o app Tauri local.',
-          'In browser/LAN mode, the mini folder browser cannot access the filesystem. Use the local Tauri app.'
-        )
+        ct('creator_in_browser_lan_mode_the_mini_folder_browser_cannot_acces')
       )
       return
     }
@@ -687,47 +658,38 @@ export default function CreatorPage() {
     setTheme('dark')
   }
 
-  const sidebarLocaleLabel = createMemo(() => `${tx('Idioma', 'Language')}: ${locale()}`)
+  const sidebarLocaleLabel = createMemo(() => `${ct('creator_language')}: ${locale()}`)
 
   const sidebarThemeLabel = createMemo(() => {
     const current = theme()
     const label =
       current === 'dark'
-        ? tx('Escuro', 'Dark')
+        ? ct('creator_dark')
         : current === 'light'
-          ? tx('Claro', 'Light')
-          : tx('Sistema', 'System')
-    return `${tx('Tema', 'Theme')}: ${label}`
+          ? ct('creator_light')
+          : ct('creator_system')
+    return `${ct('creator_theme')}: ${label}`
   })
 
   const formControlsI18n = createMemo(() => ({
-    enabled: tx('Ativado', 'Enabled'),
-    disabled: tx('Desativado', 'Disabled'),
-    mandatory: tx('Obrigatório', 'Mandatory'),
-    wineDefault: tx('Padrão do Wine', 'Use Wine default'),
-    actions: tx('Ações', 'Actions'),
-    action: tx('Ação', 'Action'),
-    add: tx('Adicionar', 'Add'),
-    addItem: tx('Adicionar item', 'Add item'),
-    addListDialogDescription: tx(
-      'Informe um valor e confirme para adicioná-lo à lista.',
-      'Enter a value and confirm to add it to the list.'
-    ),
-    addKeyValueDialogDescription: tx(
-      'Preencha chave e valor para adicionar uma nova linha.',
-      'Fill in key and value to add a new row.'
-    ),
-    pickFile: tx('Escolher arquivo', 'Choose file'),
-    pickFileHint: tx(
-      'Selecione um arquivo para preencher este campo automaticamente.',
-      'Select a file to fill this field automatically.'
-    ),
-    cancel: tx('Cancelar', 'Cancel'),
-    confirm: tx('Confirmar', 'Confirm'),
-    remove: tx('Remover', 'Remove'),
-    noItemAdded: tx('Nenhum item adicionado.', 'No item added.'),
-    keyPlaceholder: tx('Chave', 'Key'),
-    valuePlaceholder: tx('Valor', 'Value')
+    enabled: ct('creator_label_enabled'),
+    disabled: ct('creator_label_disabled'),
+    mandatory: ct('creator_label_mandatory'),
+    wineDefault: ct('creator_use_wine_default'),
+    actions: ct('creator_label_actions'),
+    action: ct('creator_label_action'),
+    add: ct('creator_label_add'),
+    addItem: ct('creator_add_item'),
+    addListDialogDescription: ct('creator_enter_a_value_and_confirm_to_add_it_to_the_list'),
+    addKeyValueDialogDescription: ct('creator_fill_in_key_and_value_to_add_a_new_row'),
+    pickFile: ct('creator_choose_file'),
+    pickFileHint: ct('creator_select_a_file_to_fill_this_field_automatically'),
+    cancel: ct('creator_label_cancel'),
+    confirm: ct('creator_label_confirm'),
+    remove: ct('creator_label_remove'),
+    noItemAdded: ct('creator_no_item_added'),
+    keyPlaceholder: ct('creator_key'),
+    valuePlaceholder: ct('creator_value')
   }))
 
   const tabIndex = createMemo(() => tabs.indexOf(activeTab()))
@@ -818,15 +780,15 @@ export default function CreatorPage() {
               size="icon"
               class="absolute left-0 h-10 w-10 lg:hidden"
               onClick={() => setMobileSidebarOpen(true)}
-              aria-label={tx('Abrir menu', 'Open menu')}
-              title={tx('Abrir menu', 'Open menu')}
+              aria-label={ct('creator_open_menu')}
+              title={ct('creator_open_menu')}
             >
               <IconMenu2 class="size-4" />
             </Button>
             <div class="min-w-0 px-12 text-center lg:px-0">
               <p class="truncate text-sm font-semibold">{tabLabel(activeTab(), controller)}</p>
               <p class="text-xs text-muted-foreground">
-                {tx('Etapa', 'Step')} {Math.max(tabIndex(), 0) + 1}/{tabs.length}
+                {ct('creator_step')} {Math.max(tabIndex(), 0) + 1}/{tabs.length}
               </p>
             </div>
         </div>
@@ -834,50 +796,39 @@ export default function CreatorPage() {
         <Show when={activeTab() === 'game'}>
           <section class="stack">
             <TextInputField
-              label={tx('Nome do jogo', 'Game name')}
-              help={tx('Nome mostrado na splash e no banco local.', 'Name shown in splash and local database.')}
+              label={ct('creator_game_name')}
+              help={ct('creator_name_shown_in_splash_and_local_database')}
               value={config().game_name}
               onInput={(value) => patchConfig((prev) => ({ ...prev, game_name: value }))}
             />
 
             <FieldShell
-              label={tx('Executável principal (.exe)', 'Main executable (.exe)')}
-              help={tx(
-                'Use o picker para selecionar o .exe real do jogo.',
-                'Use picker to select the real game executable.'
-              )}
+              label={ct('creator_main_executable_exe')}
+              help={ct('creator_use_picker_to_select_the_real_game_executable')}
             >
               <div class="picker-row">
                 <Input value={exePath()} placeholder="/home/user/Games/MyGame/game.exe" onInput={(e) => setExePath(e.currentTarget.value)} />
                 <Button type="button" variant="outline" onClick={pickExecutable}>
-                  {tx('Selecionar arquivo', 'Select file')}
+                  {ct('creator_select_file')}
                 </Button>
               </div>
             </FieldShell>
 
             <FieldShell
-              label={tx('Pasta raiz do jogo', 'Game root folder')}
-              help={tx(
-                'Por padrão usa a pasta do executável principal, mas pode ser alterada se o .exe estiver em subpasta.',
-                'Defaults to the main executable folder, but can be changed if the .exe is in a subfolder.'
-              )}
-              hint={tx(
+              label={ct('creator_game_root_folder')}
+              help={ct('creator_defaults_to_the_main_executable_folder_but_can_be_change')}
+              hint={
                 !exeInsideGameRoot()
-                  ? 'Invalido: o executável principal precisa estar dentro da pasta raiz.'
+                  ? ct('creator_game_root_hint_invalid_exe_outside_root')
                   : gameRootManualOverride()
-                    ? 'Pasta raiz alterada manualmente.'
-                    : 'Pasta raiz automática baseada no executável.',
-                !exeInsideGameRoot()
-                  ? 'Invalid: the main executable must be inside the game root.'
-                  : gameRootManualOverride()
-                    ? 'Game root manually overridden.'
-                    : 'Automatic game root based on the executable.'
-              )}
+                    ? ct('creator_game_root_hint_manual_override')
+                    : ct('creator_game_root_hint_auto')
+              }
             >
               <div class="picker-row">
                 <Input value={gameRootRelativeDisplay()} placeholder="./" readOnly class="readonly" />
                 <Button type="button" variant="outline" onClick={openGameRootChooser} disabled={!canChooseGameRoot()}>
-                  {tx('Escolher outra', 'Choose another')}
+                  {ct('creator_choose_another')}
                 </Button>
               </div>
             </FieldShell>
@@ -885,12 +836,9 @@ export default function CreatorPage() {
             <Dialog open={gameRootChooserOpen()} onOpenChange={setGameRootChooserOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{tx('Escolher pasta raiz do jogo', 'Choose game root folder')}</DialogTitle>
+                  <DialogTitle>{ct('creator_choose_game_root_folder')}</DialogTitle>
                   <DialogDescription>
-                    {tx(
-                      'A pasta raiz deve ser um ancestral da pasta onde está o executável principal.',
-                      'The game root must be an ancestor of the folder that contains the main executable.'
-                    )}
+                    {ct('creator_the_game_root_must_be_an_ancestor_of_the_folder_that_con')}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -899,10 +847,7 @@ export default function CreatorPage() {
                   fallback={
                     <div class="grid gap-3">
                       <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {tx(
-                          'Esse fluxo guiado precisa de um caminho absoluto do executável (modo Tauri local).',
-                          'This guided flow requires an absolute executable path (local Tauri mode).'
-                        )}
+                        {ct('creator_this_guided_flow_requires_an_absolute_executable_path_lo')}
                       </div>
                       <div class="flex justify-end">
                         <Button
@@ -913,7 +858,7 @@ export default function CreatorPage() {
                             await pickGameRootOverride()
                           }}
                         >
-                          {tx('Usar seletor do sistema', 'Use system picker')}
+                          {ct('creator_use_system_picker')}
                         </Button>
                       </div>
                     </div>
@@ -922,9 +867,9 @@ export default function CreatorPage() {
                   <div class="grid gap-3">
                     <div class="rounded-md border border-border/60 bg-muted/25 p-3">
                       <p class="mb-2 text-xs font-medium text-muted-foreground">
-                        {tx('Breadcrumb da pasta do executável', 'Executable folder breadcrumb')}
+                        {ct('creator_executable_folder_breadcrumb')}
                       </p>
-                      <nav class="overflow-x-auto" aria-label={tx('Caminho do executável', 'Executable path')}>
+                      <nav class="overflow-x-auto" aria-label={ct('creator_executable_path')}>
                         <ol class="flex min-w-max items-center gap-1 text-xs">
                           <For each={gameRootAncestorCandidates()}>
                             {(candidate, index) => (
@@ -957,10 +902,7 @@ export default function CreatorPage() {
 
                     <div class="grid gap-2">
                       <p class="text-xs font-medium text-muted-foreground">
-                        {tx(
-                          'Selecione qual nível acima deve ser a pasta raiz do jogo.',
-                          'Select which ancestor level should be the game root.'
-                        )}
+                        {ct('creator_select_which_ancestor_level_should_be_the_game_root')}
                       </p>
                       <div class="grid gap-2">
                         <For each={[...gameRootAncestorCandidates()].reverse()}>
@@ -986,11 +928,10 @@ export default function CreatorPage() {
                                 <span class="text-sm font-medium">{candidate}</span>
                                 <span class="text-xs text-muted-foreground">
                                   {isAutoRoot
-                                    ? tx('Mesmo diretório do executável (automático)', 'Same directory as executable (automatic)')
-                                    : tx(
-                                        `Executável fica em: ./${relativeToExe ?? ''}`,
-                                        `Executable lives in: ./${relativeToExe ?? ''}`
-                                      )}
+                                    ? ct('creator_same_directory_as_executable_automatic')
+                                    : ctf('creator_executable_lives_in_relative_path', {
+                                        path: relativeToExe ?? ''
+                                      })}
                                 </span>
                               </button>
                             )
@@ -1003,18 +944,15 @@ export default function CreatorPage() {
 
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setGameRootChooserOpen(false)}>
-                    {tx('Fechar', 'Close')}
+                    {ct('creator_close')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
             <FieldShell
-              label={tx('Hash SHA-256', 'SHA-256 hash')}
-              help={tx(
-                'Identificador principal para perfil e prefixo por jogo.',
-                'Main identifier for profile and per-game prefix.'
-              )}
+              label={ct('creator_sha_256_hash')}
+              help={ct('creator_main_identifier_for_profile_and_per_game_prefix')}
             >
               <div class="picker-row">
                 <Input
@@ -1029,11 +967,8 @@ export default function CreatorPage() {
             </FieldShell>
 
             <FieldShell
-              label={tx('Prefix path final', 'Final prefix path')}
-              help={tx(
-                'Calculado automaticamente a partir do hash do executável.',
-                'Automatically calculated from executable hash.'
-              )}
+              label={ct('creator_final_prefix_path')}
+              help={ct('creator_automatically_calculated_from_executable_hash')}
             >
               <div class="picker-row">
                 <Input value={prefixPathPreview()} readOnly class="readonly" />
@@ -1043,81 +978,69 @@ export default function CreatorPage() {
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(prefixPathPreview())
-                      setStatusMessage(tx('Path do prefixo copiado.', 'Prefix path copied.'))
+                      setStatusMessage(ct('creator_prefix_path_copied'))
                     } catch {
-                      setStatusMessage(tx('Falha ao copiar para área de transferência.', 'Failed to copy to clipboard.'))
+                      setStatusMessage(ct('creator_failed_to_copy_to_clipboard'))
                     }
                   }}
                 >
-                  {tx('Copiar', 'Copy')}
+                  {ct('creator_copy')}
                 </Button>
               </div>
             </FieldShell>
 
             <FieldShell
-              label={tx('Ícone extraído', 'Extracted icon')}
-              help={tx(
-                'Preview do ícone do jogo para facilitar identificação visual.',
-                'Game icon preview for easier visual identification.'
-              )}
-              hint={tx(
-                'Visual pronto. A extração real será conectada ao backend na próxima etapa.',
-                'Visual is ready. Real extraction will be wired to backend next.'
-              )}
+              label={ct('creator_extracted_icon')}
+              help={ct('creator_game_icon_preview_for_easier_visual_identification')}
+              hint={ct('creator_visual_is_ready_real_extraction_will_be_wired_to_backend')}
             >
               <div class="icon-preview">
                 <div class="icon-box">
-                  <Show when={iconPreviewPath()} fallback={<span>{tx('Sem ícone extraído', 'No extracted icon')}</span>}>
+                  <Show when={iconPreviewPath()} fallback={<span>{ct('creator_no_extracted_icon')}</span>}>
                     <img src={iconPreviewPath()} alt="icon preview" />
                   </Show>
                 </div>
                 <Button type="button" variant="outline" onClick={applyIconExtractionPlaceholder}>
-                  {tx('Extrair ícone', 'Extract icon')}
+                  {ct('creator_extract_icon')}
                 </Button>
               </div>
             </FieldShell>
 
             <StringListField
-              label={tx('Argumentos de launch', 'Launch arguments')}
-              help={tx('Argumentos extras passados para o exe do jogo.', 'Extra arguments passed to game executable.')}
+              label={ct('creator_launch_arguments')}
+              help={ct('creator_extra_arguments_passed_to_game_executable')}
               items={config().launch_args}
               onChange={(items) => patchConfig((prev) => ({ ...prev, launch_args: items }))}
-              placeholder={tx('-windowed', '-windowed')}
-              addLabel={tx('Adicionar argumento', 'Add argument')}
-              emptyMessage={tx('Nenhum argumento adicionado.', 'No launch argument added.')}
-              tableValueHeader={tx('Argumento', 'Argument')}
+              placeholder={ct('creator_windowed')}
+              addLabel={ct('creator_add_argument')}
+              emptyMessage={ct('creator_no_launch_argument_added')}
+              tableValueHeader={ct('creator_argument')}
             />
 
             <StringListField
-              label={tx('Arquivos obrigatórios', 'Required files')}
-              help={tx(
-                'Se algum arquivo listado não existir na pasta do jogo, a inicialização é bloqueada.',
-                'If any listed file is missing from the game folder, startup is blocked.'
-              )}
+              label={ct('creator_required_files')}
+              help={ct('creator_if_any_listed_file_is_missing_from_the_game_folder_start')}
               items={config().integrity_files}
               onChange={(items) => patchConfig((prev) => ({ ...prev, integrity_files: items }))}
-              placeholder={tx('./data/core.dll', './data/core.dll')}
-              addLabel={tx('Adicionar arquivo', 'Add file')}
-              pickerLabel={tx('Escolher arquivo na pasta do jogo', 'Pick file from game folder')}
+              placeholder={ct('creator_data_core_dll')}
+              addLabel={ct('creator_add_file')}
+              pickerLabel={ct('creator_pick_file_from_game_folder')}
               onPickValue={pickIntegrityFileRelative}
               pickerDisabled={!canPickIntegrityFromGameRoot()}
-              emptyMessage={tx('Nenhum arquivo adicionado.', 'No file added.')}
-              tableValueHeader={tx('Arquivo relativo', 'Relative file')}
+              emptyMessage={ct('creator_no_file_added')}
+              tableValueHeader={ct('creator_relative_file')}
             />
 
             <FieldShell
-              label={tx('Pastas montadas', 'Mounted folders')}
-              help={tx(
-                'Mapeia uma pasta dentro do jogo para um destino Windows dentro do prefixo (ex.: saves em Documentos).',
-                'Maps a folder inside the game to a Windows target inside the prefix (e.g. saves under Documents).'
-              )}
+              label={ct('creator_mounted_folders')}
+              help={ct('creator_maps_a_folder_inside_the_game_to_a_windows_target_inside')}
               controlClass="flex justify-end"
               footer={
                 <Show
                   when={config().folder_mounts.length > 0}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {tx('Nenhuma montagem adicionada.', 'No mount added.')}
+                      {ct('creator_no_mount_added')}
                     </div>
                   }
                 >
@@ -1125,10 +1048,10 @@ export default function CreatorPage() {
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{tx('Origem relativa', 'Relative source')}</TableHead>
-                          <TableHead>{tx('Destino Windows', 'Windows target')}</TableHead>
-                          <TableHead>{tx('Criar origem', 'Create source')}</TableHead>
-                          <TableHead class="w-[120px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                          <TableHead>{ct('creator_relative_source')}</TableHead>
+                          <TableHead>{ct('creator_windows_target')}</TableHead>
+                          <TableHead>{ct('creator_create_source')}</TableHead>
+                          <TableHead class="w-[120px] text-right">{ct('creator_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1142,7 +1065,7 @@ export default function CreatorPage() {
                                 {item.target_windows_path}
                               </TableCell>
                               <TableCell class="text-xs text-muted-foreground">
-                                {item.create_source_if_missing ? tx('Sim', 'Yes') : tx('Não', 'No')}
+                                {item.create_source_if_missing ? ct('creator_yes') : ct('creator_no')}
                               </TableCell>
                               <TableCell class="text-right">
                                 <div class="flex items-center justify-end gap-1">
@@ -1152,7 +1075,7 @@ export default function CreatorPage() {
                                     class="h-8 px-2 text-xs"
                                     onClick={() => void pickMountFolder(index())}
                                   >
-                                    {tx('Pasta', 'Folder')}
+                                    {ct('creator_folder')}
                                   </Button>
                                   <Button
                                     type="button"
@@ -1164,7 +1087,7 @@ export default function CreatorPage() {
                                         folder_mounts: removeAt(prev.folder_mounts, index())
                                       }))
                                     }
-                                    title={tx('Remover montagem', 'Remove mount')}
+                                    title={ct('creator_remove_mount')}
                                   >
                                     <IconTrash class="size-4" />
                                   </Button>
@@ -1189,17 +1112,14 @@ export default function CreatorPage() {
                   disabled={!canAddMount()}
                 >
                   <IconPlus class="size-4" />
-                  {tx('Adicionar montagem', 'Add mount')}
+                  {ct('creator_add_mount')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Adicionar montagem', 'Add mount')}</DialogTitle>
+                    <DialogTitle>{ct('creator_add_mount')}</DialogTitle>
                     <DialogDescription>
-                      {tx(
-                        'Defina origem relativa e destino Windows para criar a montagem.',
-                        'Set relative source and Windows target to create the mount.'
-                      )}
+                      {ct('creator_set_relative_source_and_windows_target_to_create_the_mou')}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -1207,7 +1127,7 @@ export default function CreatorPage() {
                     <div class="picker-row">
                       <Input
                         value={mountDraft().source_relative_path}
-                        placeholder={tx('Origem relativa (ex.: save)', 'Relative source (e.g. save)')}
+                        placeholder={ct('creator_relative_source_e_g_save')}
                         onInput={(e) =>
                           setMountDraft((prev) => ({
                             ...prev,
@@ -1221,13 +1141,13 @@ export default function CreatorPage() {
                         disabled={!canBrowseMountFolders()}
                         onClick={() => void openMountSourceBrowser()}
                       >
-                        {tx('Navegar pastas', 'Browse folders')}
+                        {ct('creator_browse_folders')}
                       </Button>
                     </div>
 
                     <Input
                       value={mountDraft().target_windows_path}
-                      placeholder={tx('Destino Windows (C:\\users\\...)', 'Windows target (C:\\users\\...)')}
+                      placeholder={ct('creator_windows_target_c_users')}
                       onInput={(e) =>
                         setMountDraft((prev) => ({
                           ...prev,
@@ -1247,13 +1167,13 @@ export default function CreatorPage() {
                           }))
                         }
                       />
-                      {tx('Criar origem se estiver ausente', 'Create source if missing')}
+                      {ct('creator_create_source_if_missing')}
                     </label>
                   </div>
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setMountDialogOpen(false)}>
-                      {tx('Cancelar', 'Cancel')}
+                      {ct('creator_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -1273,7 +1193,7 @@ export default function CreatorPage() {
                         setMountDialogOpen(false)
                       }}
                     >
-                      {tx('Confirmar', 'Confirm')}
+                      {ct('creator_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1282,21 +1202,18 @@ export default function CreatorPage() {
               <Dialog open={mountSourceBrowserOpen()} onOpenChange={setMountSourceBrowserOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Selecionar pasta dentro do jogo', 'Select folder inside game')}</DialogTitle>
+                    <DialogTitle>{ct('creator_select_folder_inside_game')}</DialogTitle>
                     <DialogDescription>
-                      {tx(
-                        'Mini navegador restrito à pasta raiz do jogo para evitar montagens fora do projeto.',
-                        'Mini browser restricted to the game root to prevent mounts outside the project.'
-                      )}
+                      {ct('creator_mini_browser_restricted_to_the_game_root_to_prevent_moun')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-3">
                     <div class="rounded-md border border-border/60 bg-muted/25 p-3">
                       <p class="mb-2 text-xs font-medium text-muted-foreground">
-                        {tx('Caminho atual', 'Current path')}
+                        {ct('creator_current_path')}
                       </p>
-                      <nav class="overflow-x-auto" aria-label={tx('Breadcrumb de pastas', 'Folder breadcrumb')}>
+                      <nav class="overflow-x-auto" aria-label={ct('creator_folder_breadcrumb')}>
                         <ol class="flex min-w-max items-center gap-1 text-xs">
                           <Show when={gameRoot().trim()}>
                             <li>
@@ -1339,7 +1256,7 @@ export default function CreatorPage() {
                         fallback={
                           <div class="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
                             <Spinner class="size-3" />
-                            {tx('Carregando pastas...', 'Loading folders...')}
+                            {ct('creator_loading_folders')}
                           </div>
                         }
                       >
@@ -1347,7 +1264,7 @@ export default function CreatorPage() {
                           when={mountBrowserDirs().length > 0}
                           fallback={
                             <div class="px-3 py-2 text-xs text-muted-foreground">
-                              {tx('Nenhuma subpasta encontrada.', 'No subfolder found.')}
+                              {ct('creator_no_subfolder_found')}
                             </div>
                           }
                         >
@@ -1371,7 +1288,7 @@ export default function CreatorPage() {
 
                     <div class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
                       <div class="min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground">{tx('Selecionar esta pasta', 'Select this folder')}</p>
+                        <p class="text-xs font-medium text-muted-foreground">{ct('creator_select_this_folder')}</p>
                         <p class="truncate text-xs">
                           {mountSourceBrowserCurrentRelative() || './'}
                         </p>
@@ -1386,14 +1303,14 @@ export default function CreatorPage() {
                           setMountSourceBrowserOpen(false)
                         }}
                       >
-                        {tx('Usar esta pasta', 'Use this folder')}
+                        {ct('creator_use_this_folder')}
                       </Button>
                     </div>
                   </div>
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setMountSourceBrowserOpen(false)}>
-                      {tx('Fechar', 'Close')}
+                      {ct('creator_close')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1405,8 +1322,8 @@ export default function CreatorPage() {
         <Show when={activeTab() === 'runtime'}>
           <section class="stack">
             <SegmentedField<RuntimePreference>
-              label={tx('Preferência geral de runtime', 'General runtime preference')}
-              help={tx('Prioridade macro entre Auto, Proton e Wine.', 'Macro priority among Auto, Proton and Wine.')}
+              label={ct('creator_general_runtime_preference')}
+              help={ct('creator_macro_priority_among_auto_proton_and_wine')}
               value={config().runner.runtime_preference}
               options={runtimePreferenceOptions()}
               onChange={(value) =>
@@ -1457,11 +1374,8 @@ export default function CreatorPage() {
               <ItemFooter>
                 <div class="grid gap-3 md:grid-cols-2">
                   <SwitchChoiceCard
-                    title={tx('Versão obrigatória', 'Required version')}
-                    description={tx(
-                      'Quando ativado, exige exatamente a versão configurada para executar.',
-                      'When enabled, requires the configured runtime version to launch.'
-                    )}
+                    title={ct('creator_required_version')}
+                    description={ct('creator_when_enabled_requires_the_configured_runtime_version_to')}
                     checked={config().requirements.runtime.strict}
                     onChange={(checked) =>
                       patchConfig((prev) => ({
@@ -1478,11 +1392,8 @@ export default function CreatorPage() {
                   />
 
                   <SwitchChoiceCard
-                    title={tx('Auto update', 'Auto update')}
-                    description={tx(
-                      'Atualiza metadados do runtime quando aplicável antes da execução.',
-                      'Updates runtime metadata when applicable before launching.'
-                    )}
+                    title={ct('creator_auto_update')}
+                    description={ct('creator_updates_runtime_metadata_when_applicable_before_launchin')}
                     checked={config().runner.auto_update}
                     onChange={(checked) =>
                       patchConfig((prev) => ({
@@ -1502,10 +1413,7 @@ export default function CreatorPage() {
               <div class="grid gap-3 md:grid-cols-2">
                 <SwitchChoiceCard
                   title="ESYNC"
-                  description={tx(
-                    'Ativa otimizações de sincronização no runtime.',
-                    'Enables synchronization optimizations in runtime.'
-                  )}
+                  description={ct('creator_enables_synchronization_optimizations_in_runtime')}
                   checked={config().runner.esync}
                   onChange={(checked) =>
                     patchConfig((prev) => ({
@@ -1520,7 +1428,7 @@ export default function CreatorPage() {
 
                 <SwitchChoiceCard
                   title="FSYNC"
-                  description={tx('Ativa otimizações FSYNC quando suportado.', 'Enables FSYNC optimizations when supported.')}
+                  description={ct('creator_enables_fsync_optimizations_when_supported')}
                   checked={config().runner.fsync}
                   onChange={(checked) =>
                     patchConfig((prev) => ({
@@ -1537,10 +1445,7 @@ export default function CreatorPage() {
 
             <FeatureStateField
               label="UMU"
-              help={tx(
-                'Controla uso de umu-run conforme política de obrigatoriedade.',
-                'Controls umu-run usage according to enforcement policy.'
-              )}
+              help={ct('creator_controls_umu_run_usage_according_to_enforcement_policy')}
               value={config().requirements.umu}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1554,11 +1459,8 @@ export default function CreatorPage() {
             />
 
             <FeatureStateField
-              label={tx('Steam Runtime', 'Steam Runtime')}
-              help={tx(
-                'Define se steam runtime é obrigatório, opcional ou bloqueado.',
-                'Defines whether steam runtime is mandatory, optional or blocked.'
-              )}
+              label={ct('creator_steam_runtime')}
+              help={ct('creator_defines_whether_steam_runtime_is_mandatory_optional_or_b')}
               value={config().requirements.steam_runtime}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1573,7 +1475,7 @@ export default function CreatorPage() {
 
             <FeatureStateField
               label="Easy AntiCheat Runtime"
-              help={tx('Política para runtime local do Easy AntiCheat.', 'Policy for local Easy AntiCheat runtime.')}
+              help={ct('creator_policy_for_local_easy_anticheat_runtime')}
               value={config().compatibility.easy_anti_cheat_runtime}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1588,7 +1490,7 @@ export default function CreatorPage() {
 
             <FeatureStateField
               label="BattleEye Runtime"
-              help={tx('Política para runtime local do BattleEye.', 'Policy for local BattleEye runtime.')}
+              help={ct('creator_policy_for_local_battleeye_runtime')}
               value={config().compatibility.battleye_runtime}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1608,10 +1510,7 @@ export default function CreatorPage() {
           <section class="stack">
             <FeatureStateField
               label="Gamescope"
-              help={tx(
-                'Define política do gamescope e sincroniza com requirements.gamescope.',
-                'Defines gamescope policy and syncs with requirements.gamescope.'
-              )}
+              help={ct('creator_defines_gamescope_policy_and_syncs_with_requirements_gam')}
               value={config().environment.gamescope.state}
               onChange={setGamescopeState}
               footer={
@@ -1619,10 +1518,7 @@ export default function CreatorPage() {
                   when={gamescopeEnabled()}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {tx(
-                        'Gamescope está desativado. Ative para configurar resolução, upscale e janela.',
-                        'Gamescope is disabled. Enable it to configure resolution, upscale and window mode.'
-                      )}
+                      {ct('creator_gamescope_is_disabled_enable_it_to_configure_resolution')}
                     </div>
                   }
                 >
@@ -1630,9 +1526,9 @@ export default function CreatorPage() {
                     <div class="grid gap-3 md:grid-cols-2">
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{tx('Método de upscale', 'Upscale method')}</p>
+                          <p class="text-sm font-medium">{ct('creator_upscale_method')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {tx('Método usado pelo gamescope para upscale.', 'Method used by gamescope for upscaling.')}
+                            {ct('creator_method_used_by_gamescope_for_upscaling')}
                           </p>
                         </div>
                         <Tabs
@@ -1669,9 +1565,9 @@ export default function CreatorPage() {
 
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{tx('Tipo de janela', 'Window type')}</p>
+                          <p class="text-sm font-medium">{ct('creator_window_type')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {tx('Define comportamento da janela no gamescope.', 'Defines gamescope window behavior.')}
+                            {ct('creator_defines_gamescope_window_behavior')}
                           </p>
                         </div>
                         <Tabs
@@ -1709,9 +1605,9 @@ export default function CreatorPage() {
                     <div class="grid gap-3 md:grid-cols-2">
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{tx('Resolução do jogo', 'Game resolution')}</p>
+                          <p class="text-sm font-medium">{ct('creator_game_resolution')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {tx('Resolução renderizada pelo jogo (largura x altura).', 'Game render resolution (width x height).')}
+                            {ct('creator_game_render_resolution_width_x_height')}
                           </p>
                         </div>
                         <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
@@ -1753,23 +1649,23 @@ export default function CreatorPage() {
 
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{tx('Resolução da tela', 'Display resolution')}</p>
+                          <p class="text-sm font-medium">{ct('creator_display_resolution')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {tx('Resolução final de saída do gamescope (largura x altura).', 'Final gamescope output resolution (width x height).')}
+                            {ct('creator_final_gamescope_output_resolution_width_x_height')}
                           </p>
                         </div>
 
                         <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                           <Input
                             value={config().environment.gamescope.output_width}
-                            placeholder={gamescopeUsesMonitorResolution() ? tx('Auto', 'Auto') : '1920'}
+                            placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1920'}
                             disabled={gamescopeUsesMonitorResolution()}
                             onInput={(e) => setGamescopeOutputWidth(e.currentTarget.value)}
                           />
                           <span class="text-sm font-semibold text-muted-foreground">x</span>
                           <Input
                             value={config().environment.gamescope.output_height}
-                            placeholder={gamescopeUsesMonitorResolution() ? tx('Auto', 'Auto') : '1080'}
+                            placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1080'}
                             disabled={gamescopeUsesMonitorResolution()}
                             onInput={(e) => setGamescopeOutputHeight(e.currentTarget.value)}
                           />
@@ -1777,7 +1673,7 @@ export default function CreatorPage() {
 
                         <div class="mt-3">
                           <SwitchChoiceCard
-                            title={tx('Obter resolução do monitor', 'Use monitor resolution')}
+                            title={ct('creator_use_monitor_resolution')}
                             checked={gamescopeUsesMonitorResolution()}
                             onChange={(checked) => {
                               if (!checked) return
@@ -1801,8 +1697,8 @@ export default function CreatorPage() {
 
                     <div class="grid gap-3 md:grid-cols-2">
                       <SwitchChoiceCard
-                        title={tx('Limitar FPS', 'Enable FPS limiter')}
-                        description={tx('Ativa limitador de FPS do gamescope.', 'Enables gamescope FPS limiter.')}
+                        title={ct('creator_enable_fps_limiter')}
+                        description={ct('creator_enables_gamescope_fps_limiter')}
                         checked={config().environment.gamescope.enable_limiter}
                         onChange={(checked) =>
                           patchConfig((prev) => ({
@@ -1819,11 +1715,8 @@ export default function CreatorPage() {
                       />
 
                       <SwitchChoiceCard
-                        title={tx('Forçar captura de cursor', 'Force grab cursor')}
-                        description={tx(
-                          'Força modo relativo de mouse para evitar perda de foco.',
-                          'Forces relative mouse mode to avoid focus loss.'
-                        )}
+                        title={ct('creator_force_grab_cursor')}
+                        description={ct('creator_forces_relative_mouse_mode_to_avoid_focus_loss')}
                         checked={config().environment.gamescope.force_grab_cursor}
                         onChange={(checked) =>
                           patchConfig((prev) => ({
@@ -1843,8 +1736,8 @@ export default function CreatorPage() {
                     <Show when={config().environment.gamescope.enable_limiter}>
                       <div class="table-grid table-grid-two">
                         <TextInputField
-                          label={tx('FPS limite', 'FPS limit')}
-                          help={tx('Limite de FPS quando o jogo está em foco.', 'FPS limit when game is focused.')}
+                          label={ct('creator_fps_limit')}
+                          help={ct('creator_fps_limit_when_game_is_focused')}
                           value={config().environment.gamescope.fps_limiter}
                           onInput={(value) =>
                             patchConfig((prev) => ({
@@ -1861,8 +1754,8 @@ export default function CreatorPage() {
                         />
 
                         <TextInputField
-                          label={tx('FPS sem foco', 'FPS limit without focus')}
-                          help={tx('Limite de FPS quando o jogo perde foco.', 'FPS limit when game loses focus.')}
+                          label={ct('creator_fps_limit_without_focus')}
+                          help={ct('creator_fps_limit_when_game_loses_focus')}
                           value={config().environment.gamescope.fps_limiter_no_focus}
                           onInput={(value) =>
                             patchConfig((prev) => ({
@@ -1881,15 +1774,12 @@ export default function CreatorPage() {
                     </Show>
 
                     <StringListField
-                      label={tx('Opções adicionais do gamescope', 'Gamescope additional options')}
-                      help={tx(
-                        'Adicione flags extras que serão anexadas ao comando do gamescope.',
-                        'Add extra flags that will be appended to the gamescope command.'
-                      )}
+                      label={ct('creator_gamescope_additional_options')}
+                      help={ct('creator_add_extra_flags_that_will_be_appended_to_the_gamescope_c')}
                       items={gamescopeAdditionalOptionsList()}
                       onChange={setGamescopeAdditionalOptionsList}
-                      placeholder={tx('--prefer-vk-device 1002:73bf', '--prefer-vk-device 1002:73bf')}
-                      addLabel={tx('Adicionar opção', 'Add option')}
+                      placeholder={ct('creator_prefer_vk_device_1002_73bf')}
+                      addLabel={ct('creator_add_option')}
                     />
                   </div>
                 </Show>
@@ -1898,21 +1788,21 @@ export default function CreatorPage() {
 
             <FeatureStateField
               label="Gamemode"
-              help={tx('Define política do gamemode.', 'Defines gamemode policy.')}
+              help={ct('creator_defines_gamemode_policy')}
               value={config().environment.gamemode}
               onChange={setGamemodeState}
             />
 
             <FeatureStateField
               label="MangoHud"
-              help={tx('Define política do MangoHud.', 'Defines MangoHud policy.')}
+              help={ct('creator_defines_mangohud_policy')}
               value={config().environment.mangohud}
               onChange={setMangohudState}
             />
 
             <FeatureStateField
               label="Wine-Wayland"
-              help={tx('Política para ativar Wine-Wayland.', 'Policy for enabling Wine-Wayland.')}
+              help={ct('creator_policy_for_enabling_wine_wayland')}
               value={config().compatibility.wine_wayland}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1927,7 +1817,7 @@ export default function CreatorPage() {
                 wineWaylandEnabled() ? (
                   <FeatureStateField
                     label="HDR"
-                    help={tx('Política para HDR (depende de Wine-Wayland).', 'Policy for HDR (depends on Wine-Wayland).')}
+                    help={ct('creator_policy_for_hdr_depends_on_wine_wayland')}
                     value={config().compatibility.hdr}
                     onChange={(value) =>
                       patchConfig((prev) => ({
@@ -1945,7 +1835,7 @@ export default function CreatorPage() {
 
             <FeatureStateField
               label="Auto DXVK-NVAPI"
-              help={tx('Controla aplicação automática de DXVK-NVAPI.', 'Controls automatic DXVK-NVAPI setup.')}
+              help={ct('creator_controls_automatic_dxvk_nvapi_setup')}
               value={config().compatibility.auto_dxvk_nvapi}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1960,7 +1850,7 @@ export default function CreatorPage() {
 
             <FeatureStateField
               label="Staging"
-              help={tx('Controla obrigatoriedade de runtime Wine com staging.', 'Controls mandatory usage of Wine staging runtime.')}
+              help={ct('creator_controls_mandatory_usage_of_wine_staging_runtime')}
               value={config().compatibility.staging}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1974,11 +1864,8 @@ export default function CreatorPage() {
             />
 
             <FeatureStateField
-              label={tx('Usar GPU dedicada', 'Use dedicated GPU')}
-              help={tx(
-                'Exporta variáveis de PRIME render offload para tentar usar a GPU dedicada em sistemas híbridos.',
-                'Exports PRIME render offload variables to try using the dedicated GPU on hybrid systems.'
-              )}
+              label={ct('creator_use_dedicated_gpu')}
+              help={ct('creator_exports_prime_render_offload_variables_to_try_using_the')}
               value={config().environment.prime_offload}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -1997,10 +1884,7 @@ export default function CreatorPage() {
           <section class="stack">
             <FieldShell
               label="Winetricks"
-              help={tx(
-                'Ativa automaticamente quando existir ao menos um verbo configurado. Use a busca para adicionar verbos do catálogo.',
-                'Enabled automatically when at least one verb is configured. Use search to add verbs from the catalog.'
-              )}
+              help={ct('creator_enabled_automatically_when_at_least_one_verb_is_configur')}
               controlClass="flex flex-col items-end gap-2"
               footer={
                 <div class="grid gap-2">
@@ -2014,8 +1898,8 @@ export default function CreatorPage() {
                               type="button"
                               class="inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:text-destructive"
                               onClick={() => removeWinetricksVerb(verb)}
-                              aria-label={tx('Remover verbo', 'Remove verb')}
-                              title={tx('Remover verbo', 'Remove verb')}
+                              aria-label={ct('creator_remove_verb')}
+                              title={ct('creator_remove_verb')}
                             >
                               <IconX class="size-3" />
                             </button>
@@ -2028,8 +1912,8 @@ export default function CreatorPage() {
                         disabled={winetricksCatalogError() || winetricksLoading()}
                         placeholder={
                           winetricksCatalogError()
-                            ? tx('Erro ao carregar o catálogo winetricks', 'Failed to load winetricks catalog')
-                            : tx('Buscar e adicionar verbos (ex.: vcrun, corefonts)', 'Search and add verbs (e.g. vcrun, corefonts)')
+                            ? ct('creator_failed_to_load_winetricks_catalog')
+                            : ct('creator_search_and_add_verbs_e_g_vcrun_corefonts')
                         }
                         class="h-7 min-w-[220px] flex-1 border-0 bg-transparent px-1 py-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         onInput={(e) => setWinetricksSearch(e.currentTarget.value)}
@@ -2061,12 +1945,9 @@ export default function CreatorPage() {
                   <Show when={winetricksCatalogError()}>
                     <Alert variant="destructive">
                       <IconAlertCircle />
-                      <AlertTitle>{tx('Erro ao carregar o catálogo winetricks', 'Failed to load winetricks catalog')}</AlertTitle>
+                      <AlertTitle>{ct('creator_failed_to_load_winetricks_catalog')}</AlertTitle>
                       <AlertDescription>
-                        {tx(
-                          'O catálogo local/remoto não pôde ser carregado. Você ainda pode atualizar o catálogo manualmente.',
-                          'The local/remote catalog could not be loaded. You can still refresh the catalog manually.'
-                        )}
+                        {ct('creator_the_local_remote_catalog_could_not_be_loaded_you_can_sti')}
                       </AlertDescription>
                     </Alert>
                   </Show>
@@ -2076,10 +1957,7 @@ export default function CreatorPage() {
                     fallback={
                       <Show when={!winetricksCatalogError()}>
                         <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                          {tx(
-                            'Digite ao menos 2 caracteres para buscar verbos no catálogo.',
-                            'Type at least 2 characters to search verbs in the catalog.'
-                          )}
+                          {ct('creator_type_at_least_2_characters_to_search_verbs_in_the_catalo')}
                         </div>
                       </Show>
                     }
@@ -2089,7 +1967,7 @@ export default function CreatorPage() {
                         when={winetricksCandidates().length > 0}
                         fallback={
                           <div class="px-2 py-2 text-xs text-muted-foreground">
-                            {tx('Nenhum item encontrado.', 'No items found.')}
+                            {ct('creator_no_items_found')}
                           </div>
                         }
                       >
@@ -2105,7 +1983,7 @@ export default function CreatorPage() {
                                 }}
                               >
                                 <span class="truncate">{verb}</span>
-                                <span class="text-xs text-muted-foreground">{tx('Adicionar', 'Add')}</span>
+                                <span class="text-xs text-muted-foreground">{ct('creator_label_add')}</span>
                               </button>
                             )}
                           </For>
@@ -2120,29 +1998,29 @@ export default function CreatorPage() {
                 <Show when={winetricksLoading()}>
                   <div class="inline-flex items-center gap-2 text-xs text-muted-foreground">
                     <Spinner class="size-3" />
-                    <span>{tx('Carregando catálogo em segundo plano...', 'Loading catalog in background...')}</span>
+                    <span>{ct('creator_loading_catalog_in_background')}</span>
                   </div>
                 </Show>
                 <Button type="button" variant="outline" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
-                  {winetricksLoading() ? tx('Carregando...', 'Loading...') : tx('Atualizar catálogo', 'Refresh catalog')}
+                  {winetricksLoading() ? ct('creator_loading') : ct('creator_refresh_catalog')}
                 </Button>
                 <p class="text-xs text-muted-foreground">
-                  {tx('Fonte:', 'Source:')} <strong>{winetricksSource()}</strong> ·{' '}
-                  {tx('Catálogo:', 'Catalog:')} <strong>{winetricksAvailable().length}</strong>
+                  {ct('creator_source')} <strong>{winetricksSource()}</strong> ·{' '}
+                  {ct('creator_catalog')} <strong>{winetricksAvailable().length}</strong>
                 </p>
               </div>
             </FieldShell>
 
             <FieldShell
-              label={tx('Chaves de registro', 'Registry keys')}
-              help={tx('Tabela de chaves aplicadas no prefixo após bootstrap.', 'Table of keys applied to prefix after bootstrap.')}
+              label={ct('creator_registry_keys')}
+              help={ct('creator_table_of_keys_applied_to_prefix_after_bootstrap')}
               controlClass="flex flex-wrap justify-end gap-2"
               footer={
                 <Show
                   when={config().registry_keys.length > 0}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {tx('Nenhuma chave adicionada.', 'No key added.')}
+                      {ct('creator_no_key_added')}
                     </div>
                   }
                 >
@@ -2150,11 +2028,11 @@ export default function CreatorPage() {
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{tx('Path', 'Path')}</TableHead>
-                          <TableHead>{tx('Nome', 'Name')}</TableHead>
-                          <TableHead>{tx('Tipo', 'Type')}</TableHead>
-                          <TableHead>{tx('Valor', 'Value')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                          <TableHead>{ct('creator_path')}</TableHead>
+                          <TableHead>{ct('creator_name')}</TableHead>
+                          <TableHead>{ct('creator_type')}</TableHead>
+                          <TableHead>{ct('creator_value')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2178,7 +2056,7 @@ export default function CreatorPage() {
                                       registry_keys: removeAt(prev.registry_keys, index())
                                     }))
                                   }
-                                  title={tx('Remover chave', 'Remove key')}
+                                  title={ct('creator_remove_key')}
                                 >
                                   <IconTrash class="size-4" />
                                 </Button>
@@ -2195,21 +2073,21 @@ export default function CreatorPage() {
               <Dialog open={registryDialogOpen()} onOpenChange={setRegistryDialogOpen}>
                 <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setRegistryDialogOpen(true)}>
                   <IconPlus class="size-4" />
-                  {tx('Adicionar chave', 'Add key')}
+                  {ct('creator_add_key')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Adicionar chave de registro', 'Add registry key')}</DialogTitle>
+                    <DialogTitle>{ct('creator_add_registry_key')}</DialogTitle>
                     <DialogDescription>
-                      {tx('Preencha os campos e confirme para adicionar a linha.', 'Fill fields and confirm to add row.')}
+                      {ct('creator_fill_fields_and_confirm_to_add_row')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-2">
                     <Input
                       value={registryDraft().path}
-                      placeholder={tx('Path (HKCU\\...)', 'Path (HKCU\\...)')}
+                      placeholder={ct('creator_path_hkcu')}
                       onInput={(e) =>
                         setRegistryDraft((prev) => ({
                           ...prev,
@@ -2219,7 +2097,7 @@ export default function CreatorPage() {
                     />
                     <Input
                       value={registryDraft().name}
-                      placeholder={tx('Nome da chave', 'Key name')}
+                      placeholder={ct('creator_key_name')}
                       onInput={(e) =>
                         setRegistryDraft((prev) => ({
                           ...prev,
@@ -2230,7 +2108,7 @@ export default function CreatorPage() {
                     <div class="grid gap-2 md:grid-cols-2">
                       <Input
                         value={registryDraft().value_type}
-                        placeholder={tx('Tipo (REG_SZ)', 'Type (REG_SZ)')}
+                        placeholder={ct('creator_type_reg_sz')}
                         onInput={(e) =>
                           setRegistryDraft((prev) => ({
                             ...prev,
@@ -2240,7 +2118,7 @@ export default function CreatorPage() {
                       />
                       <Input
                         value={registryDraft().value}
-                        placeholder={tx('Valor', 'Value')}
+                        placeholder={ct('creator_value')}
                         onInput={(e) =>
                           setRegistryDraft((prev) => ({
                             ...prev,
@@ -2253,7 +2131,7 @@ export default function CreatorPage() {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setRegistryDialogOpen(false)}>
-                      {tx('Cancelar', 'Cancel')}
+                      {ct('creator_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -2269,7 +2147,7 @@ export default function CreatorPage() {
                         setRegistryDialogOpen(false)
                       }}
                     >
-                      {tx('Confirmar', 'Confirm')}
+                      {ct('creator_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -2284,18 +2162,15 @@ export default function CreatorPage() {
                 disabled={!canImportRegistryFromFile()}
               >
                 <IconPlus class="size-4" />
-                {tx('Adicionar de arquivo (.reg)', 'Add from file (.reg)')}
+                {ct('creator_add_from_file_reg')}
               </Button>
 
               <Dialog open={registryImportWarningsOpen()} onOpenChange={setRegistryImportWarningsOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Avisos da importação de .reg', '.reg import warnings')}</DialogTitle>
+                    <DialogTitle>{ct('creator_reg_import_warnings')}</DialogTitle>
                     <DialogDescription>
-                      {tx(
-                        'Algumas linhas foram ignoradas ou importadas com fallback. Revise os avisos abaixo.',
-                        'Some lines were ignored or imported with fallback. Review the warnings below.'
-                      )}
+                      {ct('creator_some_lines_were_ignored_or_imported_with_fallback_review')}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -2314,7 +2189,7 @@ export default function CreatorPage() {
 
                   <DialogFooter>
                     <Button type="button" onClick={() => setRegistryImportWarningsOpen(false)}>
-                      {tx('Fechar', 'Close')}
+                      {ct('creator_close')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -2322,11 +2197,8 @@ export default function CreatorPage() {
             </FieldShell>
 
             <FieldShell
-              label={tx('Dependências extras do sistema', 'Extra system dependencies')}
-              help={tx(
-                'Dependências adicionais verificadas no doctor por comando/env/path.',
-                'Additional dependencies validated in doctor by command/env/path.'
-              )}
+              label={ct('creator_extra_system_dependencies')}
+              help={ct('creator_additional_dependencies_validated_in_doctor_by_command_e')}
               controlClass="flex justify-end"
               footer={
                 config().extra_system_dependencies.length > 0 ? (
@@ -2334,11 +2206,11 @@ export default function CreatorPage() {
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{tx('Nome', 'Name')}</TableHead>
-                          <TableHead>{tx('Comando', 'Command')}</TableHead>
-                          <TableHead>{tx('Variáveis', 'Env vars')}</TableHead>
-                          <TableHead>{tx('Paths padrão', 'Default paths')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                          <TableHead>{ct('creator_name')}</TableHead>
+                          <TableHead>{ct('creator_command')}</TableHead>
+                          <TableHead>{ct('creator_env_vars')}</TableHead>
+                          <TableHead>{ct('creator_default_paths')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2346,7 +2218,7 @@ export default function CreatorPage() {
                           {(item, index) => (
                             <TableRow>
                               <TableCell class="max-w-[220px] truncate font-medium">
-                                {item.name || tx('Sem nome', 'Unnamed')}
+                                {item.name || ct('creator_unnamed')}
                               </TableCell>
                               <TableCell class="max-w-[220px] truncate text-muted-foreground">
                                 {item.check_commands.length > 0 ? joinCommaList(item.check_commands) : '—'}
@@ -2368,7 +2240,7 @@ export default function CreatorPage() {
                                       extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
                                     }))
                                   }
-                                  title={tx('Remover dependência', 'Remove dependency')}
+                                  title={ct('creator_remove_dependency')}
                                 >
                                   <IconTrash class="size-4" />
                                 </Button>
@@ -2381,7 +2253,7 @@ export default function CreatorPage() {
                   </div>
                 ) : (
                   <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                    {tx('Nenhuma dependência extra adicionada.', 'No extra dependency added.')}
+                    {ct('creator_no_extra_dependency_added')}
                   </div>
                 )
               }
@@ -2395,24 +2267,21 @@ export default function CreatorPage() {
                   onClick={() => setExtraDependencyDialogOpen(true)}
                 >
                   <IconPlus class="size-4" />
-                  {tx('Adicionar dependência', 'Add dependency')}
+                  {ct('creator_add_dependency')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Adicionar dependência extra do sistema', 'Add extra system dependency')}</DialogTitle>
+                    <DialogTitle>{ct('creator_add_extra_system_dependency')}</DialogTitle>
                     <DialogDescription>
-                      {tx(
-                        'Informe como o doctor pode detectar essa dependência (comando, variáveis e paths padrão).',
-                        'Define how doctor can detect this dependency (command, env vars and default paths).'
-                      )}
+                      {ct('creator_define_how_doctor_can_detect_this_dependency_command_env')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-2">
                     <Input
                       value={extraDependencyDraft().name}
-                      placeholder={tx('Nome da dependência', 'Dependency name')}
+                      placeholder={ct('creator_dependency_name')}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev) => ({
                           ...prev,
@@ -2423,7 +2292,7 @@ export default function CreatorPage() {
 
                     <Input
                       value={extraDependencyDraft().command}
-                      placeholder={tx('Comando no terminal (ex.: mangohud)', 'Terminal command (e.g. mangohud)')}
+                      placeholder={ct('creator_terminal_command_e_g_mangohud')}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev) => ({
                           ...prev,
@@ -2434,7 +2303,7 @@ export default function CreatorPage() {
 
                     <Input
                       value={extraDependencyDraft().env_vars}
-                      placeholder={tx('Variáveis de ambiente (separadas por vírgula)', 'Environment vars (comma-separated)')}
+                      placeholder={ct('creator_environment_vars_comma_separated')}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev) => ({
                           ...prev,
@@ -2445,7 +2314,7 @@ export default function CreatorPage() {
 
                     <Input
                       value={extraDependencyDraft().paths}
-                      placeholder={tx('Paths padrão (separados por vírgula)', 'Default paths (comma-separated)')}
+                      placeholder={ct('creator_default_paths_comma_separated')}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev) => ({
                           ...prev,
@@ -2457,7 +2326,7 @@ export default function CreatorPage() {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setExtraDependencyDialogOpen(false)}>
-                      {tx('Cancelar', 'Cancel')}
+                      {ct('creator_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -2489,7 +2358,7 @@ export default function CreatorPage() {
                         setExtraDependencyDialogOpen(false)
                       }}
                     >
-                      {tx('Confirmar', 'Confirm')}
+                      {ct('creator_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -2503,25 +2372,22 @@ export default function CreatorPage() {
           <section class="stack">
             <Alert variant="warning">
               <IconAlertCircle />
-              <AlertTitle>{tx('Overrides do winecfg (não substituem tudo)', 'Winecfg overrides (do not replace everything)')}</AlertTitle>
+              <AlertTitle>{ct('creator_winecfg_overrides_do_not_replace_everything')}</AlertTitle>
               <AlertDescription>
-                {tx(
-                  'As configurações desta aba são adicionais ao padrão do prefixo/Wine. Se você deixar em "Padrão do Wine", o orquestrador não força esse item.',
-                  'Settings in this tab are additive overrides on top of Wine/prefix defaults. If you keep "Wine default", the orchestrator does not force that item.'
-                )}
+                {ct('creator_settings_in_this_tab_are_additive_overrides_on_top_of_wi')}
               </AlertDescription>
             </Alert>
 
             <FieldShell
-              label={tx('Substituição de DLL', 'DLL overrides')}
-              help={tx('Configura overrides por DLL como native/builtin.', 'Configures per-DLL overrides such as native/builtin.')}
+              label={ct('creator_dll_overrides')}
+              help={ct('creator_configures_per_dll_overrides_such_as_native_builtin')}
               controlClass="flex justify-end"
               footer={
                 <Show
                   when={config().winecfg.dll_overrides.length > 0}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {tx('Nenhum override adicionado.', 'No override added.')}
+                      {ct('creator_no_override_added')}
                     </div>
                   }
                 >
@@ -2529,9 +2395,9 @@ export default function CreatorPage() {
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{tx('DLL', 'DLL')}</TableHead>
-                          <TableHead>{tx('Modo', 'Mode')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                          <TableHead>{ct('creator_dll')}</TableHead>
+                          <TableHead>{ct('creator_mode')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2574,7 +2440,7 @@ export default function CreatorPage() {
                                       }
                                     }))
                                   }
-                                  title={tx('Remover', 'Remove')}
+                                  title={ct('creator_label_remove')}
                                 >
                                   <IconTrash class="size-4" />
                                 </Button>
@@ -2591,14 +2457,14 @@ export default function CreatorPage() {
               <Dialog open={dllDialogOpen()} onOpenChange={setDllDialogOpen}>
                 <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setDllDialogOpen(true)}>
                   <IconPlus class="size-4" />
-                  {tx('Adicionar DLL override', 'Add DLL override')}
+                  {ct('creator_add_dll_override')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Adicionar DLL override', 'Add DLL override')}</DialogTitle>
+                    <DialogTitle>{ct('creator_add_dll_override')}</DialogTitle>
                     <DialogDescription>
-                      {tx('Defina o nome da DLL e o modo de substituição.', 'Set the DLL name and override mode.')}
+                      {ct('creator_set_the_dll_name_and_override_mode')}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -2628,7 +2494,7 @@ export default function CreatorPage() {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setDllDialogOpen(false)}>
-                      {tx('Cancelar', 'Cancel')}
+                      {ct('creator_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -2647,7 +2513,7 @@ export default function CreatorPage() {
                         setDllDialogOpen(false)
                       }}
                     >
-                      {tx('Confirmar', 'Confirm')}
+                      {ct('creator_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -2655,11 +2521,8 @@ export default function CreatorPage() {
             </FieldShell>
 
             <FieldShell
-              label={tx('Versão do Windows (winecfg)', 'Windows version (winecfg)')}
-              help={tx(
-                'Override opcional da versão do Windows reportada pelo prefixo. Se não configurar, mantém o padrão do runtime/prefixo.',
-                'Optional override for the Windows version reported by the prefix. If unset, runtime/prefix defaults are kept.'
-              )}
+              label={ct('creator_windows_version_winecfg')}
+              help={ct('creator_optional_override_for_the_windows_version_reported_by_th')}
               compact
             >
               <Select
@@ -2686,48 +2549,42 @@ export default function CreatorPage() {
                 onToggle={() =>
                   setWinecfgAccordionOpen((prev) => (prev === 'graphics' ? null : 'graphics'))
                 }
-                title={tx('Gráficos', 'Graphics')}
-                description={tx(
-                  'Equivalente à aba Gráficos do winecfg. Tudo aqui é adicional ao padrão do prefixo.',
-                  'Equivalent to the Graphics tab in winecfg. Everything here is an additive override to prefix defaults.'
-                )}
+                title={ct('creator_graphics')}
+                description={ct('creator_equivalent_to_the_graphics_tab_in_winecfg_everything_her')}
               >
                 <div class="grid gap-3">
                   <Alert>
                     <IconAlertCircle />
-                    <AlertTitle>{tx('Gráficos = ajustes incrementais', 'Graphics = incremental overrides')}</AlertTitle>
+                    <AlertTitle>{ct('creator_graphics_incremental_overrides')}</AlertTitle>
                     <AlertDescription>
-                      {tx(
-                        'Esses itens não recriam o prefixo. Eles apenas adicionam overrides de comportamento do winecfg sobre o que já existe no prefixo atual.',
-                        'These items do not recreate the prefix. They only add winecfg behavior overrides on top of what already exists in the current prefix.'
-                      )}
+                      {ct('creator_these_items_do_not_recreate_the_prefix_they_only_add_win')}
                     </AlertDescription>
                   </Alert>
 
                   <WinecfgFeatureStateField
-                    label={tx('Capturar o mouse automaticamente em janelas em tela cheia', 'Automatically capture mouse in fullscreen windows')}
-                    help={tx('Equivalente à opção de captura automática do winecfg.', 'Equivalent to winecfg auto-capture mouse option.')}
+                    label={ct('creator_automatically_capture_mouse_in_fullscreen_windows')}
+                    help={ct('creator_equivalent_to_winecfg_auto_capture_mouse_option')}
                     value={config().winecfg.auto_capture_mouse}
                     onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, auto_capture_mouse: value } }))}
                   />
 
                   <WinecfgFeatureStateField
-                    label={tx('Permitir que o gerenciador de janelas decore as janelas', 'Allow the window manager to decorate windows')}
-                    help={tx('Controla decorações de janela gerenciadas pelo WM.', 'Controls window decorations managed by the WM.')}
+                    label={ct('creator_allow_the_window_manager_to_decorate_windows')}
+                    help={ct('creator_controls_window_decorations_managed_by_the_wm')}
                     value={config().winecfg.window_decorations}
                     onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_decorations: value } }))}
                   />
 
                   <WinecfgFeatureStateField
-                    label={tx('Permitir que o gerenciador de janelas controle as janelas', 'Allow the window manager to control windows')}
-                    help={tx('Permite que o WM controle posição/foco/estado das janelas.', 'Lets the WM control window position/focus/state.')}
+                    label={ct('creator_allow_the_window_manager_to_control_windows')}
+                    help={ct('creator_lets_the_wm_control_window_position_focus_state')}
                     value={config().winecfg.window_manager_control}
                     onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_manager_control: value } }))}
                   />
 
                   <WinecfgFeatureStateField
-                    label={tx('Emular uma área de trabalho virtual', 'Emulate a virtual desktop')}
-                    help={tx('Quando ativo, o jogo roda dentro de um desktop virtual do Wine.', 'When enabled, the game runs inside a Wine virtual desktop.')}
+                    label={ct('creator_emulate_a_virtual_desktop')}
+                    help={ct('creator_when_enabled_the_game_runs_inside_a_wine_virtual_desktop')}
                     value={config().winecfg.virtual_desktop.state}
                     onChange={(value) =>
                       patchConfig((prev) => ({
@@ -2746,9 +2603,9 @@ export default function CreatorPage() {
                   <Show when={winecfgVirtualDesktopEnabled()}>
                     <div class="rounded-md border border-border/60 bg-muted/20 p-3">
                       <div class="space-y-1.5">
-                        <p class="text-sm font-medium">{tx('Tamanho da área de trabalho virtual', 'Virtual desktop size')}</p>
+                        <p class="text-sm font-medium">{ct('creator_virtual_desktop_size')}</p>
                         <p class="text-xs text-muted-foreground">
-                          {tx('Informe largura x altura (ex.: 1280 x 720).', 'Set width x height (e.g. 1280 x 720).')}
+                          {ct('creator_set_width_x_height_e_g_1280_x_720')}
                         </p>
                       </div>
                       <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
@@ -2770,9 +2627,9 @@ export default function CreatorPage() {
                   <div class="rounded-md border border-border/60 bg-muted/20 p-3">
                     <div class="flex items-start justify-between gap-3">
                       <div class="space-y-1.5">
-                        <p class="text-sm font-medium">{tx('Resolução da tela (DPI)', 'Screen resolution (DPI)')}</p>
+                        <p class="text-sm font-medium">{ct('creator_screen_resolution_dpi')}</p>
                         <p class="text-xs text-muted-foreground">
-                          {tx('Slider de 96 ppp até 480 ppp. Se não configurar, usa o padrão do Wine.', 'Slider from 96 DPI to 480 DPI. If unset, Wine default is used.')}
+                          {ct('creator_slider_from_96_dpi_to_480_dpi_if_unset_wine_default_is_u')}
                         </p>
                       </div>
                       <Button
@@ -2789,7 +2646,7 @@ export default function CreatorPage() {
                           }))
                         }
                       >
-                        {tx('Usar padrão', 'Use default')}
+                        {ct('creator_use_default')}
                       </Button>
                     </div>
                     <div class="mt-3 grid gap-2">
@@ -2798,7 +2655,7 @@ export default function CreatorPage() {
                         <span class="font-medium">
                           {(config().winecfg.screen_dpi ?? 96).toString()} ppp
                           <Show when={config().winecfg.screen_dpi == null}>
-                            <span class="text-muted-foreground"> ({tx('padrão', 'default')})</span>
+                            <span class="text-muted-foreground"> ({ct('creator_default')})</span>
                           </Show>
                         </span>
                         <span class="text-muted-foreground">480 ppp</span>
@@ -2831,27 +2688,21 @@ export default function CreatorPage() {
                 onToggle={() =>
                   setWinecfgAccordionOpen((prev) => (prev === 'desktop' ? null : 'desktop'))
                 }
-                title={tx('Integração com área de trabalho', 'Desktop integration')}
-                description={tx(
-                  'Associações de arquivo/protocolo e mapeamentos de pastas especiais do Wine.',
-                  'File/protocol associations and Wine special desktop folder mappings.'
-                )}
+                title={ct('creator_desktop_integration')}
+                description={ct('creator_file_protocol_associations_and_wine_special_desktop_fold')}
               >
                 <div class="grid gap-3">
                   <Alert>
                     <IconAlertCircle />
-                    <AlertTitle>{tx('Integração pode afetar o sistema do usuário', 'Integration can affect user system behavior')}</AlertTitle>
+                    <AlertTitle>{ct('creator_integration_can_affect_user_system_behavior')}</AlertTitle>
                     <AlertDescription>
-                      {tx(
-                        'Associações MIME/protocolo e pastas especiais podem alterar integração com desktop. Prefira configurar apenas o necessário para o jogo.',
-                        'MIME/protocol associations and special folders can change desktop integration behavior. Configure only what the game needs.'
-                      )}
+                      {ct('creator_mime_protocol_associations_and_special_folders_can_chang')}
                     </AlertDescription>
                   </Alert>
 
                   <WinecfgFeatureStateField
-                    label={tx('Integração com desktop (geral)', 'Desktop integration (general)')}
-                    help={tx('Controla integração do Wine com shell/desktop do Linux.', 'Controls Wine integration with the Linux shell/desktop.')}
+                    label={ct('creator_desktop_integration_general')}
+                    help={ct('creator_controls_wine_integration_with_the_linux_shell_desktop')}
                     value={config().winecfg.desktop_integration}
                     onChange={(value) =>
                       patchConfig((prev) => ({
@@ -2862,8 +2713,8 @@ export default function CreatorPage() {
                   />
 
                   <WinecfgFeatureStateField
-                    label={tx('Tipos MIME (associações de arquivo e protocolo)', 'MIME types (file/protocol associations)')}
-                    help={tx('Equivalente a "Manage file and protocol associations".', 'Equivalent to "Manage file and protocol associations".')}
+                    label={ct('creator_mime_types_file_protocol_associations')}
+                    help={ct('creator_equivalent_to_manage_file_and_protocol_associations')}
                     value={config().winecfg.mime_associations}
                     onChange={(value) =>
                       patchConfig((prev) => ({
@@ -2876,9 +2727,9 @@ export default function CreatorPage() {
                   <div class="rounded-xl border border-border/70 bg-card/70 p-3">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p class="text-sm font-semibold">{tx('Pastas especiais', 'Special folders')}</p>
+                        <p class="text-sm font-semibold">{ct('creator_special_folders')}</p>
                         <p class="text-xs text-muted-foreground">
-                          {tx('Adicione mapeamentos de pasta e atalho para o Wine (override opcional).', 'Add folder + shortcut mappings for Wine (optional override).')}
+                          {ct('creator_add_folder_shortcut_mappings_for_wine_optional_override')}
                         </p>
                       </div>
                       <Dialog open={wineDesktopFolderDialogOpen()} onOpenChange={setWineDesktopFolderDialogOpen}>
@@ -2890,14 +2741,14 @@ export default function CreatorPage() {
                           onClick={() => setWineDesktopFolderDialogOpen(true)}
                         >
                           <IconPlus class="size-4" />
-                          {tx('Adicionar pasta', 'Add folder')}
+                          {ct('creator_add_folder')}
                         </Button>
 
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>{tx('Adicionar pasta especial do Wine', 'Add Wine special folder')}</DialogTitle>
+                            <DialogTitle>{ct('creator_add_wine_special_folder')}</DialogTitle>
                             <DialogDescription>
-                              {tx('Defina o tipo da pasta, nome do atalho e caminho Linux.', 'Set folder type, shortcut name and Linux path.')}
+                              {ct('creator_set_folder_type_shortcut_name_and_linux_path')}
                             </DialogDescription>
                           </DialogHeader>
 
@@ -2914,7 +2765,7 @@ export default function CreatorPage() {
                             </Select>
                             <Input
                               value={wineDesktopFolderDraft().shortcut_name}
-                              placeholder={tx('Nome do atalho no Wine', 'Shortcut name in Wine')}
+                              placeholder={ct('creator_shortcut_name_in_wine')}
                               onInput={(e) =>
                                 setWineDesktopFolderDraft((prev) => ({ ...prev, shortcut_name: e.currentTarget.value }))
                               }
@@ -2927,13 +2778,13 @@ export default function CreatorPage() {
                               }
                             />
                             <p class="text-xs text-muted-foreground">
-                              {tx('Prefira caminhos genéricos (sem nome de usuário fixo), quando possível.', 'Prefer generic paths (without a fixed username) when possible.')}
+                              {ct('creator_prefer_generic_paths_without_a_fixed_username_when_possi')}
                             </p>
                           </div>
 
                           <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setWineDesktopFolderDialogOpen(false)}>
-                              {tx('Cancelar', 'Cancel')}
+                              {ct('creator_label_cancel')}
                             </Button>
                             <Button
                               type="button"
@@ -2959,7 +2810,7 @@ export default function CreatorPage() {
                                 setWineDesktopFolderDialogOpen(false)
                               }}
                             >
-                              {tx('Confirmar', 'Confirm')}
+                              {ct('creator_label_confirm')}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -2971,7 +2822,7 @@ export default function CreatorPage() {
                         when={config().winecfg.desktop_folders.length > 0}
                         fallback={
                           <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                            {tx('Nenhuma pasta especial adicionada.', 'No special folder added.')}
+                            {ct('creator_no_special_folder_added')}
                           </div>
                         }
                       >
@@ -2979,10 +2830,10 @@ export default function CreatorPage() {
                           <Table>
                             <TableHeader>
                               <TableRow class="hover:bg-transparent">
-                                <TableHead>{tx('Tipo', 'Type')}</TableHead>
-                                <TableHead>{tx('Atalho', 'Shortcut')}</TableHead>
-                                <TableHead>{tx('Caminho Linux', 'Linux path')}</TableHead>
-                                <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                                <TableHead>{ct('creator_type')}</TableHead>
+                                <TableHead>{ct('creator_shortcut')}</TableHead>
+                                <TableHead>{ct('creator_linux_path')}</TableHead>
+                                <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -3027,21 +2878,15 @@ export default function CreatorPage() {
                 onToggle={() =>
                   setWinecfgAccordionOpen((prev) => (prev === 'drives' ? null : 'drives'))
                 }
-                title={tx('Unidades', 'Drives')}
-                description={tx(
-                  'Unidades adicionais do Wine como overrides. C: e Z geralmente já existem no prefixo padrão.',
-                  'Additional Wine drives as overrides. C: and Z: usually already exist in the default prefix.'
-                )}
+                title={ct('creator_drives')}
+                description={ct('creator_additional_wine_drives_as_overrides_c_and_z_usually_alre')}
               >
                 <div class="grid gap-3">
                   <Alert variant="warning">
                     <IconAlertCircle />
-                    <AlertTitle>{tx('Unidades do Wine exigem cuidado', 'Wine drives require care')}</AlertTitle>
+                    <AlertTitle>{ct('creator_wine_drives_require_care')}</AlertTitle>
                     <AlertDescription>
-                      {tx(
-                        'C: e Z: normalmente já existem no prefixo padrão. Adicione novas unidades apenas quando o jogo realmente depender disso e prefira caminhos Linux genéricos.',
-                        'C: and Z: usually already exist in the default prefix. Add new drives only when the game really depends on it and prefer generic Linux paths.'
-                      )}
+                      {ct('creator_c_and_z_usually_already_exist_in_the_default_prefix_add')}
                     </AlertDescription>
                   </Alert>
 
@@ -3049,11 +2894,11 @@ export default function CreatorPage() {
                     <div class="grid gap-1">
                       <p>
                         <strong class="text-foreground">C:</strong>{' '}
-                        {tx('normalmente aponta para drive_c (interno do prefixo).', 'usually points to drive_c (internal prefix path).')}
+                        {ct('creator_usually_points_to_drive_c_internal_prefix_path')}
                       </p>
                       <p>
                         <strong class="text-foreground">Z:</strong>{' '}
-                        {tx('geralmente expõe a raiz do filesystem Linux por compatibilidade.', 'usually exposes the Linux filesystem root for compatibility.')}
+                        {ct('creator_usually_exposes_the_linux_filesystem_root_for_compatibil')}
                       </p>
                     </div>
                     <div class="mt-2">
@@ -3081,7 +2926,7 @@ export default function CreatorPage() {
                           }))
                         }
                       >
-                        {tx('Restaurar padrão exibido (Z:)', 'Restore shown default (Z:)')}
+                        {ct('creator_restore_shown_default_z')}
                       </Button>
                     </div>
                   </div>
@@ -3106,14 +2951,14 @@ export default function CreatorPage() {
                         }}
                       >
                         <IconPlus class="size-4" />
-                        {tx('Adicionar unidade', 'Add drive')}
+                        {ct('creator_add_drive')}
                       </Button>
 
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>{tx('Adicionar unidade do Wine', 'Add Wine drive')}</DialogTitle>
+                          <DialogTitle>{ct('creator_add_wine_drive')}</DialogTitle>
                           <DialogDescription>
-                            {tx('Escolha uma letra disponível e configure os metadados da unidade.', 'Choose an available letter and configure drive metadata.')}
+                            {ct('creator_choose_an_available_letter_and_configure_drive_metadata')}
                           </DialogDescription>
                         </DialogHeader>
 
@@ -3145,24 +2990,24 @@ export default function CreatorPage() {
                           <div class="grid gap-2 md:grid-cols-2">
                             <Input
                               value={wineDriveDraft().label}
-                              placeholder={tx('Rótulo (opcional)', 'Label (optional)')}
+                              placeholder={ct('creator_label_optional')}
                               onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, label: e.currentTarget.value }))}
                             />
                             <Input
                               value={wineDriveDraft().serial}
-                              placeholder={tx('Serial (opcional)', 'Serial (optional)')}
+                              placeholder={ct('creator_serial_optional')}
                               onInput={(e) => setWineDriveDraft((prev) => ({ ...prev, serial: e.currentTarget.value }))}
                             />
                           </div>
 
                           <p class="text-xs text-muted-foreground">
-                            {tx('Use um diretório Linux genérico quando possível (evite paths fixos com nome de usuário).', 'Use a generic Linux directory when possible (avoid user-specific absolute paths).')}
+                            {ct('creator_use_a_generic_linux_directory_when_possible_avoid_user_s')}
                           </p>
                         </div>
 
                         <DialogFooter>
                           <Button type="button" variant="outline" onClick={() => setWineDriveDialogOpen(false)}>
-                            {tx('Cancelar', 'Cancel')}
+                            {ct('creator_label_cancel')}
                           </Button>
                           <Button
                             type="button"
@@ -3172,7 +3017,7 @@ export default function CreatorPage() {
                               const letter = draft.letter.trim().toUpperCase()
                               if (!letter || !draft.host_path.trim()) return
                               if (config().winecfg.drives.some((item) => item.letter.trim().toUpperCase() === letter)) {
-                                setStatusMessage(tx('Essa letra de unidade já está em uso.', 'That drive letter is already in use.'))
+                                setStatusMessage(ct('creator_that_drive_letter_is_already_in_use'))
                                 return
                               }
                               patchConfig((prev) => ({
@@ -3196,7 +3041,7 @@ export default function CreatorPage() {
                               setWineDriveDialogOpen(false)
                             }}
                           >
-                            {tx('Confirmar', 'Confirm')}
+                            {ct('creator_label_confirm')}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -3207,7 +3052,7 @@ export default function CreatorPage() {
                     when={config().winecfg.drives.length > 0}
                     fallback={
                       <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {tx('Nenhuma unidade adicional configurada.', 'No additional drive configured.')}
+                        {ct('creator_no_additional_drive_configured')}
                       </div>
                     }
                   >
@@ -3215,12 +3060,12 @@ export default function CreatorPage() {
                       <Table>
                         <TableHeader>
                           <TableRow class="hover:bg-transparent">
-                            <TableHead>{tx('Letra', 'Letter')}</TableHead>
-                            <TableHead>{tx('Caminho Linux', 'Linux path')}</TableHead>
-                            <TableHead>{tx('Tipo', 'Type')}</TableHead>
-                            <TableHead>{tx('Rótulo', 'Label')}</TableHead>
-                            <TableHead>{tx('Serial', 'Serial')}</TableHead>
-                            <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                            <TableHead>{ct('creator_letter')}</TableHead>
+                            <TableHead>{ct('creator_linux_path')}</TableHead>
+                            <TableHead>{ct('creator_type')}</TableHead>
+                            <TableHead>{ct('creator_label')}</TableHead>
+                            <TableHead>{ct('creator_serial')}</TableHead>
+                            <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -3273,29 +3118,23 @@ export default function CreatorPage() {
                 onToggle={() =>
                   setWinecfgAccordionOpen((prev) => (prev === 'audio' ? null : 'audio'))
                 }
-                title={tx('Áudio', 'Audio')}
-                description={tx(
-                  'Configurações adicionais de áudio do winecfg. O padrão do runtime continua válido se nada for alterado.',
-                  'Additional audio settings from winecfg. Runtime defaults remain valid if nothing is changed.'
-                )}
+                title={ct('creator_audio')}
+                description={ct('creator_additional_audio_settings_from_winecfg_runtime_defaults')}
               >
                 <div class="grid gap-3">
                   <Alert>
                     <IconAlertCircle />
-                    <AlertTitle>{tx('Áudio: altere só se precisar', 'Audio: change only if needed')}</AlertTitle>
+                    <AlertTitle>{ct('creator_audio_change_only_if_needed')}</AlertTitle>
                     <AlertDescription>
-                      {tx(
-                        'Forçar backend de áudio pode resolver compatibilidade, mas também pode piorar em outros hosts. O padrão do runtime costuma ser a opção mais portátil.',
-                        'Forcing an audio backend can fix compatibility, but may worsen behavior on other hosts. Runtime default is usually the most portable option.'
-                      )}
+                      {ct('creator_forcing_an_audio_backend_can_fix_compatibility_but_may_w')}
                     </AlertDescription>
                   </Alert>
 
                   <div class="rounded-md border border-border/60 bg-muted/20 p-3">
                     <div class="space-y-1.5">
-                      <p class="text-sm font-medium">{tx('Driver de áudio', 'Audio driver')}</p>
+                      <p class="text-sm font-medium">{ct('creator_audio_driver')}</p>
                       <p class="text-xs text-muted-foreground">
-                        {tx('Selecione o backend preferido. "Padrão do runtime" mantém o comportamento padrão do Wine.', 'Select the preferred backend. "Runtime default" keeps Wine default behavior.')}
+                        {ct('creator_select_the_preferred_backend_runtime_default_keeps_wine')}
                       </p>
                     </div>
                     <div class="mt-3 max-w-sm">
@@ -3326,11 +3165,8 @@ export default function CreatorPage() {
         <Show when={activeTab() === 'wrappers' || activeTab() === 'scripts'}>
           <section class="stack">
             <FieldShell
-              label={tx('Comandos de wrapper', 'Wrapper commands')}
-              help={tx(
-                'Comandos executados antes do runtime principal (ex.: gamescope, gamemoderun, mangohud).',
-                'Commands executed before the main runtime (e.g. gamescope, gamemoderun, mangohud).'
-              )}
+              label={ct('creator_wrapper_commands')}
+              help={ct('creator_commands_executed_before_the_main_runtime_e_g_gamescope')}
               controlClass="flex justify-end"
               footer={
                 <div class="grid gap-2">
@@ -3338,7 +3174,7 @@ export default function CreatorPage() {
                     when={config().compatibility.wrapper_commands.length > 0}
                     fallback={
                       <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {tx('Nenhum comando de wrapper adicionado.', 'No wrapper command added.')}
+                      {ct('creator_no_wrapper_command_added')}
                       </div>
                     }
                   >
@@ -3346,19 +3182,19 @@ export default function CreatorPage() {
                       <Table>
                         <TableHeader>
                           <TableRow class="hover:bg-transparent">
-                            <TableHead>{tx('Ativado', 'Enabled')}</TableHead>
-                            <TableHead>{tx('Obrigatório', 'Mandatory')}</TableHead>
-                            <TableHead>{tx('Executável', 'Executable')}</TableHead>
-                            <TableHead>{tx('Argumentos', 'Arguments')}</TableHead>
-                            <TableHead class="w-14 text-right">{tx('Ação', 'Action')}</TableHead>
+                            <TableHead>{ct('creator_label_enabled')}</TableHead>
+                            <TableHead>{ct('creator_label_mandatory')}</TableHead>
+                            <TableHead>{ct('creator_executable')}</TableHead>
+                            <TableHead>{ct('creator_arguments')}</TableHead>
+                            <TableHead class="w-14 text-right">{ct('creator_label_action')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           <For each={config().compatibility.wrapper_commands}>
                             {(item, index) => (
                               <TableRow>
-                                <TableCell>{featureStateEnabled(item.state) ? tx('Sim', 'Yes') : tx('Não', 'No')}</TableCell>
-                                <TableCell>{featureStateMandatory(item.state) ? tx('Sim', 'Yes') : tx('Não', 'No')}</TableCell>
+                                <TableCell>{featureStateEnabled(item.state) ? ct('creator_yes') : ct('creator_no')}</TableCell>
+                                <TableCell>{featureStateMandatory(item.state) ? ct('creator_yes') : ct('creator_no')}</TableCell>
                                 <TableCell class="font-medium">{item.executable}</TableCell>
                                 <TableCell class="text-muted-foreground">{item.args || '—'}</TableCell>
                                 <TableCell class="text-right">
@@ -3375,7 +3211,7 @@ export default function CreatorPage() {
                                         }
                                       }))
                                     }
-                                    title={tx('Remover wrapper', 'Remove wrapper')}
+                                    title={ct('creator_remove_wrapper')}
                                   >
                                     <IconTrash class="size-4" />
                                   </Button>
@@ -3393,21 +3229,21 @@ export default function CreatorPage() {
               <Dialog open={wrapperDialogOpen()} onOpenChange={setWrapperDialogOpen}>
                 <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setWrapperDialogOpen(true)}>
                   <IconPlus class="size-4" />
-                  {tx('Adicionar wrapper', 'Add wrapper')}
+                  {ct('creator_add_wrapper')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Adicionar wrapper', 'Add wrapper')}</DialogTitle>
+                    <DialogTitle>{ct('creator_add_wrapper')}</DialogTitle>
                     <DialogDescription>
-                      {tx('Defina política, executável e argumentos do wrapper.', 'Set policy, executable and wrapper arguments.')}
+                      {ct('creator_set_policy_executable_and_wrapper_arguments')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-3">
                     <div class="grid gap-2 md:grid-cols-2">
                       <SwitchChoiceCard
-                        title={tx('Ativado', 'Enabled')}
+                        title={ct('creator_label_enabled')}
                         checked={featureStateEnabled(wrapperDraft().state)}
                         onChange={(checked) =>
                           setWrapperDraft((prev) => ({
@@ -3417,7 +3253,7 @@ export default function CreatorPage() {
                         }
                       />
                       <SwitchChoiceCard
-                        title={tx('Obrigatório', 'Mandatory')}
+                        title={ct('creator_label_mandatory')}
                         checked={featureStateMandatory(wrapperDraft().state)}
                         onChange={(checked) =>
                           setWrapperDraft((prev) => ({
@@ -3429,7 +3265,7 @@ export default function CreatorPage() {
                     </div>
                     <Input
                       value={wrapperDraft().executable}
-                      placeholder={tx('Executável (ex.: gamescope)', 'Executable (e.g. gamescope)')}
+                      placeholder={ct('creator_executable_e_g_gamescope')}
                       onInput={(e) =>
                         setWrapperDraft((prev) => ({
                           ...prev,
@@ -3439,7 +3275,7 @@ export default function CreatorPage() {
                     />
                     <Input
                       value={wrapperDraft().args}
-                      placeholder={tx('Args (ex.: -w 1920 -h 1080)', 'Args (e.g. -w 1920 -h 1080)')}
+                      placeholder={ct('creator_args_e_g_w_1920_h_1080')}
                       onInput={(e) =>
                         setWrapperDraft((prev) => ({
                           ...prev,
@@ -3451,7 +3287,7 @@ export default function CreatorPage() {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setWrapperDialogOpen(false)}>
-                      {tx('Cancelar', 'Cancel')}
+                      {ct('creator_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -3474,7 +3310,7 @@ export default function CreatorPage() {
                         setWrapperDialogOpen(false)
                       }}
                     >
-                      {tx('Confirmar', 'Confirm')}
+                      {ct('creator_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -3482,38 +3318,35 @@ export default function CreatorPage() {
             </FieldShell>
 
             <KeyValueListField
-              label={tx('Variáveis de ambiente', 'Environment variables')}
-              help={tx('Aplicadas no launch (chaves protegidas são ignoradas pelo runtime).', 'Applied at launch (protected keys are ignored by runtime).')}
+              label={ct('creator_environment_variables')}
+              help={ct('creator_applied_at_launch_protected_keys_are_ignored_by_runtime')}
               items={environmentVarsAsList()}
               onChange={updateCustomVars}
               keyPlaceholder="WINE_FULLSCREEN_FSR"
               valuePlaceholder="1"
-              addLabel={tx('Adicionar variável', 'Add variable')}
-              removeLabel={tx('Remover', 'Remove')}
-              emptyMessage={tx('Nenhuma variável de ambiente adicionada.', 'No environment variable added.')}
+              addLabel={ct('creator_add_variable')}
+              removeLabel={ct('creator_label_remove')}
+              emptyMessage={ct('creator_no_environment_variable_added')}
               tableHeaders={{
-                key: tx('Variável', 'Variable'),
-                value: tx('Valor', 'Value')
+                key: ct('creator_variable'),
+                value: ct('creator_value')
               }}
             />
 
             <Alert variant="warning">
               <IconAlertCircle />
-              <AlertTitle>{tx('Chaves protegidas pelo runtime', 'Runtime-protected keys')}</AlertTitle>
+              <AlertTitle>{ct('creator_runtime_protected_keys')}</AlertTitle>
               <AlertDescription>
                 <span class="block">
-                  {tx(
-                    'As chaves abaixo são reservadas. Se forem adicionadas na lista acima, serão ignoradas pelo orquestrador.',
-                    'The keys below are reserved. If added above, they will be ignored by the orchestrator.'
-                  )}
+                  {ct('creator_the_keys_below_are_reserved_if_added_above_they_will_be')}
                 </span>
                 <span class="mt-1 block font-mono text-[11px]">WINEPREFIX · PROTON_VERB</span>
               </AlertDescription>
             </Alert>
 
             <FieldShell
-              label={tx('Script antes de iniciar o jogo (bash)', 'Pre-launch script (bash)')}
-              help={tx('Executado antes de iniciar o jogo.', 'Executed before starting the game.')}
+              label={ct('creator_pre_launch_script_bash')}
+              help={ct('creator_executed_before_starting_the_game')}
               controlClass="hidden"
               footer={
                 <Textarea
@@ -3533,8 +3366,8 @@ export default function CreatorPage() {
             </FieldShell>
 
             <FieldShell
-              label={tx('Script após fechar o jogo (bash)', 'Post-launch script (bash)')}
-              help={tx('Executado após o jogo ser encerrado.', 'Executed after the game exits.')}
+              label={ct('creator_post_launch_script_bash')}
+              help={ct('creator_executed_after_the_game_exits')}
               controlClass="hidden"
               footer={
                 <Textarea
@@ -3555,19 +3388,13 @@ export default function CreatorPage() {
 
             <Alert variant="warning">
               <IconAlertCircle />
-              <AlertTitle>{tx('Scripts locais (MVP)', 'Local scripts (MVP)')}</AlertTitle>
+              <AlertTitle>{ct('creator_local_scripts_mvp')}</AlertTitle>
               <AlertDescription>
                 <span class="block">
-                  {tx(
-                    'Scripts aceitam apenas bash e execução local no MVP.',
-                    'Scripts accept bash only and local execution in the MVP.'
-                  )}
+                  {ct('creator_scripts_accept_bash_only_and_local_execution_in_the_mvp')}
                 </span>
                 <span class="mt-1 block">
-                  {tx(
-                    'Scripts não são enviados para a API comunitária. Use apenas comandos confiáveis.',
-                    'Scripts are not sent to the community API. Use trusted commands only.'
-                  )}
+                  {ct('creator_scripts_are_not_sent_to_the_community_api_use_trusted_co')}
                 </span>
               </AlertDescription>
             </Alert>
@@ -3577,21 +3404,18 @@ export default function CreatorPage() {
         <Show when={activeTab() === 'review'}>
           <section class="stack">
             <FieldShell
-              label={tx('Resumo da configuração', 'Configuration summary')}
-              help={tx(
-                'Visão rápida da quantidade de itens configurados em cada seção.',
-                'Quick view of how many items were configured in each section.'
-              )}
+              label={ct('creator_configuration_summary')}
+              help={ct('creator_quick_view_of_how_many_items_were_configured_in_each_sec')}
               controlClass="hidden"
               footer={
                 <div class="summary-grid">
                   <div>
                     <strong>{payloadSummary().launchArgs}</strong>
-                    <span>{tx('Argumentos de inicialização', 'Launch arguments')}</span>
+                    <span>{ct('creator_launch_arguments_2')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().integrityFiles}</strong>
-                    <span>{tx('Arquivos obrigatórios', 'Required files')}</span>
+                    <span>{ct('creator_required_files')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().winetricks}</strong>
@@ -3599,19 +3423,19 @@ export default function CreatorPage() {
                   </div>
                   <div>
                     <strong>{payloadSummary().registry}</strong>
-                    <span>{tx('Registro do Windows', 'Windows Registry')}</span>
+                    <span>{ct('creator_windows_registry')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().mounts}</strong>
-                    <span>{tx('Montagens', 'Mounts')}</span>
+                    <span>{ct('creator_mounts')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().wrappers}</strong>
-                    <span>{tx('Wrappers', 'Wrappers')}</span>
+                    <span>{ct('creator_wrappers')}</span>
                   </div>
                   <div>
                     <strong>{payloadSummary().envVars}</strong>
-                    <span>{tx('Variáveis de ambiente', 'Environment variables')}</span>
+                    <span>{ct('creator_environment_variables')}</span>
                   </div>
                 </div>
               }
@@ -3620,7 +3444,7 @@ export default function CreatorPage() {
             </FieldShell>
 
             <section class="preview">
-              <h3>{tx('Pré-visualização da configuração (JSON)', 'Configuration preview (JSON)')}</h3>
+              <h3>{ct('creator_configuration_preview_json')}</h3>
               <pre>{configPreview()}</pre>
             </section>
 
@@ -3634,7 +3458,7 @@ export default function CreatorPage() {
             </div>
 
             <section class="preview">
-              <h3>{tx('Resultado da última ação', 'Last action result')}</h3>
+              <h3>{ct('creator_last_action_result')}</h3>
               <pre>{resultJson() || t('noResult')}</pre>
             </section>
           </section>
@@ -3646,14 +3470,14 @@ export default function CreatorPage() {
           <div class="flex justify-start">
             <Show when={canGoPrevTab()}>
               <Button type="button" variant="outline" class="h-10" onClick={goPrevTab}>
-                {tx('Retornar', 'Back')}
+                {ct('creator_back')}
               </Button>
             </Show>
           </div>
           <div class="flex justify-end">
             <Show when={canGoNextTab()}>
               <Button type="button" class="h-10" onClick={goNextTab}>
-                {tx('Avançar', 'Next')}
+                {ct('creator_next')}
               </Button>
             </Show>
           </div>
