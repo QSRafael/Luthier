@@ -1822,6 +1822,21 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 58
+Escopo implementado:
+- Aba `Jogo`:
+  - `Prefix path final` reposicionado para ficar logo abaixo de `Hash SHA-256`.
+- Aba `Revisão e Gerar`:
+  - item `Orchestrator base` removido da UI;
+  - item `Saída do executável` ocultado da UI;
+  - `Resumo do payload` ajustado para mostrar os cards de contagem no rodape do item (`FieldShell.footer`);
+  - botoes `Testar` e `Criar executável` movidos para abaixo do `Preview do Payload JSON`.
+- Fluxo interno (controller):
+  - `outputPath` passou a ser derivado automaticamente do executável principal selecionado (mesmo diretorio e nome-base, sem extensão de launcher `.exe/.bat/.cmd/.com`), para permitir ocultar o campo manual com seguranca.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 57
 Escopo implementado:
 - Reorganizacao de abas (Creator UI):

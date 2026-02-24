@@ -69,6 +69,10 @@ function basename(raw: string): string {
   return normalized.slice(index + 1)
 }
 
+function stripLauncherExtension(raw: string): string {
+  return raw.replace(/\.(exe|bat|cmd|com)$/i, '')
+}
+
 function relativeFromRoot(root: string, path: string): string | null {
   const normalizedRoot = normalizePath(root)
   const normalizedPath = normalizePath(path)
@@ -356,6 +360,20 @@ export function useCreatorController() {
     const nextRelativePath = relative ? `./${relative}` : `./${basename(currentExePath)}`
     if (config().relative_exe_path !== nextRelativePath) {
       patchConfig((prev) => ({ ...prev, relative_exe_path: nextRelativePath }))
+    }
+  })
+
+  createEffect(() => {
+    const currentExePath = exePath().trim()
+    if (!currentExePath) return
+
+    const dir = dirname(currentExePath)
+    const file = basename(currentExePath)
+    const stem = stripLauncherExtension(file) || file
+    const derivedOutput = dir && dir !== file ? `${dir}/${stem}` : stem
+
+    if (derivedOutput && outputPath() !== derivedOutput) {
+      setOutputPath(derivedOutput)
     }
   })
 

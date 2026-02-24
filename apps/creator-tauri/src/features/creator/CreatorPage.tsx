@@ -221,13 +221,10 @@ export default function CreatorPage() {
   const { theme, setTheme } = useTheme()
 
   const {
-    ORCHESTRATOR_BASE_PATH,
     locale,
     setLocale,
     activeTab,
     setActiveTab,
-    outputPath,
-    setOutputPath,
     gameRoot,
     setGameRoot,
     gameRootManualOverride,
@@ -933,6 +930,32 @@ export default function CreatorPage() {
             </FieldShell>
 
             <FieldShell
+              label={tx('Prefix path final', 'Final prefix path')}
+              help={tx(
+                'Calculado automaticamente a partir do hash do executável.',
+                'Automatically calculated from executable hash.'
+              )}
+            >
+              <div class="picker-row">
+                <Input value={prefixPathPreview()} readOnly class="readonly" />
+                <Button
+                  type="button"
+                  class="btn-secondary"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(prefixPathPreview())
+                      setStatusMessage(tx('Path do prefixo copiado.', 'Prefix path copied.'))
+                    } catch {
+                      setStatusMessage(tx('Falha ao copiar para área de transferência.', 'Failed to copy to clipboard.'))
+                    }
+                  }}
+                >
+                  {tx('Copiar', 'Copy')}
+                </Button>
+              </div>
+            </FieldShell>
+
+            <FieldShell
               label={tx('Ícone extraído', 'Extracted icon')}
               help={tx(
                 'Preview do ícone do jogo para facilitar identificação visual.',
@@ -978,32 +1001,6 @@ export default function CreatorPage() {
               emptyMessage={tx('Nenhum arquivo adicionado.', 'No file added.')}
               tableValueHeader={tx('Arquivo relativo', 'Relative file')}
             />
-
-            <FieldShell
-              label={tx('Prefix path final', 'Final prefix path')}
-              help={tx(
-                'Calculado automaticamente a partir do hash do executável.',
-                'Automatically calculated from executable hash.'
-              )}
-            >
-              <div class="picker-row">
-                <Input value={prefixPathPreview()} readOnly class="readonly" />
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(prefixPathPreview())
-                      setStatusMessage(tx('Path do prefixo copiado.', 'Prefix path copied.'))
-                    } catch {
-                      setStatusMessage(tx('Falha ao copiar para área de transferência.', 'Failed to copy to clipboard.'))
-                    }
-                  }}
-                >
-                  {tx('Copiar', 'Copy')}
-                </Button>
-              </div>
-            </FieldShell>
 
             <FieldShell
               label={tx('Pastas montadas (folder_mounts)', 'Mounted folders (folder_mounts)')}
@@ -3459,56 +3456,50 @@ export default function CreatorPage() {
 
         <Show when={activeTab() === 'review'}>
           <section class="stack">
-            <TextInputField
-              label={tx('Orchestrator base', 'Orchestrator base')}
-              help={tx('Caminho fixo do binário base do Orchestrator (não editável).', 'Fixed path to Orchestrator base binary (not editable).')}
-              value={ORCHESTRATOR_BASE_PATH}
-              onInput={() => undefined}
-              readonly
-            />
-
-            <TextInputField
-              label={tx('Saída do executável', 'Output executable')}
-              help={tx('Destino final do orquestrador gerado.', 'Final destination for generated orchestrator.')}
-              value={outputPath()}
-              onInput={setOutputPath}
-            />
-
             <FieldShell
               label={tx('Resumo do payload', 'Payload summary')}
               help={tx('Visão rápida de quantos itens foram configurados por seção.', 'Quick view of how many items were configured per section.')}
+              controlClass="hidden"
+              footer={
+                <div class="summary-grid">
+                  <div>
+                    <strong>{payloadSummary().launchArgs}</strong>
+                    <span>{tx('Launch args', 'Launch args')}</span>
+                  </div>
+                  <div>
+                    <strong>{payloadSummary().integrityFiles}</strong>
+                    <span>{tx('Arquivos obrigatórios', 'Required files')}</span>
+                  </div>
+                  <div>
+                    <strong>{payloadSummary().winetricks}</strong>
+                    <span>Winetricks</span>
+                  </div>
+                  <div>
+                    <strong>{payloadSummary().registry}</strong>
+                    <span>{tx('Registro', 'Registry')}</span>
+                  </div>
+                  <div>
+                    <strong>{payloadSummary().mounts}</strong>
+                    <span>{tx('Montagens', 'Mounts')}</span>
+                  </div>
+                  <div>
+                    <strong>{payloadSummary().wrappers}</strong>
+                    <span>Wrappers</span>
+                  </div>
+                  <div>
+                    <strong>{payloadSummary().envVars}</strong>
+                    <span>{tx('Variáveis', 'Variables')}</span>
+                  </div>
+                </div>
+              }
             >
-              <div class="summary-grid">
-                <div>
-                  <strong>{payloadSummary().launchArgs}</strong>
-                  <span>{tx('Launch args', 'Launch args')}</span>
-                </div>
-                <div>
-                  <strong>{payloadSummary().integrityFiles}</strong>
-                  <span>{tx('Arquivos obrigatórios', 'Required files')}</span>
-                </div>
-                <div>
-                  <strong>{payloadSummary().winetricks}</strong>
-                  <span>Winetricks</span>
-                </div>
-                <div>
-                  <strong>{payloadSummary().registry}</strong>
-                  <span>{tx('Registro', 'Registry')}</span>
-                </div>
-                <div>
-                  <strong>{payloadSummary().mounts}</strong>
-                  <span>{tx('Montagens', 'Mounts')}</span>
-                </div>
-                <div>
-                  <strong>{payloadSummary().wrappers}</strong>
-                  <span>Wrappers</span>
-                </div>
-                <div>
-                  <strong>{payloadSummary().envVars}</strong>
-                  <span>{tx('Variáveis', 'Variables')}</span>
-                </div>
-              </div>
+              <span />
             </FieldShell>
+
+            <section class="preview">
+              <h3>{tx('Preview do Payload JSON', 'Payload JSON Preview')}</h3>
+              <pre>{configPreview()}</pre>
+            </section>
 
             <div class="row-actions">
               <Button type="button" class="btn-test" onClick={runTest}>
@@ -3518,11 +3509,6 @@ export default function CreatorPage() {
                 {t('createButton')}
               </Button>
             </div>
-
-            <section class="preview">
-              <h3>{tx('Preview do Payload JSON', 'Payload JSON Preview')}</h3>
-              <pre>{configPreview()}</pre>
-            </section>
 
             <section class="preview">
               <h3>{tx('Resultado', 'Result')}</h3>
