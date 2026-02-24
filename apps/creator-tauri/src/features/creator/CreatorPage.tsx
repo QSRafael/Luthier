@@ -57,24 +57,36 @@ function tabLabel(tab: CreatorTab, controller: CreatorController) {
 type AccordionSectionProps = {
   title: string
   description?: string
-  defaultOpen?: boolean
+  open: boolean
+  onToggle: () => void
   children: JSX.Element
 }
 
 function AccordionSection(props: AccordionSectionProps) {
   return (
-    <details open={props.defaultOpen ?? false} class="group rounded-xl border border-border/70 bg-card/80">
-      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+    <section class="rounded-xl border border-border/70 bg-card/80">
+      <button
+        type="button"
+        class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        onClick={props.onToggle}
+      >
         <div class="min-w-0">
           <p class="text-sm font-semibold">{props.title}</p>
           <Show when={props.description}>
             <p class="text-xs text-muted-foreground">{props.description}</p>
           </Show>
         </div>
-        <IconChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-      </summary>
-      <div class="border-t border-border/60 px-4 py-3">{props.children}</div>
-    </details>
+        <IconChevronDown
+          class={
+            'size-4 shrink-0 text-muted-foreground transition-transform ' +
+            (props.open ? 'rotate-180' : '')
+          }
+        />
+      </button>
+      <Show when={props.open}>
+        <div class="border-t border-border/60 px-4 py-3">{props.children}</div>
+      </Show>
+    </section>
   )
 }
 
@@ -321,6 +333,9 @@ export default function CreatorPage() {
     label: '',
     serial: ''
   })
+  const [winecfgAccordionOpen, setWinecfgAccordionOpen] = createSignal<
+    'graphics' | 'desktop' | 'drives' | 'audio' | null
+  >(null)
 
   const wineWindowsVersionOptions = [
     { value: '__default__', label: tx('Padrão do runtime (não alterar)', 'Runtime default (do not override)') },
@@ -2504,7 +2519,10 @@ export default function CreatorPage() {
 
             <div class="grid gap-3">
               <AccordionSection
-                defaultOpen
+                open={winecfgAccordionOpen() === 'graphics'}
+                onToggle={() =>
+                  setWinecfgAccordionOpen((prev) => (prev === 'graphics' ? null : 'graphics'))
+                }
                 title={tx('Gráficos', 'Graphics')}
                 description={tx(
                   'Equivalente à aba Gráficos do winecfg. Tudo aqui é adicional ao padrão do prefixo.',
@@ -2635,6 +2653,10 @@ export default function CreatorPage() {
               </AccordionSection>
 
               <AccordionSection
+                open={winecfgAccordionOpen() === 'desktop'}
+                onToggle={() =>
+                  setWinecfgAccordionOpen((prev) => (prev === 'desktop' ? null : 'desktop'))
+                }
                 title={tx('Integração com área de trabalho', 'Desktop integration')}
                 description={tx(
                   'Associações de arquivo/protocolo e mapeamentos de pastas especiais do Wine.',
@@ -2816,6 +2838,10 @@ export default function CreatorPage() {
               </AccordionSection>
 
               <AccordionSection
+                open={winecfgAccordionOpen() === 'drives'}
+                onToggle={() =>
+                  setWinecfgAccordionOpen((prev) => (prev === 'drives' ? null : 'drives'))
+                }
                 title={tx('Unidades', 'Drives')}
                 description={tx(
                   'Unidades adicionais do Wine como overrides. C: e Z geralmente já existem no prefixo padrão.',
@@ -3047,6 +3073,10 @@ export default function CreatorPage() {
               </AccordionSection>
 
               <AccordionSection
+                open={winecfgAccordionOpen() === 'audio'}
+                onToggle={() =>
+                  setWinecfgAccordionOpen((prev) => (prev === 'audio' ? null : 'audio'))
+                }
                 title={tx('Áudio', 'Audio')}
                 description={tx(
                   'Configurações adicionais de áudio do winecfg. O padrão do runtime continua válido se nada for alterado.',

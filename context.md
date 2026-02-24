@@ -1913,6 +1913,17 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
 
+### 2026-02-24 - Checkpoint 39
+Escopo implementado:
+- Ajuste de comportamento do acordeao na aba `winecfg`:
+  - todas as secoes iniciam fechadas por padrao;
+  - apenas uma secao pode ficar aberta por vez (acordeao controlado);
+  - ao abrir uma secao, a anteriormente aberta eh fechada automaticamente;
+  - clicar na secao aberta novamente fecha (volta para "nenhuma aberta").
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
 - Layout do item `Versão de runtime` reorganizado:
