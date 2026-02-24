@@ -804,7 +804,7 @@ export default function CreatorPage() {
             >
               <div class="picker-row">
                 <Input value={exePath()} placeholder="/home/user/Games/MyGame/game.exe" onInput={(e) => setExePath(e.currentTarget.value)} />
-                <Button type="button" class="btn-secondary" onClick={pickExecutable}>
+                <Button type="button" variant="outline" onClick={pickExecutable}>
                   {tx('Selecionar arquivo', 'Select file')}
                 </Button>
               </div>
@@ -831,7 +831,7 @@ export default function CreatorPage() {
             >
               <div class="picker-row">
                 <Input value={gameRootRelativeDisplay()} placeholder="./" readOnly class="readonly" />
-                <Button type="button" class="btn-secondary" onClick={openGameRootChooser}>
+                <Button type="button" variant="outline" onClick={openGameRootChooser}>
                   {tx('Escolher outra', 'Choose another')}
                 </Button>
               </div>
@@ -981,7 +981,7 @@ export default function CreatorPage() {
                     }))
                   }
                 />
-                <Button type="button" class="btn-secondary" onClick={runHash}>
+                <Button type="button" variant="outline" onClick={runHash}>
                   {t('hashButton')}
                 </Button>
               </div>
@@ -998,7 +998,7 @@ export default function CreatorPage() {
                 <Input value={prefixPathPreview()} readOnly class="readonly" />
                 <Button
                   type="button"
-                  class="btn-secondary"
+                  variant="outline"
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(prefixPathPreview())
@@ -1030,7 +1030,7 @@ export default function CreatorPage() {
                     <img src={iconPreviewPath()} alt="icon preview" />
                   </Show>
                 </div>
-                <Button type="button" class="btn-secondary" onClick={applyIconExtractionPlaceholder}>
+                <Button type="button" variant="outline" onClick={applyIconExtractionPlaceholder}>
                   {tx('Extrair ícone', 'Extract icon')}
                 </Button>
               </div>
@@ -2065,7 +2065,7 @@ export default function CreatorPage() {
                     <span>{tx('Carregando catálogo em segundo plano...', 'Loading catalog in background...')}</span>
                   </div>
                 </Show>
-                <Button type="button" class="btn-secondary" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
+                <Button type="button" variant="outline" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
                   {winetricksLoading() ? tx('Carregando...', 'Loading...') : tx('Atualizar catálogo', 'Refresh catalog')}
                 </Button>
                 <p class="text-xs text-muted-foreground">

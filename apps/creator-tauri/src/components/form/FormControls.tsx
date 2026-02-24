@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from '../ui/dialog'
 import { Input } from '../ui/input'
 import {
@@ -435,16 +434,16 @@ export function StringListField(props: StringListFieldProps) {
       }
     >
       <Dialog open={open()} onOpenChange={setOpen}>
-        <DialogTrigger
-          as={Button}
+        <Button
           type="button"
           variant="outline"
           size="sm"
           class="inline-flex items-center gap-1.5"
+          onClick={() => setOpen(true)}
         >
           <IconPlus class="size-4" />
           {props.addLabel ?? 'Adicionar'}
-        </DialogTrigger>
+        </Button>
 
         <DialogContent>
           <DialogHeader>
@@ -630,16 +629,16 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
       }
     >
       <Dialog open={open()} onOpenChange={setOpen}>
-        <DialogTrigger
-          as={Button}
+        <Button
           type="button"
           variant="outline"
           size="sm"
           class="inline-flex items-center gap-1.5"
+          onClick={() => setOpen(true)}
         >
           <IconPlus class="size-4" />
           {props.addLabel ?? 'Adicionar'}
-        </DialogTrigger>
+        </Button>
 
         <DialogContent>
           <DialogHeader>

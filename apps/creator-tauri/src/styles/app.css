@@ -242,10 +242,6 @@ body {
   @apply flex w-full items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-left text-sm;
 }
 
-.btn-secondary {
-  @apply border border-border bg-muted/50 text-foreground;
-}
-
 .btn-danger {
   @apply border border-destructive/30 bg-destructive/10 text-destructive;
 }
@@ -259,7 +255,7 @@ body {
 }
 
 .readonly {
-  @apply bg-muted/70 text-muted-foreground;
+  @apply bg-muted/50 text-muted-foreground;
 }
 
 @media (min-width: 900px) {

@@ -2046,6 +2046,20 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
 
+### 2026-02-24 - Checkpoint 36
+Escopo implementado:
+- Padronizacao visual de botoes secundarios no Creator UI:
+  - botoes de acoes auxiliares (`Selecionar executavel`, `Escolher outra`, `Calcular hash`, `Copiar`, `Extrair icone`, `Atualizar catalogo winetricks`) passaram a usar `Button variant="outline"` em vez de classe custom `btn-secondary`;
+  - reduz discrepancia visual entre botoes pretos/cinza no tema escuro e alinha com o padrao shadcn.
+- Padronizacao dos botoes "Adicionar ..." em listas/dialogs:
+  - `StringListField` e `KeyValueListField` passaram a abrir dialog com `Button` explicito (`variant="outline"`) em vez de `DialogTrigger as={Button}`;
+  - evita perda de estilo/variant em alguns cenarios de renderizacao.
+- Campos read-only:
+  - classe `.readonly` ajustada para o mesmo tom dos demais campos somente leitura (`bg-muted/50`), reduzindo inconsistencias entre inputs readonly.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 55
 Escopo implementado:
 - Feedback global da UI do Creator migrado de banner fixo para `Sonner`:
