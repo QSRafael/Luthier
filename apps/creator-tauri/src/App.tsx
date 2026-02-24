@@ -1,274 +1,14 @@
 import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
 
-type FeatureState = 'MandatoryOn' | 'MandatoryOff' | 'OptionalOn' | 'OptionalOff'
-
-type GameConfig = {
-  config_version: number
-  created_by: string
-  game_name: string
-  exe_hash: string
-  relative_exe_path: string
-  launch_args: string[]
-  runner: {
-    proton_version: string
-    auto_update: boolean
-    esync: boolean
-    fsync: boolean
-    runtime_preference: 'Auto' | 'Proton' | 'Wine'
-  }
-  environment: {
-    gamemode: FeatureState
-    gamescope: {
-      state: FeatureState
-      resolution: string | null
-      fsr: boolean
-    }
-    mangohud: FeatureState
-    prime_offload: boolean
-    custom_vars: Record<string, string>
-  }
-  compatibility: {
-    wine_wayland: FeatureState
-    hdr: FeatureState
-    auto_dxvk_nvapi: FeatureState
-    easy_anti_cheat_runtime: FeatureState
-    battleye_runtime: FeatureState
-    staging: FeatureState
-    wrapper_commands: Array<{ state: FeatureState; executable: string; args: string }>
-  }
-  winecfg: {
-    dll_overrides: Array<{ dll: string; mode: string }>
-    auto_capture_mouse: FeatureState
-    window_decorations: FeatureState
-    window_manager_control: FeatureState
-    virtual_desktop: { state: FeatureState; resolution: string | null }
-    desktop_integration: FeatureState
-    drives: Array<{ letter: string; source_relative_path: string; state: FeatureState }>
-    audio_driver: string | null
-  }
-  dependencies: string[]
-  extra_system_dependencies: Array<{
-    name: string
-    state: FeatureState
-    check_commands: string[]
-    check_env_vars: string[]
-    check_paths: string[]
-  }>
-  requirements: {
-    runtime: {
-      strict: boolean
-      primary: 'ProtonUmu' | 'ProtonNative' | 'Wine'
-      fallback_order: Array<'ProtonUmu' | 'ProtonNative' | 'Wine'>
-    }
-    umu: FeatureState
-    winetricks: FeatureState
-    gamescope: FeatureState
-    gamemode: FeatureState
-    mangohud: FeatureState
-    steam_runtime: FeatureState
-  }
-  registry_keys: Array<{ path: string; name: string; value_type: string; value: string }>
-  integrity_files: string[]
-  folder_mounts: Array<{
-    source_relative_path: string
-    target_windows_path: string
-    create_source_if_missing: boolean
-  }>
-  scripts: {
-    pre_launch: string
-    post_launch: string
-  }
-}
-
-const defaultConfig = (): GameConfig => ({
-  config_version: 1,
-  created_by: 'creator-ui',
-  game_name: '',
-  exe_hash: '',
-  relative_exe_path: './game.exe',
-  launch_args: [],
-  runner: {
-    proton_version: 'GE-Proton9-10',
-    auto_update: false,
-    esync: true,
-    fsync: true,
-    runtime_preference: 'Auto'
-  },
-  environment: {
-    gamemode: 'OptionalOn',
-    gamescope: { state: 'OptionalOff', resolution: null, fsr: false },
-    mangohud: 'OptionalOff',
-    prime_offload: false,
-    custom_vars: {}
-  },
-  compatibility: {
-    wine_wayland: 'OptionalOff',
-    hdr: 'OptionalOff',
-    auto_dxvk_nvapi: 'OptionalOff',
-    easy_anti_cheat_runtime: 'OptionalOff',
-    battleye_runtime: 'OptionalOff',
-    staging: 'OptionalOff',
-    wrapper_commands: []
-  },
-  winecfg: {
-    dll_overrides: [],
-    auto_capture_mouse: 'OptionalOn',
-    window_decorations: 'OptionalOn',
-    window_manager_control: 'OptionalOn',
-    virtual_desktop: { state: 'OptionalOff', resolution: null },
-    desktop_integration: 'OptionalOn',
-    drives: [],
-    audio_driver: null
-  },
-  dependencies: [],
-  extra_system_dependencies: [],
-  requirements: {
-    runtime: {
-      strict: false,
-      primary: 'ProtonNative',
-      fallback_order: ['ProtonUmu', 'Wine']
-    },
-    umu: 'OptionalOn',
-    winetricks: 'OptionalOff',
-    gamescope: 'OptionalOff',
-    gamemode: 'OptionalOn',
-    mangohud: 'OptionalOff',
-    steam_runtime: 'OptionalOff'
-  },
-  registry_keys: [],
-  integrity_files: [],
-  folder_mounts: [],
-  scripts: {
-    pre_launch: '',
-    post_launch: ''
-  }
-})
-
-type Locale = 'pt-BR' | 'en-US'
-
-const i18n: Record<Locale, Record<string, string>> = {
-  'pt-BR': {
-    appName: 'Game Orchestrator Creator',
-    title: 'Fluxo mínimo para gerar e testar o Orquestrador',
-    subtitle: 'UI inicial para evoluir por fases, com foco em debug e rastreabilidade.',
-    language: 'Idioma',
-    statusReady: 'Pronto',
-    tabGame: 'Jogo',
-    tabRuntime: 'Runtime',
-    tabReview: 'Revisao e Gerar',
-    gameName: 'Nome do jogo',
-    gameNameHelp: 'Nome exibido na splash e nos logs.',
-    exePath: 'Executavel (.exe)',
-    exePathHelp: 'Caminho do exe para hash e referencia de integridade.',
-    gameRoot: 'Pasta raiz do jogo',
-    gameRootHelp: 'Usada no comando Testar para validar arquivos obrigatorios.',
-    relativeExePath: 'Path relativo do exe no payload',
-    relativeExePathHelp: 'Sempre relativo; ex.: ./game.exe',
-    exeHash: 'Hash SHA-256',
-    exeHashHelp: 'Identificador do perfil e do prefixo.',
-    hashButton: 'Calcular Hash',
-    launchArgs: 'Launch args (separados por espaço)',
-    launchArgsHelp: 'Ex.: -windowed -nointro',
-    integrityFiles: 'Arquivos obrigatórios (1 por linha)',
-    integrityFilesHelp: 'Cada linha vira um item em integrity_files.',
-    applyLists: 'Aplicar Listas',
-    protonVersion: 'Versão do Proton',
-    protonVersionHelp: 'Usado quando runtime selecionado for Proton.',
-    runtimePrimary: 'Runtime primário',
-    runtimePrimaryHelp: 'Candidato inicial: ProtonUmu, ProtonNative ou Wine.',
-    strictRuntime: 'Runtime estrito (sem fallback)',
-    strictRuntimeHelp: 'Se ativo, só tenta o runtime primário.',
-    restoreRuntimeDefaults: 'Restaurar defaults de runtime',
-    orchestratorBase: 'Orchestrator base',
-    orchestratorBaseHelp: 'Binário base pré-compilado usado para injetar o payload.',
-    outputExecutable: 'Saída do executável',
-    outputExecutableHelp: 'Caminho final do orquestrador gerado.',
-    testButton: 'Testar',
-    createButton: 'Criar Executável',
-    payloadPreview: 'Preview do Payload JSON',
-    resultTitle: 'Resultado',
-    noResult: 'Sem resultado ainda.',
-    msgHashStart: 'Calculando hash do executavel...',
-    msgHashOk: 'Hash calculado com sucesso',
-    msgHashFail: 'Falha ao calcular hash:',
-    msgTestStart: 'Testando configuracao (doctor + prefix plan)...',
-    msgTestOk: 'Teste concluido',
-    msgTestFail: 'Falha no teste:',
-    msgCreateStart: 'Gerando orquestrador...',
-    msgCreateOk: 'Executavel gerado com sucesso',
-    msgCreateFail: 'Falha ao gerar executavel:',
-    msgListsApplied: 'Listas aplicadas no payload'
-  },
-  'en-US': {
-    appName: 'Game Orchestrator Creator',
-    title: 'Minimal flow to test and build the Orchestrator',
-    subtitle: 'Initial UI that will evolve by phases, focused on debugging and traceability.',
-    language: 'Language',
-    statusReady: 'Ready',
-    tabGame: 'Game',
-    tabRuntime: 'Runtime',
-    tabReview: 'Review and Generate',
-    gameName: 'Game name',
-    gameNameHelp: 'Displayed in splash and logs.',
-    exePath: 'Executable (.exe)',
-    exePathHelp: 'EXE path used for hashing and integrity checks.',
-    gameRoot: 'Game root folder',
-    gameRootHelp: 'Used by Test to validate required files.',
-    relativeExePath: 'Relative EXE path in payload',
-    relativeExePathHelp: 'Always relative; ex.: ./game.exe',
-    exeHash: 'SHA-256 hash',
-    exeHashHelp: 'Profile and prefix identifier.',
-    hashButton: 'Calculate Hash',
-    launchArgs: 'Launch args (space separated)',
-    launchArgsHelp: 'Ex.: -windowed -nointro',
-    integrityFiles: 'Required files (1 per line)',
-    integrityFilesHelp: 'Each line becomes one integrity_files item.',
-    applyLists: 'Apply Lists',
-    protonVersion: 'Proton version',
-    protonVersionHelp: 'Used when selected runtime is Proton.',
-    runtimePrimary: 'Primary runtime',
-    runtimePrimaryHelp: 'Initial candidate: ProtonUmu, ProtonNative or Wine.',
-    strictRuntime: 'Strict runtime (no fallback)',
-    strictRuntimeHelp: 'When enabled, only the primary runtime is tried.',
-    restoreRuntimeDefaults: 'Restore runtime defaults',
-    orchestratorBase: 'Orchestrator base',
-    orchestratorBaseHelp: 'Prebuilt base binary used to inject payload.',
-    outputExecutable: 'Output executable',
-    outputExecutableHelp: 'Final generated orchestrator path.',
-    testButton: 'Test',
-    createButton: 'Create Executable',
-    payloadPreview: 'Payload JSON Preview',
-    resultTitle: 'Result',
-    noResult: 'No result yet.',
-    msgHashStart: 'Calculating executable hash...',
-    msgHashOk: 'Hash calculated successfully',
-    msgHashFail: 'Failed to calculate hash:',
-    msgTestStart: 'Testing configuration (doctor + prefix plan)...',
-    msgTestOk: 'Test completed',
-    msgTestFail: 'Test failed:',
-    msgCreateStart: 'Generating orchestrator...',
-    msgCreateOk: 'Executable created successfully',
-    msgCreateFail: 'Failed to create executable:',
-    msgListsApplied: 'Lists applied to payload'
-  }
-}
-
-function detectLocale(): Locale {
-  const saved = localStorage.getItem('creator.locale')
-  if (saved === 'pt-BR' || saved === 'en-US') return saved
-  const browserLocale = navigator.language
-  return browserLocale.startsWith('pt') ? 'pt-BR' : 'en-US'
-}
-
-async function invokeCommand<T>(command: string, input: unknown): Promise<T> {
-  const tauri = await import('@tauri-apps/api/tauri')
-  return tauri.invoke<T>(command, { input })
-}
+import { invokeCommand } from './api/tauri'
+import Field from './components/Field'
+import { detectLocale, Locale, translate } from './i18n'
+import { CreatorTab, defaultGameConfig, GameConfig, RuntimePrimary } from './models/config'
 
 export default function App() {
   const initialLocale = detectLocale()
   const [locale, setLocale] = createSignal<Locale>(initialLocale)
-  const [activeTab, setActiveTab] = createSignal<'game' | 'runtime' | 'review'>('game')
+  const [activeTab, setActiveTab] = createSignal<CreatorTab>('game')
 
   const [baseBinaryPath, setBaseBinaryPath] = createSignal('./target/debug/orchestrator')
   const [outputPath, setOutputPath] = createSignal('./tmp/game-orchestrator')
@@ -276,16 +16,16 @@ export default function App() {
   const [exePath, setExePath] = createSignal('')
   const [launchArgsInput, setLaunchArgsInput] = createSignal('')
   const [integrityInput, setIntegrityInput] = createSignal('')
-  const [statusMessage, setStatusMessage] = createSignal(i18n[initialLocale].statusReady)
+  const [statusMessage, setStatusMessage] = createSignal(translate(initialLocale, 'statusReady'))
   const [resultJson, setResultJson] = createSignal('')
 
-  const [config, setConfig] = createSignal<GameConfig>(defaultConfig())
+  const [config, setConfig] = createSignal<GameConfig>(defaultGameConfig())
 
   const configPreview = createMemo(() => JSON.stringify(config(), null, 2))
-  const t = (key: string) => i18n[locale()][key] ?? key
-  const tabs: Array<'game' | 'runtime' | 'review'> = ['game', 'runtime', 'review']
+  const t = (key: string) => translate(locale(), key)
+  const tabs: CreatorTab[] = ['game', 'runtime', 'review']
 
-  const tabLabel = (tab: 'game' | 'runtime' | 'review') => {
+  const tabLabel = (tab: CreatorTab) => {
     if (tab === 'game') return t('tabGame')
     if (tab === 'runtime') return t('tabRuntime')
     return t('tabReview')
@@ -463,15 +203,22 @@ export default function App() {
             <label class="field">
               <div class="label-row">
                 <span>{t('launchArgs')}</span>
-                <span class="help" title={t('launchArgsHelp')}>?</span>
+                <span class="help" title={t('launchArgsHelp')}>
+                  ?
+                </span>
               </div>
-              <input value={launchArgsInput()} onInput={(e) => setLaunchArgsInput(e.currentTarget.value)} />
+              <input
+                value={launchArgsInput()}
+                onInput={(e) => setLaunchArgsInput(e.currentTarget.value)}
+              />
             </label>
 
             <label class="field">
               <div class="label-row">
                 <span>{t('integrityFiles')}</span>
-                <span class="help" title={t('integrityFilesHelp')}>?</span>
+                <span class="help" title={t('integrityFilesHelp')}>
+                  ?
+                </span>
               </div>
               <textarea
                 rows={6}
@@ -505,7 +252,9 @@ export default function App() {
             <label class="field">
               <div class="label-row">
                 <span>{t('runtimePrimary')}</span>
-                <span class="help" title={t('runtimePrimaryHelp')}>?</span>
+                <span class="help" title={t('runtimePrimaryHelp')}>
+                  ?
+                </span>
               </div>
               <select
                 value={config().requirements.runtime.primary}
@@ -516,7 +265,7 @@ export default function App() {
                       ...prev.requirements,
                       runtime: {
                         ...prev.requirements.runtime,
-                        primary: e.currentTarget.value as 'ProtonUmu' | 'ProtonNative' | 'Wine'
+                        primary: e.currentTarget.value as RuntimePrimary
                       }
                     }
                   }))
@@ -546,7 +295,9 @@ export default function App() {
                 }
               />
               <span>{t('strictRuntime')}</span>
-              <span class="help" title={t('strictRuntimeHelp')}>?</span>
+              <span class="help" title={t('strictRuntimeHelp')}>
+                ?
+              </span>
             </label>
 
             <div class="row-actions">
@@ -594,26 +345,5 @@ export default function App() {
         </Show>
       </main>
     </div>
-  )
-}
-
-type FieldProps = {
-  label: string
-  help: string
-  value: string
-  onInput: (value: string) => void
-}
-
-function Field(props: FieldProps) {
-  return (
-    <label class="field">
-      <div class="label-row">
-        <span>{props.label}</span>
-        <span class="help" title={props.help}>
-          ?
-        </span>
-      </div>
-      <input value={props.value} onInput={(e) => props.onInput(e.currentTarget.value)} />
-    </label>
   )
 }
