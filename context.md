@@ -2233,3 +2233,33 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 35
+Escopo implementado:
+- Correcao de erro em `Calcular hash` no modo navegador/LAN:
+  - a UI agora bloqueia a acao quando `exePath` nao eh caminho absoluto e mostra mensagem explicando que hash exige app Tauri local;
+  - evita enviar caminho incompleto (ex.: apenas nome do arquivo) para o backend, que gerava `os error 2`.
+- Correcao de erro em importacao de `.reg` no modo navegador/LAN:
+  - antes de chamar o backend, a UI valida se o arquivo selecionado tem caminho absoluto;
+  - quando o picker web retorna apenas nome do arquivo, a UI mostra mensagem clara orientando uso do app Tauri local.
+- Picker de `Executavel principal`:
+  - passou a reutilizar `defaultPath` (diretorio do executavel atual ou `gameRoot`) quando houver contexto, reduzindo abertura em `Recentes` nas reselecoes.
+- Picker de override da `Pasta raiz do jogo`:
+  - passou a sugerir `defaultPath` no diretorio do executavel quando usa seletor do sistema.
+- `Pasta raiz do jogo` (UX guiada):
+  - botao `Escolher outra` agora abre um dialog com breadcrumb e lista de ancestrais da pasta do executavel;
+  - usuario so pode escolher niveis ancestrais validos (regra: executavel precisa estar dentro da pasta raiz).
+- `Pastas montadas (folder_mounts)`:
+  - novo mini navegador de pastas (dialog) restrito a `gameRoot`, com breadcrumb e lista de subpastas;
+  - selecao de pasta para montagem usa `Usar esta pasta` e grava caminho relativo;
+  - evita escolher diretórios fora da pasta raiz do jogo.
+- Backend Tauri:
+  - novo comando `cmd_list_child_directories` para listar subpastas (base do mini navegador de pastas).
+
+Observacao importante (UX/arquitetura):
+- No modo frontend em navegador/LAN, o fallback web de `input[type=file]` nao fornece caminho absoluto por restricao de seguranca do browser.
+- Operacoes que dependem de caminho real no filesystem (hash do `.exe`, importacao de `.reg`, mini navegador de pastas) devem ser feitas no app Tauri local.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo build --workspace`

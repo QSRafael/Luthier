@@ -102,6 +102,53 @@ type ImportRegistryFileOutput = {
   warnings: string[]
 }
 
+type ListChildDirectoriesOutput = {
+  path: string
+  directories: string[]
+}
+
+function isLikelyAbsolutePath(path: string) {
+  const trimmed = path.trim()
+  return trimmed.startsWith('/') || /^[A-Za-z]:[\\/]/.test(trimmed)
+}
+
+function posixDirname(path: string) {
+  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
+  if (!normalized || normalized === '/') return '/'
+  const idx = normalized.lastIndexOf('/')
+  if (idx <= 0) return '/'
+  return normalized.slice(0, idx)
+}
+
+function buildAncestorPathsFromExe(exePath: string): string[] {
+  if (!isLikelyAbsolutePath(exePath)) return []
+  const dir = posixDirname(exePath)
+  const normalized = dir.replace(/\\/g, '/')
+  if (!normalized.startsWith('/')) return [dir]
+  const parts = normalized.split('/').filter(Boolean)
+  const out: string[] = []
+  let current = ''
+  for (const part of parts) {
+    current += `/${part}`
+    out.push(current)
+  }
+  return out
+}
+
+function relativeInsideBase(base: string, target: string): string | null {
+  const b = base.replace(/\\/g, '/').replace(/\/+$/, '')
+  const t = target.replace(/\\/g, '/').replace(/\/+$/, '')
+  if (t === b) return '.'
+  if (!t.startsWith(`${b}/`)) return null
+  return t.slice(b.length + 1) || '.'
+}
+
+function basenamePath(path: string): string {
+  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
+  const idx = normalized.lastIndexOf('/')
+  return idx >= 0 ? normalized.slice(idx + 1) : normalized
+}
+
 export default function CreatorPage() {
   const controller = useCreatorController()
   const { theme, setTheme } = useTheme()
@@ -115,7 +162,9 @@ export default function CreatorPage() {
     outputPath,
     setOutputPath,
     gameRoot,
+    setGameRoot,
     gameRootManualOverride,
+    setGameRootManualOverride,
     gameRootRelativeDisplay,
     exeInsideGameRoot,
     exePath,
@@ -164,7 +213,6 @@ export default function CreatorPage() {
     pickIntegrityFileRelative,
     pickRegistryFile,
     pickMountFolder,
-    pickMountSourceRelative,
     applyIconExtractionPlaceholder,
     setGamescopeState,
     setGamemodeState,
@@ -184,6 +232,11 @@ export default function CreatorPage() {
   })
   const [registryImportWarningsOpen, setRegistryImportWarningsOpen] = createSignal(false)
   const [registryImportWarnings, setRegistryImportWarnings] = createSignal<string[]>([])
+  const [gameRootChooserOpen, setGameRootChooserOpen] = createSignal(false)
+  const [mountSourceBrowserOpen, setMountSourceBrowserOpen] = createSignal(false)
+  const [mountBrowserPath, setMountBrowserPath] = createSignal('')
+  const [mountBrowserDirs, setMountBrowserDirs] = createSignal<string[]>([])
+  const [mountBrowserLoading, setMountBrowserLoading] = createSignal(false)
 
   const [mountDialogOpen, setMountDialogOpen] = createSignal(false)
   const [mountDraft, setMountDraft] = createSignal({
@@ -315,6 +368,16 @@ export default function CreatorPage() {
       const selected = await pickRegistryFile()
       if (!selected) return
 
+      if (!isLikelyAbsolutePath(selected)) {
+        setStatusMessage(
+          tx(
+            'Importação de .reg requer caminho absoluto. No modo navegador (LAN), selecione no app Tauri local.',
+            'Importing .reg requires an absolute path. In browser/LAN mode, use the local Tauri app.'
+          )
+        )
+        return
+      }
+
       const result = await invokeCommand<ImportRegistryFileOutput>('cmd_import_registry_file', {
         path: selected
       })
@@ -364,6 +427,64 @@ export default function CreatorPage() {
         )
       )
     }
+  }
+
+  const gameRootAncestorCandidates = createMemo(() => buildAncestorPathsFromExe(exePath()))
+
+  const openGameRootChooser = () => {
+    if (!isLikelyAbsolutePath(exePath())) {
+      void pickGameRootOverride()
+      return
+    }
+    setGameRootChooserOpen(true)
+  }
+
+  const loadMountBrowserDirs = async (absolutePath: string) => {
+    if (!isLikelyAbsolutePath(absolutePath)) {
+      setStatusMessage(
+        tx(
+          'Navegador de pastas montadas requer caminho absoluto da pasta do jogo. Use o app Tauri local.',
+          'Mounted-folder browser requires an absolute game root path. Use the local Tauri app.'
+        )
+      )
+      return
+    }
+    setMountBrowserLoading(true)
+    try {
+      const result = await invokeCommand<ListChildDirectoriesOutput>('cmd_list_child_directories', {
+        path: absolutePath
+      })
+      setMountBrowserPath(result.path)
+      setMountBrowserDirs(result.directories)
+    } catch (error) {
+      setStatusMessage(
+        tx(
+          `Falha ao listar pastas: ${String(error)}`,
+          `Failed to list folders: ${String(error)}`
+        )
+      )
+    } finally {
+      setMountBrowserLoading(false)
+    }
+  }
+
+  const openMountSourceBrowser = async () => {
+    const root = gameRoot().trim()
+    if (!root) {
+      setStatusMessage(tx('Selecione um executável primeiro para definir a pasta do jogo.', 'Select an executable first to define the game folder.'))
+      return
+    }
+    if (!isLikelyAbsolutePath(root)) {
+      setStatusMessage(
+        tx(
+          'No modo navegador (LAN), o mini navegador de pastas não consegue acessar o filesystem. Use o app Tauri local.',
+          'In browser/LAN mode, the mini folder browser cannot access the filesystem. Use the local Tauri app.'
+        )
+      )
+      return
+    }
+    await loadMountBrowserDirs(root)
+    setMountSourceBrowserOpen(true)
   }
 
   return (
@@ -462,11 +583,138 @@ export default function CreatorPage() {
             >
               <div class="picker-row">
                 <Input value={gameRootRelativeDisplay()} placeholder="./" readOnly class="readonly" />
-                <Button type="button" class="btn-secondary" onClick={pickGameRootOverride}>
+                <Button type="button" class="btn-secondary" onClick={openGameRootChooser}>
                   {tx('Escolher outra', 'Choose another')}
                 </Button>
               </div>
             </FieldShell>
+
+            <Dialog open={gameRootChooserOpen()} onOpenChange={setGameRootChooserOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{tx('Escolher pasta raiz do jogo', 'Choose game root folder')}</DialogTitle>
+                  <DialogDescription>
+                    {tx(
+                      'A pasta raiz deve ser um ancestral da pasta onde está o executável principal.',
+                      'The game root must be an ancestor of the folder that contains the main executable.'
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <Show
+                  when={gameRootAncestorCandidates().length > 0}
+                  fallback={
+                    <div class="grid gap-3">
+                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        {tx(
+                          'Esse fluxo guiado precisa de um caminho absoluto do executável (modo Tauri local).',
+                          'This guided flow requires an absolute executable path (local Tauri mode).'
+                        )}
+                      </div>
+                      <div class="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={async () => {
+                            setGameRootChooserOpen(false)
+                            await pickGameRootOverride()
+                          }}
+                        >
+                          {tx('Usar seletor do sistema', 'Use system picker')}
+                        </Button>
+                      </div>
+                    </div>
+                  }
+                >
+                  <div class="grid gap-3">
+                    <div class="rounded-md border border-border/60 bg-muted/25 p-3">
+                      <p class="mb-2 text-xs font-medium text-muted-foreground">
+                        {tx('Breadcrumb da pasta do executável', 'Executable folder breadcrumb')}
+                      </p>
+                      <nav class="overflow-x-auto" aria-label={tx('Caminho do executável', 'Executable path')}>
+                        <ol class="flex min-w-max items-center gap-1 text-xs">
+                          <For each={gameRootAncestorCandidates()}>
+                            {(candidate, index) => (
+                              <>
+                                <Show when={index() > 0}>
+                                  <li class="text-muted-foreground">/</li>
+                                </Show>
+                                <li>
+                                  <Button
+                                    type="button"
+                                    variant={gameRoot() === candidate ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    class="h-7 px-2"
+                                    onClick={() => {
+                                      const exeDir = posixDirname(exePath())
+                                      setGameRoot(candidate)
+                                      setGameRootManualOverride(candidate !== exeDir)
+                                      setGameRootChooserOpen(false)
+                                    }}
+                                  >
+                                    {basenamePath(candidate) || '/'}
+                                  </Button>
+                                </li>
+                              </>
+                            )}
+                          </For>
+                        </ol>
+                      </nav>
+                    </div>
+
+                    <div class="grid gap-2">
+                      <p class="text-xs font-medium text-muted-foreground">
+                        {tx(
+                          'Selecione qual nível acima deve ser a pasta raiz do jogo.',
+                          'Select which ancestor level should be the game root.'
+                        )}
+                      </p>
+                      <div class="grid gap-2">
+                        <For each={[...gameRootAncestorCandidates()].reverse()}>
+                          {(candidate) => {
+                            const exeDir = posixDirname(exePath())
+                            const relativeToExe = relativeInsideBase(candidate, exeDir)
+                            const isAutoRoot = candidate === exeDir
+                            return (
+                              <button
+                                type="button"
+                                class={
+                                  'grid gap-1 rounded-md border px-3 py-2 text-left transition-colors ' +
+                                  (gameRoot() === candidate
+                                    ? 'border-primary/40 bg-muted/45'
+                                    : 'border-border/60 bg-muted/20 hover:bg-muted/35')
+                                }
+                                onClick={() => {
+                                  setGameRoot(candidate)
+                                  setGameRootManualOverride(!isAutoRoot)
+                                  setGameRootChooserOpen(false)
+                                }}
+                              >
+                                <span class="text-sm font-medium">{candidate}</span>
+                                <span class="text-xs text-muted-foreground">
+                                  {isAutoRoot
+                                    ? tx('Mesmo diretório do executável (automático)', 'Same directory as executable (automatic)')
+                                    : tx(
+                                        `Executável fica em: ./${relativeToExe ?? ''}`,
+                                        `Executable lives in: ./${relativeToExe ?? ''}`
+                                      )}
+                                </span>
+                              </button>
+                            )
+                          }}
+                        </For>
+                      </div>
+                    </div>
+                  </div>
+                </Show>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setGameRootChooserOpen(false)}>
+                    {tx('Fechar', 'Close')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <FieldShell
               label={tx('Hash SHA-256', 'SHA-256 hash')}
@@ -1702,16 +1950,9 @@ export default function CreatorPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={async () => {
-                          const relative = await pickMountSourceRelative()
-                          if (!relative) return
-                          setMountDraft((prev) => ({
-                            ...prev,
-                            source_relative_path: relative
-                          }))
-                        }}
+                        onClick={() => void openMountSourceBrowser()}
                       >
-                        {tx('Escolher pasta', 'Choose folder')}
+                        {tx('Navegar pastas', 'Browse folders')}
                       </Button>
                     </div>
 
@@ -1764,6 +2005,158 @@ export default function CreatorPage() {
                       }}
                     >
                       {tx('Confirmar', 'Confirm')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={mountSourceBrowserOpen()} onOpenChange={setMountSourceBrowserOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Selecionar pasta dentro do jogo', 'Select folder inside game')}</DialogTitle>
+                    <DialogDescription>
+                      {tx(
+                        'Mini navegador restrito à pasta raiz do jogo para evitar montagens fora do projeto.',
+                        'Mini browser restricted to the game root to prevent mounts outside the project.'
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="grid gap-3">
+                    <div class="rounded-md border border-border/60 bg-muted/25 p-3">
+                      <p class="mb-2 text-xs font-medium text-muted-foreground">
+                        {tx('Caminho atual', 'Current path')}
+                      </p>
+                      <nav class="overflow-x-auto" aria-label={tx('Breadcrumb de pastas', 'Folder breadcrumb')}>
+                        <ol class="flex min-w-max items-center gap-1 text-xs">
+                          <Show when={gameRoot().trim()}>
+                            <li>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                class="h-7 px-2"
+                                onClick={() => void loadMountBrowserDirs(gameRoot().trim())}
+                              >
+                                {basenamePath(gameRoot()) || '/'}
+                              </Button>
+                            </li>
+                          </Show>
+                          <For
+                            each={(() => {
+                              const root = gameRoot().trim()
+                              const current = mountBrowserPath().trim()
+                              const relative = root && current ? relativeInsideBase(root, current) : null
+                              if (!relative || relative === '.') return []
+                              let acc = root
+                              return relative
+                                .split('/')
+                                .filter(Boolean)
+                                .map((segment) => {
+                                  acc = `${acc.replace(/\/+$/, '')}/${segment}`
+                                  return { label: segment, path: acc }
+                                })
+                            })()}
+                          >
+                            {(crumb) => (
+                              <>
+                                <li class="text-muted-foreground">/</li>
+                                <li>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-2"
+                                    onClick={() => void loadMountBrowserDirs(crumb.path)}
+                                  >
+                                    {crumb.label}
+                                  </Button>
+                                </li>
+                              </>
+                            )}
+                          </For>
+                        </ol>
+                      </nav>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium">{tx('Selecionar pasta atual', 'Select current folder')}</p>
+                        <p class="truncate text-xs text-muted-foreground">
+                          {(() => {
+                            const relative = relativeInsideBase(gameRoot().trim(), mountBrowserPath().trim())
+                            return relative ?? tx('Fora da pasta raiz do jogo', 'Outside game root')
+                          })()}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const relative = relativeInsideBase(gameRoot().trim(), mountBrowserPath().trim())
+                          if (!relative) {
+                            setStatusMessage(
+                              tx(
+                                'A pasta selecionada precisa estar dentro da pasta raiz do jogo.',
+                                'Selected folder must be inside the game root folder.'
+                              )
+                            )
+                            return
+                          }
+                          setMountDraft((prev) => ({
+                            ...prev,
+                            source_relative_path: relative
+                          }))
+                          setMountSourceBrowserOpen(false)
+                        }}
+                      >
+                        {tx('Usar esta pasta', 'Use this folder')}
+                      </Button>
+                    </div>
+
+                    <div class="grid gap-2">
+                      <p class="text-xs font-medium text-muted-foreground">
+                        {tx('Subpastas disponíveis', 'Available subfolders')}
+                      </p>
+                      <Show
+                        when={!mountBrowserLoading()}
+                        fallback={
+                          <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                            {tx('Carregando pastas...', 'Loading folders...')}
+                          </div>
+                        }
+                      >
+                        <Show
+                          when={mountBrowserDirs().length > 0}
+                          fallback={
+                            <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                              {tx('Nenhuma subpasta encontrada neste nível.', 'No subfolders found at this level.')}
+                            </div>
+                          }
+                        >
+                          <div class="grid gap-2">
+                            <For each={mountBrowserDirs()}>
+                              {(dirPath) => (
+                                <button
+                                  type="button"
+                                  class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-left hover:bg-muted/35"
+                                  onClick={() => void loadMountBrowserDirs(dirPath)}
+                                >
+                                  <span class="truncate text-sm font-medium">{basenamePath(dirPath)}</span>
+                                  <span class="text-xs text-muted-foreground">
+                                    {relativeInsideBase(gameRoot().trim(), dirPath) ?? ''}
+                                  </span>
+                                </button>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+                      </Show>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setMountSourceBrowserOpen(false)}>
+                      {tx('Fechar', 'Close')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

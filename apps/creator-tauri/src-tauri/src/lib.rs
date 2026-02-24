@@ -64,6 +64,17 @@ pub struct ImportRegistryFileOutput {
     pub warnings: Vec<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ListChildDirectoriesInput {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ListChildDirectoriesOutput {
+    pub path: String,
+    pub directories: Vec<String>,
+}
+
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
     let config: GameConfig = serde_json::from_str(&input.config_json)
         .map_err(|err| format!("invalid config JSON: {err}"))?;
@@ -173,6 +184,29 @@ pub fn import_registry_file(input: ImportRegistryFileInput) -> Result<ImportRegi
     }
 
     Ok(ImportRegistryFileOutput { entries, warnings })
+}
+
+pub fn list_child_directories(
+    input: ListChildDirectoriesInput,
+) -> Result<ListChildDirectoriesOutput, String> {
+    let root = PathBuf::from(&input.path);
+    let entries = fs::read_dir(&root).map_err(|err| format!("failed to list directory: {err}"))?;
+
+    let mut directories = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|err| format!("failed to read directory entry: {err}"))?;
+        let path = entry.path();
+        if path.is_dir() {
+            directories.push(path.to_string_lossy().into_owned());
+        }
+    }
+
+    directories.sort_by_key(|value| value.to_ascii_lowercase());
+
+    Ok(ListChildDirectoriesOutput {
+        path: input.path,
+        directories,
+    })
 }
 
 fn collect_missing_files(config: &GameConfig, game_root: &Path) -> Result<Vec<String>, String> {

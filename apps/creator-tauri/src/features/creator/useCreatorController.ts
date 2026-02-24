@@ -125,6 +125,11 @@ function formatRelativeDirDisplay(relative: string | null): string {
   return relative.endsWith('/') ? relative : `${relative}/`
 }
 
+function isLikelyAbsolutePath(path: string): boolean {
+  const trimmed = path.trim()
+  return trimmed.startsWith('/') || /^[A-Za-z]:[\\/]/.test(trimmed)
+}
+
 function hasWindowsLauncherExtension(path: string): boolean {
   const lower = basename(path).toLowerCase()
   return ['.exe', '.bat', '.cmd', '.com'].some((ext) => lower.endsWith(ext))
@@ -382,6 +387,16 @@ export function useCreatorController() {
       return
     }
 
+    if (!isLikelyAbsolutePath(exePath())) {
+      setStatusMessage(
+        tx(
+          'Calcular hash requer caminho absoluto. No modo navegador (LAN), use o app Tauri local.',
+          'Hashing requires an absolute path. In browser/LAN mode, use the local Tauri app.'
+        )
+      )
+      return
+    }
+
     try {
       setStatusMessage(t('msgHashStart'))
       const result = await invokeCommand<{ sha256_hex: string }>('cmd_hash_executable', {
@@ -456,9 +471,18 @@ export function useCreatorController() {
   }
 
   const pickExecutable = async () => {
+    const defaultPathCandidate = (() => {
+      const exe = exePath().trim()
+      if (isLikelyAbsolutePath(exe)) return dirname(exe)
+      const root = gameRoot().trim()
+      if (isLikelyAbsolutePath(root)) return root
+      return undefined
+    })()
+
     const selected = await pickFile({
       title: tx('Selecionar executável do jogo', 'Select game executable'),
-      filters: [{ name: 'Windows Launchers', extensions: ['exe', 'bat', 'cmd', 'com'] }]
+      filters: [{ name: 'Windows Launchers', extensions: ['exe', 'bat', 'cmd', 'com'] }],
+      defaultPath: defaultPathCandidate
     })
     if (!selected) return
 
@@ -497,7 +521,8 @@ export function useCreatorController() {
 
   const pickGameRootOverride = async () => {
     const selected = await pickFolder({
-      title: tx('Selecionar pasta raiz do jogo', 'Select game root folder')
+      title: tx('Selecionar pasta raiz do jogo', 'Select game root folder'),
+      defaultPath: (isLikelyAbsolutePath(exeDirectory()) ? exeDirectory() : undefined) ?? undefined
     })
     if (!selected) return
 
@@ -775,6 +800,7 @@ export function useCreatorController() {
     gameRoot,
     setGameRoot,
     gameRootManualOverride,
+    setGameRootManualOverride,
     gameRootRelativeDisplay,
     exeInsideGameRoot,
     exePath,
