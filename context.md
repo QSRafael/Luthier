@@ -1851,6 +1851,24 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
+- Itens de listas do Creator migrados de "cards/linhas soltas" para tabelas simples com cabecalho (melhor legibilidade de colunas):
+  - `Argumentos de launch`
+  - `Arquivos obrigatorios (integrity_files)`
+  - `Dependencias extras do sistema`
+  - `Chaves de registro`
+  - `Pastas montadas (folder_mounts)`
+- Adicionado componente UI `Table` (estilo shadcn/solid) em `components/ui/table.tsx`.
+- `StringListField` agora suporta modo tabela opcional via `tableValueHeader`, preservando comportamento anterior nos outros usos.
+
+Regra de UX:
+- Sempre que a lista tiver mais de um atributo/coluna relevante, preferir tabela com cabecalho explicito.
+- Mensagens de estado vazio foram mantidas (ex.: "Nenhuma chave adicionada.").
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 37
+Escopo implementado:
 - Layout do item `Versão de runtime` reorganizado:
   - campo de versão foi movido para a coluna esquerda, logo abaixo da descrição do item;
   - coluna direita ficou dedicada ao painel com os switches (`Versão obrigatória` e `Auto update`), melhorando uso de espaço.

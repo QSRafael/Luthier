@@ -25,6 +25,7 @@ import {
 } from '../ui/item'
 import { Select } from '../ui/select'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../ui/switch'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 import { Textarea } from '../ui/textarea'
 
@@ -281,6 +282,7 @@ type StringListFieldProps = {
   pickerLabel?: string
   onPickValue?: () => Promise<string | null>
   emptyMessage?: string
+  tableValueHeader?: string
 }
 
 export function StringListField(props: StringListFieldProps) {
@@ -308,26 +310,59 @@ export function StringListField(props: StringListFieldProps) {
       controlClass="flex justify-end"
       footer={
         props.items.length > 0 ? (
-          <div class="grid gap-2">
-            <For each={props.items}>
-              {(item, index) => (
-                <div class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                  <span class="truncate">{item}</span>
-                  <div class="ml-auto">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(index())}
-                      title="Remover"
-                    >
-                      <IconTrash class="size-4" />
-                    </Button>
+          props.tableValueHeader ? (
+            <div class="rounded-md border border-border/60 bg-background/40">
+              <Table>
+                <TableHeader>
+                  <TableRow class="hover:bg-transparent">
+                    <TableHead>{props.tableValueHeader}</TableHead>
+                    <TableHead class="w-[72px] text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <For each={props.items}>
+                    {(item, index) => (
+                      <TableRow>
+                        <TableCell class="max-w-0 truncate">{item}</TableCell>
+                        <TableCell class="text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeItem(index())}
+                            title="Remover"
+                          >
+                            <IconTrash class="size-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </For>
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div class="grid gap-2">
+              <For each={props.items}>
+                {(item, index) => (
+                  <div class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                    <span class="truncate">{item}</span>
+                    <div class="ml-auto">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeItem(index())}
+                        title="Remover"
+                      >
+                        <IconTrash class="size-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </For>
-          </div>
+                )}
+              </For>
+            </div>
+          )
         ) : props.emptyMessage ? (
           <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">{props.emptyMessage}</div>
         ) : undefined

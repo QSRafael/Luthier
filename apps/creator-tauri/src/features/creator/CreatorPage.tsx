@@ -28,6 +28,7 @@ import { Input } from '../../components/ui/input'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemMain, ItemTitle } from '../../components/ui/item'
 import { Select } from '../../components/ui/select'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import type { Theme } from '../../components/theme-provider'
 import { Locale } from '../../i18n'
@@ -770,6 +771,7 @@ export default function CreatorPage() {
               placeholder={tx('-windowed', '-windowed')}
               addLabel={tx('Adicionar argumento', 'Add argument')}
               emptyMessage={tx('Nenhum argumento adicionado.', 'No launch argument added.')}
+              tableValueHeader={tx('Argumento', 'Argument')}
             />
 
             <StringListField
@@ -782,6 +784,7 @@ export default function CreatorPage() {
               pickerLabel={tx('Escolher arquivo na pasta do jogo', 'Pick file from game folder')}
               onPickValue={pickIntegrityFileRelative}
               emptyMessage={tx('Nenhum arquivo adicionado.', 'No file added.')}
+              tableValueHeader={tx('Arquivo relativo', 'Relative file')}
             />
           </section>
         </Show>
@@ -994,45 +997,54 @@ export default function CreatorPage() {
               controlClass="flex justify-end"
               footer={
                 config().extra_system_dependencies.length > 0 ? (
-                  <div class="grid gap-2">
-                    <For each={config().extra_system_dependencies}>
-                      {(item, index) => (
-                        <div class="grid items-start gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_auto]">
-                          <div class="min-w-0 space-y-1">
-                            <p class="truncate text-sm font-medium">{item.name || tx('Sem nome', 'Unnamed')}</p>
-                            <Show when={item.check_commands.length > 0}>
-                              <p class="truncate text-xs text-muted-foreground">
-                                {tx('Comando:', 'Command:')} {joinCommaList(item.check_commands)}
-                              </p>
-                            </Show>
-                            <Show when={item.check_env_vars.length > 0}>
-                              <p class="truncate text-xs text-muted-foreground">
-                                {tx('Variáveis:', 'Env vars:')} {joinCommaList(item.check_env_vars)}
-                              </p>
-                            </Show>
-                            <Show when={item.check_paths.length > 0}>
-                              <p class="truncate text-xs text-muted-foreground">
-                                {tx('Paths:', 'Paths:')} {joinCommaList(item.check_paths)}
-                              </p>
-                            </Show>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              patchConfig((prev) => ({
-                                ...prev,
-                                extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
-                              }))
-                            }
-                            title={tx('Remover dependência', 'Remove dependency')}
-                          >
-                            <IconTrash class="size-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </For>
+                  <div class="rounded-md border border-border/60 bg-background/40">
+                    <Table>
+                      <TableHeader>
+                        <TableRow class="hover:bg-transparent">
+                          <TableHead>{tx('Nome', 'Name')}</TableHead>
+                          <TableHead>{tx('Comando', 'Command')}</TableHead>
+                          <TableHead>{tx('Variáveis', 'Env vars')}</TableHead>
+                          <TableHead>{tx('Paths padrão', 'Default paths')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <For each={config().extra_system_dependencies}>
+                          {(item, index) => (
+                            <TableRow>
+                              <TableCell class="max-w-[220px] truncate font-medium">
+                                {item.name || tx('Sem nome', 'Unnamed')}
+                              </TableCell>
+                              <TableCell class="max-w-[220px] truncate text-muted-foreground">
+                                {item.check_commands.length > 0 ? joinCommaList(item.check_commands) : '—'}
+                              </TableCell>
+                              <TableCell class="max-w-[220px] truncate text-muted-foreground">
+                                {item.check_env_vars.length > 0 ? joinCommaList(item.check_env_vars) : '—'}
+                              </TableCell>
+                              <TableCell class="max-w-[240px] truncate text-muted-foreground">
+                                {item.check_paths.length > 0 ? joinCommaList(item.check_paths) : '—'}
+                              </TableCell>
+                              <TableCell class="text-right">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() =>
+                                    patchConfig((prev) => ({
+                                      ...prev,
+                                      extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
+                                    }))
+                                  }
+                                  title={tx('Remover dependência', 'Remove dependency')}
+                                >
+                                  <IconTrash class="size-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </For>
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
                   <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
@@ -1698,41 +1710,58 @@ export default function CreatorPage() {
               help={tx('Tabela de chaves aplicadas no prefixo após bootstrap.', 'Table of keys applied to prefix after bootstrap.')}
               controlClass="flex flex-wrap justify-end gap-2"
               footer={
-                <div class="grid gap-2">
-                  <Show
-                    when={config().registry_keys.length > 0}
-                    fallback={
-                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {tx('Nenhuma chave adicionada.', 'No key added.')}
-                      </div>
-                    }
-                  >
-                    <For each={config().registry_keys}>
-                      {(item, index) => (
-                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_minmax(0,1fr)_auto]">
-                          <span class="truncate text-sm font-medium">{item.path}</span>
-                          <span class="truncate text-sm">{item.name}</span>
-                          <span class="truncate text-xs text-muted-foreground">{item.value_type}</span>
-                          <span class="truncate text-sm text-muted-foreground">{item.value}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              patchConfig((prev) => ({
-                                ...prev,
-                                registry_keys: removeAt(prev.registry_keys, index())
-                              }))
-                            }
-                            title={tx('Remover chave', 'Remove key')}
-                          >
-                            <IconTrash class="size-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </div>
+                <Show
+                  when={config().registry_keys.length > 0}
+                  fallback={
+                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      {tx('Nenhuma chave adicionada.', 'No key added.')}
+                    </div>
+                  }
+                >
+                  <div class="rounded-md border border-border/60 bg-background/40">
+                    <Table>
+                      <TableHeader>
+                        <TableRow class="hover:bg-transparent">
+                          <TableHead>{tx('Path', 'Path')}</TableHead>
+                          <TableHead>{tx('Nome', 'Name')}</TableHead>
+                          <TableHead>{tx('Tipo', 'Type')}</TableHead>
+                          <TableHead>{tx('Valor', 'Value')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <For each={config().registry_keys}>
+                          {(item, index) => (
+                            <TableRow>
+                              <TableCell class="max-w-[260px] truncate font-medium">{item.path}</TableCell>
+                              <TableCell class="max-w-[180px] truncate">{item.name}</TableCell>
+                              <TableCell class="max-w-[120px] truncate text-xs text-muted-foreground">
+                                {item.value_type}
+                              </TableCell>
+                              <TableCell class="max-w-[260px] truncate text-muted-foreground">{item.value}</TableCell>
+                              <TableCell class="text-right">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() =>
+                                    patchConfig((prev) => ({
+                                      ...prev,
+                                      registry_keys: removeAt(prev.registry_keys, index())
+                                    }))
+                                  }
+                                  title={tx('Remover chave', 'Remove key')}
+                                >
+                                  <IconTrash class="size-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </For>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Show>
               }
             >
               <Dialog open={registryDialogOpen()} onOpenChange={setRegistryDialogOpen}>
@@ -1868,54 +1897,70 @@ export default function CreatorPage() {
               help={tx('Mapeia pasta relativa do jogo para destino Windows dentro do prefixo.', 'Maps game-relative folder to Windows target path inside prefix.')}
               controlClass="flex justify-end"
               footer={
-                <div class="grid gap-2">
-                  <Show
-                    when={config().folder_mounts.length > 0}
-                    fallback={
-                      <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {tx('Nenhuma montagem adicionada.', 'No mount added.')}
-                      </div>
-                    }
-                  >
-                    <For each={config().folder_mounts}>
-                      {(item, index) => (
-                        <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px_auto]">
-                          <span class="truncate text-sm font-medium">{item.source_relative_path}</span>
-                          <span class="truncate text-sm text-muted-foreground">{item.target_windows_path}</span>
-                          <span class="text-xs text-muted-foreground">
-                            {item.create_source_if_missing
-                              ? tx('Criar origem: sim', 'Create source: yes')
-                              : tx('Criar origem: não', 'Create source: no')}
-                          </span>
-                          <div class="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              class="h-8 px-2 text-xs"
-                              onClick={() => void pickMountFolder(index())}
-                            >
-                              {tx('Pasta', 'Folder')}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                              onClick={() =>
-                                patchConfig((prev) => ({
-                                  ...prev,
-                                  folder_mounts: removeAt(prev.folder_mounts, index())
-                                }))
-                              }
-                              title={tx('Remover montagem', 'Remove mount')}
-                            >
-                              <IconTrash class="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </div>
+                <Show
+                  when={config().folder_mounts.length > 0}
+                  fallback={
+                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      {tx('Nenhuma montagem adicionada.', 'No mount added.')}
+                    </div>
+                  }
+                >
+                  <div class="rounded-md border border-border/60 bg-background/40">
+                    <Table>
+                      <TableHeader>
+                        <TableRow class="hover:bg-transparent">
+                          <TableHead>{tx('Origem relativa', 'Relative source')}</TableHead>
+                          <TableHead>{tx('Destino Windows', 'Windows target')}</TableHead>
+                          <TableHead>{tx('Criar origem', 'Create source')}</TableHead>
+                          <TableHead class="w-[120px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <For each={config().folder_mounts}>
+                          {(item, index) => (
+                            <TableRow>
+                              <TableCell class="max-w-[220px] truncate font-medium">
+                                {item.source_relative_path}
+                              </TableCell>
+                              <TableCell class="max-w-[280px] truncate text-muted-foreground">
+                                {item.target_windows_path}
+                              </TableCell>
+                              <TableCell class="text-xs text-muted-foreground">
+                                {item.create_source_if_missing ? tx('Sim', 'Yes') : tx('Não', 'No')}
+                              </TableCell>
+                              <TableCell class="text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="h-8 px-2 text-xs"
+                                    onClick={() => void pickMountFolder(index())}
+                                  >
+                                    {tx('Pasta', 'Folder')}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={() =>
+                                      patchConfig((prev) => ({
+                                        ...prev,
+                                        folder_mounts: removeAt(prev.folder_mounts, index())
+                                      }))
+                                    }
+                                    title={tx('Remover montagem', 'Remove mount')}
+                                  >
+                                    <IconTrash class="size-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </For>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Show>
               }
             >
               <Dialog open={mountDialogOpen()} onOpenChange={setMountDialogOpen}>
