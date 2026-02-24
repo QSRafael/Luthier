@@ -1292,3 +1292,26 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Integrar `injector` ao backend Tauri (command `create_orchestrator_binary`).
 - Comecar Fase 4 (`doctor/discovery`) no binario `orchestrator`.
+
+### 2026-02-24 - Checkpoint 03
+Escopo implementado:
+- Fase 4 (parcial) no `orchestrator`:
+  - `--doctor` agora funcional, com relatorio JSON.
+- Novo modulo `doctor` em `orchestrator-core` com:
+  - discovery de runtime por prioridade:
+    - `PATH`
+    - env vars (`PROTONPATH`, `STEAM_COMPAT_TOOL_PATHS`, `WINE`, `UMU_RUNTIME`)
+    - paths padrao de Proton/Wine
+  - avaliacao de componentes com status:
+    - `OK`
+    - `WARN`
+    - `BLOCKER`
+    - `INFO`
+  - avaliacao de runtime conforme `runtime.strict` + `primary` + `fallback_order` quando houver config embutida.
+- `--doctor` roda com ou sem config embutida:
+  - sem config: diagnostico best-effort sem bloquear por politica;
+  - com config: aplica regras de obrigatoriedade e pode gerar `BLOCKER`.
+
+Proximo checkpoint planejado:
+- Implementar setup inicial de prefix (fase 5), incluindo passos idempotentes e logs por etapa.
+- Integrar comando de injeção no backend Tauri do App Criador.

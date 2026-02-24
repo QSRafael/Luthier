@@ -33,5 +33,21 @@
   - `--no-exec-bit`
 - Mantido padrão de log estruturado NDJSON com `event_code`, `trace_id`, `span_id`.
 - Próximo passo técnico:
-  - integrar chamada do injector no backend do App Criador (Tauri command);
-  - iniciar `doctor/discovery` no binário `orchestrator`.
+- integrar chamada do injector no backend do App Criador (Tauri command);
+- iniciar `doctor/discovery` no binário `orchestrator`.
+
+## 2026-02-24 (checkpoint 03)
+- Implementado `doctor` inicial em `orchestrator-core`:
+  - discovery de runtime por ordem:
+    - `PATH`
+    - env vars (`PROTONPATH`, `STEAM_COMPAT_TOOL_PATHS`, `WINE`, `UMU_RUNTIME`)
+    - paths padrão para Proton/Wine
+  - avaliação de dependências com status `OK/WARN/BLOCKER/INFO`
+  - aplicação de política do `GameConfig` quando disponível.
+- `orchestrator --doctor` agora:
+  - tenta ler config embutida;
+  - roda doctor com/sem config;
+  - imprime relatório JSON;
+  - gera logs estruturados NDJSON (`GO-DR-*`).
+- Próximo passo técnico:
+  - iniciar setup de prefix (fase 5) e wiring do fluxo `--play`.
