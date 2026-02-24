@@ -1822,6 +1822,26 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 57
+Escopo implementado:
+- Reorganizacao de abas (Creator UI):
+  - aba `Performance e Compatibilidade` renomeada para `Melhorias`;
+  - aba `Prefixo e Dependências` renomeada para `Dependências`.
+- Aba `Jogo`:
+  - `Prefix path final` movido para a aba `Jogo`;
+  - `Pastas montadas (folder_mounts)` movido para a aba `Jogo` (tabela + dialogs mantidos).
+- Aba `Dependências`:
+  - agora concentra `Winetricks`, `Chaves de registro` e `Dependências extras do sistema`;
+  - `Prefix path final` e `Pastas montadas` removidos desta aba.
+- Aba `Execução e Ambiente`:
+  - alerts `Chaves protegidas` e `Validação básica` deixaram de ficar dentro de `FieldShell`;
+  - agora são renderizados como alerts independentes no fluxo da aba.
+- Infra da UI:
+  - adicionados helpers locais para breadcrumb/seleção do mini navegador de pastas (`mountSourceBrowserSegments`, `mountSourceBrowserCurrentRelative`) para suportar `folder_mounts` na aba `Jogo`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 56
 Escopo implementado:
 - Aba `Wrappers e Ambiente` renomeada para `Execução e Ambiente` e consolidada:

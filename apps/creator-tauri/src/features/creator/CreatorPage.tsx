@@ -50,8 +50,8 @@ function tabLabel(tab: CreatorTab, controller: CreatorController) {
   const tx = controller.tx
   if (tab === 'game') return tx('Jogo', 'Game')
   if (tab === 'runtime') return tx('Runtime', 'Runtime')
-  if (tab === 'performance') return tx('Performance e Compatibilidade', 'Performance and Compatibility')
-  if (tab === 'prefix') return tx('Prefixo e Dependências', 'Prefix and Dependencies')
+  if (tab === 'performance') return tx('Melhorias', 'Enhancements')
+  if (tab === 'prefix') return tx('Dependências', 'Dependencies')
   if (tab === 'winecfg') return 'Winecfg'
   if (tab === 'wrappers') return tx('Execução e Ambiente', 'Launch and Environment')
   if (tab === 'scripts') return tx('Scripts', 'Scripts')
@@ -638,6 +638,27 @@ export default function CreatorPage() {
     setMountSourceBrowserOpen(true)
   }
 
+  const mountSourceBrowserSegments = createMemo(() => {
+    const root = gameRoot().trim()
+    const current = mountBrowserPath().trim()
+    const relative = root && current ? relativeInsideBase(root, current) : null
+    if (!relative || relative === '.') return [] as Array<{ label: string; path: string }>
+
+    let acc = root
+    return relative
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => {
+        acc = `${acc.replace(/\/+$/, '')}/${segment}`
+        return { label: segment, path: acc }
+      })
+  })
+
+  const mountSourceBrowserCurrentRelative = createMemo(() => {
+    const relative = relativeInsideBase(gameRoot().trim(), mountBrowserPath().trim())
+    return relative ?? ''
+  })
+
   createEffect(() => {
     const message = statusMessage().trim()
     if (!message) return
@@ -957,6 +978,316 @@ export default function CreatorPage() {
               emptyMessage={tx('Nenhum arquivo adicionado.', 'No file added.')}
               tableValueHeader={tx('Arquivo relativo', 'Relative file')}
             />
+
+            <FieldShell
+              label={tx('Prefix path final', 'Final prefix path')}
+              help={tx(
+                'Calculado automaticamente a partir do hash do executável.',
+                'Automatically calculated from executable hash.'
+              )}
+            >
+              <div class="picker-row">
+                <Input value={prefixPathPreview()} readOnly class="readonly" />
+                <Button
+                  type="button"
+                  class="btn-secondary"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(prefixPathPreview())
+                      setStatusMessage(tx('Path do prefixo copiado.', 'Prefix path copied.'))
+                    } catch {
+                      setStatusMessage(tx('Falha ao copiar para área de transferência.', 'Failed to copy to clipboard.'))
+                    }
+                  }}
+                >
+                  {tx('Copiar', 'Copy')}
+                </Button>
+              </div>
+            </FieldShell>
+
+            <FieldShell
+              label={tx('Pastas montadas (folder_mounts)', 'Mounted folders (folder_mounts)')}
+              help={tx('Mapeia pasta relativa do jogo para destino Windows dentro do prefixo.', 'Maps game-relative folder to Windows target path inside prefix.')}
+              controlClass="flex justify-end"
+              footer={
+                <Show
+                  when={config().folder_mounts.length > 0}
+                  fallback={
+                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      {tx('Nenhuma montagem adicionada.', 'No mount added.')}
+                    </div>
+                  }
+                >
+                  <div class="rounded-md border border-border/60 bg-background/40">
+                    <Table>
+                      <TableHeader>
+                        <TableRow class="hover:bg-transparent">
+                          <TableHead>{tx('Origem relativa', 'Relative source')}</TableHead>
+                          <TableHead>{tx('Destino Windows', 'Windows target')}</TableHead>
+                          <TableHead>{tx('Criar origem', 'Create source')}</TableHead>
+                          <TableHead class="w-[120px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <For each={config().folder_mounts}>
+                          {(item, index) => (
+                            <TableRow>
+                              <TableCell class="max-w-[220px] truncate font-medium">
+                                {item.source_relative_path}
+                              </TableCell>
+                              <TableCell class="max-w-[280px] truncate text-muted-foreground">
+                                {item.target_windows_path}
+                              </TableCell>
+                              <TableCell class="text-xs text-muted-foreground">
+                                {item.create_source_if_missing ? tx('Sim', 'Yes') : tx('Não', 'No')}
+                              </TableCell>
+                              <TableCell class="text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="h-8 px-2 text-xs"
+                                    onClick={() => void pickMountFolder(index())}
+                                  >
+                                    {tx('Pasta', 'Folder')}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={() =>
+                                      patchConfig((prev) => ({
+                                        ...prev,
+                                        folder_mounts: removeAt(prev.folder_mounts, index())
+                                      }))
+                                    }
+                                    title={tx('Remover montagem', 'Remove mount')}
+                                  >
+                                    <IconTrash class="size-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </For>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Show>
+              }
+            >
+              <Dialog open={mountDialogOpen()} onOpenChange={setMountDialogOpen}>
+                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setMountDialogOpen(true)}>
+                  <IconPlus class="size-4" />
+                  {tx('Adicionar montagem', 'Add mount')}
+                </Button>
+
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Adicionar montagem', 'Add mount')}</DialogTitle>
+                    <DialogDescription>
+                      {tx(
+                        'Defina origem relativa e destino Windows para criar a montagem.',
+                        'Set relative source and Windows target to create the mount.'
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="grid gap-2">
+                    <div class="picker-row">
+                      <Input
+                        value={mountDraft().source_relative_path}
+                        placeholder={tx('Origem relativa (ex.: save)', 'Relative source (e.g. save)')}
+                        onInput={(e) =>
+                          setMountDraft((prev) => ({
+                            ...prev,
+                            source_relative_path: e.currentTarget.value
+                          }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void openMountSourceBrowser()}
+                      >
+                        {tx('Navegar pastas', 'Browse folders')}
+                      </Button>
+                    </div>
+
+                    <Input
+                      value={mountDraft().target_windows_path}
+                      placeholder={tx('Destino Windows (C:\\users\\...)', 'Windows target (C:\\users\\...)')}
+                      onInput={(e) =>
+                        setMountDraft((prev) => ({
+                          ...prev,
+                          target_windows_path: e.currentTarget.value
+                        }))
+                      }
+                    />
+
+                    <label class="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={mountDraft().create_source_if_missing}
+                        onInput={(e) =>
+                          setMountDraft((prev) => ({
+                            ...prev,
+                            create_source_if_missing: e.currentTarget.checked
+                          }))
+                        }
+                      />
+                      {tx('Criar origem se estiver ausente', 'Create source if missing')}
+                    </label>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setMountDialogOpen(false)}>
+                      {tx('Cancelar', 'Cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={!mountDraft().source_relative_path.trim() || !mountDraft().target_windows_path.trim()}
+                      onClick={() => {
+                        const draft = mountDraft()
+                        if (!draft.source_relative_path.trim() || !draft.target_windows_path.trim()) return
+                        patchConfig((prev) => ({
+                          ...prev,
+                          folder_mounts: [...prev.folder_mounts, draft]
+                        }))
+                        setMountDraft({
+                          source_relative_path: '',
+                          target_windows_path: '',
+                          create_source_if_missing: true
+                        })
+                        setMountDialogOpen(false)
+                      }}
+                    >
+                      {tx('Confirmar', 'Confirm')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={mountSourceBrowserOpen()} onOpenChange={setMountSourceBrowserOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{tx('Selecionar pasta dentro do jogo', 'Select folder inside game')}</DialogTitle>
+                    <DialogDescription>
+                      {tx(
+                        'Mini navegador restrito à pasta raiz do jogo para evitar montagens fora do projeto.',
+                        'Mini browser restricted to the game root to prevent mounts outside the project.'
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div class="grid gap-3">
+                    <div class="rounded-md border border-border/60 bg-muted/25 p-3">
+                      <p class="mb-2 text-xs font-medium text-muted-foreground">
+                        {tx('Caminho atual', 'Current path')}
+                      </p>
+                      <nav class="overflow-x-auto" aria-label={tx('Breadcrumb de pastas', 'Folder breadcrumb')}>
+                        <ol class="flex min-w-max items-center gap-1 text-xs">
+                          <Show when={gameRoot().trim()}>
+                            <li>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                class="h-7 px-2"
+                                onClick={() => void loadMountBrowserDirs(gameRoot())}
+                              >
+                                {basenamePath(gameRoot()) || '/'}
+                              </Button>
+                            </li>
+                          </Show>
+                          <For each={mountSourceBrowserSegments()}>
+                            {(segment) => (
+                              <>
+                                <li class="text-muted-foreground">/</li>
+                                <li>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-2"
+                                    onClick={() => void loadMountBrowserDirs(segment.path)}
+                                  >
+                                    {segment.label}
+                                  </Button>
+                                </li>
+                              </>
+                            )}
+                          </For>
+                        </ol>
+                      </nav>
+                    </div>
+
+                    <div class="rounded-md border border-border/60 bg-background/40">
+                      <Show
+                        when={!mountBrowserLoading()}
+                        fallback={
+                          <div class="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                            <Spinner class="size-3" />
+                            {tx('Carregando pastas...', 'Loading folders...')}
+                          </div>
+                        }
+                      >
+                        <Show
+                          when={mountBrowserDirs().length > 0}
+                          fallback={
+                            <div class="px-3 py-2 text-xs text-muted-foreground">
+                              {tx('Nenhuma subpasta encontrada.', 'No subfolder found.')}
+                            </div>
+                          }
+                        >
+                          <div class="grid gap-1 p-1">
+                            <For each={mountBrowserDirs()}>
+                              {(dir) => (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  class="justify-start text-left"
+                                  onClick={() => void loadMountBrowserDirs(dir)}
+                                >
+                                  {basenamePath(dir)}
+                                </Button>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+                      </Show>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+                      <div class="min-w-0">
+                        <p class="text-xs font-medium text-muted-foreground">{tx('Selecionar esta pasta', 'Select this folder')}</p>
+                        <p class="truncate text-xs">
+                          {mountSourceBrowserCurrentRelative() || './'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setMountDraft((prev) => ({
+                            ...prev,
+                            source_relative_path: mountSourceBrowserCurrentRelative() || './'
+                          }))
+                          setMountSourceBrowserOpen(false)
+                        }}
+                      >
+                        {tx('Usar esta pasta', 'Use this folder')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setMountSourceBrowserOpen(false)}>
+                      {tx('Fechar', 'Close')}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </FieldShell>
           </section>
         </Show>
 
@@ -1159,180 +1490,6 @@ export default function CreatorPage() {
               }
             />
 
-            <FieldShell
-              label={tx('Dependências extras do sistema', 'Extra system dependencies')}
-              help={tx(
-                'Dependências adicionais verificadas no doctor por comando/env/path.',
-                'Additional dependencies validated in doctor by command/env/path.'
-              )}
-              controlClass="flex justify-end"
-              footer={
-                config().extra_system_dependencies.length > 0 ? (
-                  <div class="rounded-md border border-border/60 bg-background/40">
-                    <Table>
-                      <TableHeader>
-                        <TableRow class="hover:bg-transparent">
-                          <TableHead>{tx('Nome', 'Name')}</TableHead>
-                          <TableHead>{tx('Comando', 'Command')}</TableHead>
-                          <TableHead>{tx('Variáveis', 'Env vars')}</TableHead>
-                          <TableHead>{tx('Paths padrão', 'Default paths')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <For each={config().extra_system_dependencies}>
-                          {(item, index) => (
-                            <TableRow>
-                              <TableCell class="max-w-[220px] truncate font-medium">
-                                {item.name || tx('Sem nome', 'Unnamed')}
-                              </TableCell>
-                              <TableCell class="max-w-[220px] truncate text-muted-foreground">
-                                {item.check_commands.length > 0 ? joinCommaList(item.check_commands) : '—'}
-                              </TableCell>
-                              <TableCell class="max-w-[220px] truncate text-muted-foreground">
-                                {item.check_env_vars.length > 0 ? joinCommaList(item.check_env_vars) : '—'}
-                              </TableCell>
-                              <TableCell class="max-w-[240px] truncate text-muted-foreground">
-                                {item.check_paths.length > 0 ? joinCommaList(item.check_paths) : '—'}
-                              </TableCell>
-                              <TableCell class="text-right">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                  onClick={() =>
-                                    patchConfig((prev) => ({
-                                      ...prev,
-                                      extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
-                                    }))
-                                  }
-                                  title={tx('Remover dependência', 'Remove dependency')}
-                                >
-                                  <IconTrash class="size-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </For>
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                    {tx('Nenhuma dependência extra adicionada.', 'No extra dependency added.')}
-                  </div>
-                )
-              }
-            >
-              <Dialog open={extraDependencyDialogOpen()} onOpenChange={setExtraDependencyDialogOpen}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  class="inline-flex items-center gap-1.5"
-                  onClick={() => setExtraDependencyDialogOpen(true)}
-                >
-                  <IconPlus class="size-4" />
-                  {tx('Adicionar dependência', 'Add dependency')}
-                </Button>
-
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{tx('Adicionar dependência extra do sistema', 'Add extra system dependency')}</DialogTitle>
-                    <DialogDescription>
-                      {tx(
-                        'Informe como o doctor pode detectar essa dependência (comando, variáveis e paths padrão).',
-                        'Define how doctor can detect this dependency (command, env vars and default paths).'
-                      )}
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div class="grid gap-2">
-                    <Input
-                      value={extraDependencyDraft().name}
-                      placeholder={tx('Nome da dependência', 'Dependency name')}
-                      onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
-                          ...prev,
-                          name: e.currentTarget.value
-                        }))
-                      }
-                    />
-
-                    <Input
-                      value={extraDependencyDraft().command}
-                      placeholder={tx('Comando no terminal (ex.: mangohud)', 'Terminal command (e.g. mangohud)')}
-                      onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
-                          ...prev,
-                          command: e.currentTarget.value
-                        }))
-                      }
-                    />
-
-                    <Input
-                      value={extraDependencyDraft().env_vars}
-                      placeholder={tx('Variáveis de ambiente (separadas por vírgula)', 'Environment vars (comma-separated)')}
-                      onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
-                          ...prev,
-                          env_vars: e.currentTarget.value
-                        }))
-                      }
-                    />
-
-                    <Input
-                      value={extraDependencyDraft().paths}
-                      placeholder={tx('Paths padrão (separados por vírgula)', 'Default paths (comma-separated)')}
-                      onInput={(e) =>
-                        setExtraDependencyDraft((prev) => ({
-                          ...prev,
-                          paths: e.currentTarget.value
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setExtraDependencyDialogOpen(false)}>
-                      {tx('Cancelar', 'Cancel')}
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={!extraDependencyDraft().name.trim()}
-                      onClick={() => {
-                        const draft = extraDependencyDraft()
-                        if (!draft.name.trim()) return
-
-                        patchConfig((prev) => ({
-                          ...prev,
-                          extra_system_dependencies: [
-                            ...prev.extra_system_dependencies,
-                            {
-                              name: draft.name.trim(),
-                              state: 'MandatoryOn',
-                              check_commands: splitCommaList(draft.command),
-                              check_env_vars: splitCommaList(draft.env_vars),
-                              check_paths: splitCommaList(draft.paths)
-                            }
-                          ]
-                        }))
-
-                        setExtraDependencyDraft({
-                          name: '',
-                          command: '',
-                          env_vars: '',
-                          paths: ''
-                        })
-                        setExtraDependencyDialogOpen(false)
-                      }}
-                    >
-                      {tx('Confirmar', 'Confirm')}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </FieldShell>
           </section>
         </Show>
 
@@ -1726,32 +1883,6 @@ export default function CreatorPage() {
         <Show when={activeTab() === 'prefix'}>
           <section class="stack">
             <FieldShell
-              label={tx('Prefix path final', 'Final prefix path')}
-              help={tx(
-                'Calculado automaticamente a partir do hash do executável.',
-                'Automatically calculated from executable hash.'
-              )}
-            >
-              <div class="picker-row">
-                <Input value={prefixPathPreview()} readOnly class="readonly" />
-                <Button
-                  type="button"
-                  class="btn-secondary"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(prefixPathPreview())
-                      setStatusMessage(tx('Path do prefixo copiado.', 'Prefix path copied.'))
-                    } catch {
-                      setStatusMessage(tx('Falha ao copiar para área de transferência.', 'Failed to copy to clipboard.'))
-                    }
-                  }}
-                >
-                  {tx('Copiar', 'Copy')}
-                </Button>
-              </div>
-            </FieldShell>
-
-            <FieldShell
               label="Winetricks"
               help={tx(
                 'Ativa automaticamente quando existir ao menos um verbo configurado. Use a busca para adicionar verbos do catálogo.',
@@ -2077,66 +2208,56 @@ export default function CreatorPage() {
             </FieldShell>
 
             <FieldShell
-              label={tx('Pastas montadas (folder_mounts)', 'Mounted folders (folder_mounts)')}
-              help={tx('Mapeia pasta relativa do jogo para destino Windows dentro do prefixo.', 'Maps game-relative folder to Windows target path inside prefix.')}
+              label={tx('Dependências extras do sistema', 'Extra system dependencies')}
+              help={tx(
+                'Dependências adicionais verificadas no doctor por comando/env/path.',
+                'Additional dependencies validated in doctor by command/env/path.'
+              )}
               controlClass="flex justify-end"
               footer={
-                <Show
-                  when={config().folder_mounts.length > 0}
-                  fallback={
-                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {tx('Nenhuma montagem adicionada.', 'No mount added.')}
-                    </div>
-                  }
-                >
+                config().extra_system_dependencies.length > 0 ? (
                   <div class="rounded-md border border-border/60 bg-background/40">
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{tx('Origem relativa', 'Relative source')}</TableHead>
-                          <TableHead>{tx('Destino Windows', 'Windows target')}</TableHead>
-                          <TableHead>{tx('Criar origem', 'Create source')}</TableHead>
-                          <TableHead class="w-[120px] text-right">{tx('Ações', 'Actions')}</TableHead>
+                          <TableHead>{tx('Nome', 'Name')}</TableHead>
+                          <TableHead>{tx('Comando', 'Command')}</TableHead>
+                          <TableHead>{tx('Variáveis', 'Env vars')}</TableHead>
+                          <TableHead>{tx('Paths padrão', 'Default paths')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{tx('Ações', 'Actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <For each={config().folder_mounts}>
+                        <For each={config().extra_system_dependencies}>
                           {(item, index) => (
                             <TableRow>
                               <TableCell class="max-w-[220px] truncate font-medium">
-                                {item.source_relative_path}
+                                {item.name || tx('Sem nome', 'Unnamed')}
                               </TableCell>
-                              <TableCell class="max-w-[280px] truncate text-muted-foreground">
-                                {item.target_windows_path}
+                              <TableCell class="max-w-[220px] truncate text-muted-foreground">
+                                {item.check_commands.length > 0 ? joinCommaList(item.check_commands) : '—'}
                               </TableCell>
-                              <TableCell class="text-xs text-muted-foreground">
-                                {item.create_source_if_missing ? tx('Sim', 'Yes') : tx('Não', 'No')}
+                              <TableCell class="max-w-[220px] truncate text-muted-foreground">
+                                {item.check_env_vars.length > 0 ? joinCommaList(item.check_env_vars) : '—'}
+                              </TableCell>
+                              <TableCell class="max-w-[240px] truncate text-muted-foreground">
+                                {item.check_paths.length > 0 ? joinCommaList(item.check_paths) : '—'}
                               </TableCell>
                               <TableCell class="text-right">
-                                <div class="flex items-center justify-end gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    class="h-8 px-2 text-xs"
-                                    onClick={() => void pickMountFolder(index())}
-                                  >
-                                    {tx('Pasta', 'Folder')}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                    onClick={() =>
-                                      patchConfig((prev) => ({
-                                        ...prev,
-                                        folder_mounts: removeAt(prev.folder_mounts, index())
-                                      }))
-                                    }
-                                    title={tx('Remover montagem', 'Remove mount')}
-                                  >
-                                    <IconTrash class="size-4" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() =>
+                                    patchConfig((prev) => ({
+                                      ...prev,
+                                      extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
+                                    }))
+                                  }
+                                  title={tx('Remover dependência', 'Remove dependency')}
+                                >
+                                  <IconTrash class="size-4" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           )}
@@ -2144,93 +2265,114 @@ export default function CreatorPage() {
                       </TableBody>
                     </Table>
                   </div>
-                </Show>
+                ) : (
+                  <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                    {tx('Nenhuma dependência extra adicionada.', 'No extra dependency added.')}
+                  </div>
+                )
               }
             >
-              <Dialog open={mountDialogOpen()} onOpenChange={setMountDialogOpen}>
-                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setMountDialogOpen(true)}>
+              <Dialog open={extraDependencyDialogOpen()} onOpenChange={setExtraDependencyDialogOpen}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="inline-flex items-center gap-1.5"
+                  onClick={() => setExtraDependencyDialogOpen(true)}
+                >
                   <IconPlus class="size-4" />
-                  {tx('Adicionar montagem', 'Add mount')}
+                  {tx('Adicionar dependência', 'Add dependency')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{tx('Adicionar montagem', 'Add mount')}</DialogTitle>
+                    <DialogTitle>{tx('Adicionar dependência extra do sistema', 'Add extra system dependency')}</DialogTitle>
                     <DialogDescription>
                       {tx(
-                        'Defina origem relativa e destino Windows para criar a montagem.',
-                        'Set relative source and Windows target to create the mount.'
+                        'Informe como o doctor pode detectar essa dependência (comando, variáveis e paths padrão).',
+                        'Define how doctor can detect this dependency (command, env vars and default paths).'
                       )}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-2">
-                    <div class="picker-row">
-                      <Input
-                        value={mountDraft().source_relative_path}
-                        placeholder={tx('Origem relativa (ex.: save)', 'Relative source (e.g. save)')}
-                        onInput={(e) =>
-                          setMountDraft((prev) => ({
-                            ...prev,
-                            source_relative_path: e.currentTarget.value
-                          }))
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void openMountSourceBrowser()}
-                      >
-                        {tx('Navegar pastas', 'Browse folders')}
-                      </Button>
-                    </div>
-
                     <Input
-                      value={mountDraft().target_windows_path}
-                      placeholder={tx('Destino Windows (C:\\users\\...)', 'Windows target (C:\\users\\...)')}
+                      value={extraDependencyDraft().name}
+                      placeholder={tx('Nome da dependência', 'Dependency name')}
                       onInput={(e) =>
-                        setMountDraft((prev) => ({
+                        setExtraDependencyDraft((prev) => ({
                           ...prev,
-                          target_windows_path: e.currentTarget.value
+                          name: e.currentTarget.value
                         }))
                       }
                     />
 
-                    <label class="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={mountDraft().create_source_if_missing}
-                        onInput={(e) =>
-                          setMountDraft((prev) => ({
-                            ...prev,
-                            create_source_if_missing: e.currentTarget.checked
-                          }))
-                        }
-                      />
-                      {tx('Criar origem se estiver ausente', 'Create source if missing')}
-                    </label>
+                    <Input
+                      value={extraDependencyDraft().command}
+                      placeholder={tx('Comando no terminal (ex.: mangohud)', 'Terminal command (e.g. mangohud)')}
+                      onInput={(e) =>
+                        setExtraDependencyDraft((prev) => ({
+                          ...prev,
+                          command: e.currentTarget.value
+                        }))
+                      }
+                    />
+
+                    <Input
+                      value={extraDependencyDraft().env_vars}
+                      placeholder={tx('Variáveis de ambiente (separadas por vírgula)', 'Environment vars (comma-separated)')}
+                      onInput={(e) =>
+                        setExtraDependencyDraft((prev) => ({
+                          ...prev,
+                          env_vars: e.currentTarget.value
+                        }))
+                      }
+                    />
+
+                    <Input
+                      value={extraDependencyDraft().paths}
+                      placeholder={tx('Paths padrão (separados por vírgula)', 'Default paths (comma-separated)')}
+                      onInput={(e) =>
+                        setExtraDependencyDraft((prev) => ({
+                          ...prev,
+                          paths: e.currentTarget.value
+                        }))
+                      }
+                    />
                   </div>
 
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setMountDialogOpen(false)}>
+                    <Button type="button" variant="outline" onClick={() => setExtraDependencyDialogOpen(false)}>
                       {tx('Cancelar', 'Cancel')}
                     </Button>
                     <Button
                       type="button"
-                      disabled={!mountDraft().source_relative_path.trim() || !mountDraft().target_windows_path.trim()}
+                      disabled={!extraDependencyDraft().name.trim()}
                       onClick={() => {
-                        const draft = mountDraft()
-                        if (!draft.source_relative_path.trim() || !draft.target_windows_path.trim()) return
+                        const draft = extraDependencyDraft()
+                        if (!draft.name.trim()) return
+
                         patchConfig((prev) => ({
                           ...prev,
-                          folder_mounts: [...prev.folder_mounts, draft]
+                          extra_system_dependencies: [
+                            ...prev.extra_system_dependencies,
+                            {
+                              name: draft.name.trim(),
+                              state: 'MandatoryOn',
+                              check_commands: splitCommaList(draft.command),
+                              check_env_vars: splitCommaList(draft.env_vars),
+                              check_paths: splitCommaList(draft.paths)
+                            }
+                          ]
                         }))
-                        setMountDraft({
-                          source_relative_path: '',
-                          target_windows_path: '',
-                          create_source_if_missing: true
+
+                        setExtraDependencyDraft({
+                          name: '',
+                          command: '',
+                          env_vars: '',
+                          paths: ''
                         })
-                        setMountDialogOpen(false)
+                        setExtraDependencyDialogOpen(false)
                       }}
                     >
                       {tx('Confirmar', 'Confirm')}
@@ -2238,159 +2380,8 @@ export default function CreatorPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-
-              <Dialog open={mountSourceBrowserOpen()} onOpenChange={setMountSourceBrowserOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{tx('Selecionar pasta dentro do jogo', 'Select folder inside game')}</DialogTitle>
-                    <DialogDescription>
-                      {tx(
-                        'Mini navegador restrito à pasta raiz do jogo para evitar montagens fora do projeto.',
-                        'Mini browser restricted to the game root to prevent mounts outside the project.'
-                      )}
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div class="grid gap-3">
-                    <div class="rounded-md border border-border/60 bg-muted/25 p-3">
-                      <p class="mb-2 text-xs font-medium text-muted-foreground">
-                        {tx('Caminho atual', 'Current path')}
-                      </p>
-                      <nav class="overflow-x-auto" aria-label={tx('Breadcrumb de pastas', 'Folder breadcrumb')}>
-                        <ol class="flex min-w-max items-center gap-1 text-xs">
-                          <Show when={gameRoot().trim()}>
-                            <li>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                class="h-7 px-2"
-                                onClick={() => void loadMountBrowserDirs(gameRoot().trim())}
-                              >
-                                {basenamePath(gameRoot()) || '/'}
-                              </Button>
-                            </li>
-                          </Show>
-                          <For
-                            each={(() => {
-                              const root = gameRoot().trim()
-                              const current = mountBrowserPath().trim()
-                              const relative = root && current ? relativeInsideBase(root, current) : null
-                              if (!relative || relative === '.') return []
-                              let acc = root
-                              return relative
-                                .split('/')
-                                .filter(Boolean)
-                                .map((segment) => {
-                                  acc = `${acc.replace(/\/+$/, '')}/${segment}`
-                                  return { label: segment, path: acc }
-                                })
-                            })()}
-                          >
-                            {(crumb) => (
-                              <>
-                                <li class="text-muted-foreground">/</li>
-                                <li>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    class="h-7 px-2"
-                                    onClick={() => void loadMountBrowserDirs(crumb.path)}
-                                  >
-                                    {crumb.label}
-                                  </Button>
-                                </li>
-                              </>
-                            )}
-                          </For>
-                        </ol>
-                      </nav>
-                    </div>
-
-                    <div class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium">{tx('Selecionar pasta atual', 'Select current folder')}</p>
-                        <p class="truncate text-xs text-muted-foreground">
-                          {(() => {
-                            const relative = relativeInsideBase(gameRoot().trim(), mountBrowserPath().trim())
-                            return relative ?? tx('Fora da pasta raiz do jogo', 'Outside game root')
-                          })()}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          const relative = relativeInsideBase(gameRoot().trim(), mountBrowserPath().trim())
-                          if (!relative) {
-                            setStatusMessage(
-                              tx(
-                                'A pasta selecionada precisa estar dentro da pasta raiz do jogo.',
-                                'Selected folder must be inside the game root folder.'
-                              )
-                            )
-                            return
-                          }
-                          setMountDraft((prev) => ({
-                            ...prev,
-                            source_relative_path: relative
-                          }))
-                          setMountSourceBrowserOpen(false)
-                        }}
-                      >
-                        {tx('Usar esta pasta', 'Use this folder')}
-                      </Button>
-                    </div>
-
-                    <div class="grid gap-2">
-                      <p class="text-xs font-medium text-muted-foreground">
-                        {tx('Subpastas disponíveis', 'Available subfolders')}
-                      </p>
-                      <Show
-                        when={!mountBrowserLoading()}
-                        fallback={
-                          <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                            {tx('Carregando pastas...', 'Loading folders...')}
-                          </div>
-                        }
-                      >
-                        <Show
-                          when={mountBrowserDirs().length > 0}
-                          fallback={
-                            <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                              {tx('Nenhuma subpasta encontrada neste nível.', 'No subfolders found at this level.')}
-                            </div>
-                          }
-                        >
-                          <div class="grid gap-2">
-                            <For each={mountBrowserDirs()}>
-                              {(dirPath) => (
-                                <button
-                                  type="button"
-                                  class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-left hover:bg-muted/35"
-                                  onClick={() => void loadMountBrowserDirs(dirPath)}
-                                >
-                                  <span class="truncate text-sm font-medium">{basenamePath(dirPath)}</span>
-                                  <span class="text-xs text-muted-foreground">
-                                    {relativeInsideBase(gameRoot().trim(), dirPath) ?? ''}
-                                  </span>
-                                </button>
-                              )}
-                            </For>
-                          </div>
-                        </Show>
-                      </Show>
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setMountSourceBrowserOpen(false)}>
-                      {tx('Fechar', 'Close')}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
             </FieldShell>
+
           </section>
         </Show>
 
@@ -3389,28 +3380,19 @@ export default function CreatorPage() {
               }}
             />
 
-            <FieldShell
-              label={tx('Chaves protegidas', 'Protected keys')}
-              help={tx('Não podem ser sobrescritas por custom_vars: WINEPREFIX, PROTON_VERB.', 'Cannot be overwritten by custom_vars: WINEPREFIX, PROTON_VERB.')}
-              controlClass="hidden"
-              footer={
-                <Alert variant="warning">
-                  <IconAlertCircle />
-                  <AlertTitle>{tx('Chaves protegidas pelo runtime', 'Runtime-protected keys')}</AlertTitle>
-                  <AlertDescription>
-                    <span class="block">
-                      {tx(
-                        'As chaves abaixo são reservadas e qualquer override em custom_vars será ignorado.',
-                        'The keys below are reserved and any custom_vars override will be ignored.'
-                      )}
-                    </span>
-                    <span class="mt-1 block font-mono text-[11px]">WINEPREFIX · PROTON_VERB</span>
-                  </AlertDescription>
-                </Alert>
-              }
-            >
-              <span />
-            </FieldShell>
+            <Alert variant="warning">
+              <IconAlertCircle />
+              <AlertTitle>{tx('Chaves protegidas pelo runtime', 'Runtime-protected keys')}</AlertTitle>
+              <AlertDescription>
+                <span class="block">
+                  {tx(
+                    'As chaves abaixo são reservadas e qualquer override em custom_vars será ignorado.',
+                    'The keys below are reserved and any custom_vars override will be ignored.'
+                  )}
+                </span>
+                <span class="mt-1 block font-mono text-[11px]">WINEPREFIX · PROTON_VERB</span>
+              </AlertDescription>
+            </Alert>
 
             <FieldShell
               label={tx('Script pre-launch (bash)', 'Pre-launch script (bash)')}
@@ -3454,33 +3436,24 @@ export default function CreatorPage() {
               <span />
             </FieldShell>
 
-            <FieldShell
-              label={tx('Validação básica', 'Basic validation')}
-              help={tx('No MVP, os scripts aceitam apenas bash e execução local.', 'In MVP, scripts accept bash only and local execution.')}
-              controlClass="hidden"
-              footer={
-                <Alert variant="warning">
-                  <IconAlertCircle />
-                  <AlertTitle>{tx('Scripts locais (MVP)', 'Local scripts (MVP)')}</AlertTitle>
-                  <AlertDescription>
-                    <span class="block">
-                      {tx(
-                        'Scripts aceitam apenas bash e execução local no MVP.',
-                        'Scripts accept bash only and local execution in the MVP.'
-                      )}
-                    </span>
-                    <span class="mt-1 block">
-                      {tx(
-                        'Scripts não são enviados para a API comunitária. Use apenas comandos confiáveis.',
-                        'Scripts are not sent to the community API. Use trusted commands only.'
-                      )}
-                    </span>
-                  </AlertDescription>
-                </Alert>
-              }
-            >
-              <span />
-            </FieldShell>
+            <Alert variant="warning">
+              <IconAlertCircle />
+              <AlertTitle>{tx('Scripts locais (MVP)', 'Local scripts (MVP)')}</AlertTitle>
+              <AlertDescription>
+                <span class="block">
+                  {tx(
+                    'Scripts aceitam apenas bash e execução local no MVP.',
+                    'Scripts accept bash only and local execution in the MVP.'
+                  )}
+                </span>
+                <span class="mt-1 block">
+                  {tx(
+                    'Scripts não são enviados para a API comunitária. Use apenas comandos confiáveis.',
+                    'Scripts are not sent to the community API. Use trusted commands only.'
+                  )}
+                </span>
+              </AlertDescription>
+            </Alert>
           </section>
         </Show>
 
