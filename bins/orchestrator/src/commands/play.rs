@@ -12,6 +12,7 @@ use orchestrator_core::{
 };
 
 use crate::{
+    instance_lock::acquire_instance_lock,
     launch::{
         build_launch_command, dry_run_enabled, execute_script_if_present, validate_integrity,
     },
@@ -37,6 +38,42 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
             "mangohud": overrides.mangohud,
             "gamescope": overrides.gamescope,
             "gamemode": overrides.gamemode,
+        }),
+    );
+
+    let instance_lock = match acquire_instance_lock(&config.exe_hash) {
+        Ok(lock) => lock,
+        Err(err) => {
+            let output = serde_json::json!({
+                "lock": {
+                    "status": "BLOCKER",
+                    "error": err.to_string(),
+                },
+                "launch": {
+                    "status": "aborted",
+                    "reason": "another orchestrator instance is already running for this game",
+                }
+            });
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .context("failed to serialize lock failure output")?
+            );
+
+            return Err(err).context("failed to acquire game instance lock");
+        }
+    };
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "lock",
+        "GO-LK-010",
+        "instance_lock_acquired",
+        serde_json::json!({
+            "exe_hash": &config.exe_hash,
+            "lock_path": instance_lock.lock_path().to_string_lossy(),
         }),
     );
 

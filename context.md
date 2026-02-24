@@ -1593,3 +1593,25 @@ Validacao do checkpoint:
 - `cargo test -p orchestrator -- --nocapture`
 - `cargo build --workspace`
 - `cargo clippy -p orchestrator --all-targets -- -D warnings`
+
+### 2026-02-24 - Checkpoint 18
+Escopo implementado:
+- Lock de instancia por jogo (`exe_hash`) no Orquestrador:
+  - lock file em `~/.local/share/GameOrchestrator/locks/<exe_hash>.lock`;
+  - exclusao mutua por `create_new(true)` para evitar duas execucoes concorrentes;
+  - metadata no lock (`pid`, `created_at`);
+  - reclaim automatico de lock stale quando PID nao existe mais (`/proc/<pid>` ausente).
+- `--play` agora tenta adquirir lock antes do pipeline:
+  - se lock indisponivel, retorna `BLOCKER` no JSON e aborta launch;
+  - lock e liberado automaticamente ao encerrar fluxo (guard com `Drop`).
+- Observabilidade:
+  - novo evento NDJSON `GO-LK-010` ao adquirir lock com caminho do lock.
+- Testes:
+  - garante exclusividade (segunda instancia falha enquanto primeira esta ativa);
+  - garante reaproveitamento de lock stale.
+
+Validacao do checkpoint:
+- `cargo fmt --all`
+- `cargo test -p orchestrator -- --nocapture`
+- `cargo build --workspace`
+- `cargo clippy -p orchestrator --all-targets -- -D warnings`

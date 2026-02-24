@@ -1,5 +1,6 @@
 mod cli;
 mod commands;
+mod instance_lock;
 mod launch;
 mod logging;
 mod mounts;
