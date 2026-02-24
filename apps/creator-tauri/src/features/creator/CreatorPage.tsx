@@ -60,6 +60,7 @@ export default function CreatorPage() {
     outputPath,
     setOutputPath,
     gameRoot,
+    gameRootManualOverride,
     exePath,
     setExePath,
     registryImportPath,
@@ -104,6 +105,8 @@ export default function CreatorPage() {
     runCreate,
     loadWinetricksCatalog,
     pickExecutable,
+    pickGameRootOverride,
+    pickIntegrityFileRelative,
     pickRegistryFile,
     pickMountFolder,
     pickMountSourceRelative,
@@ -227,26 +230,25 @@ export default function CreatorPage() {
             <FieldShell
               label={tx('Pasta raiz do jogo', 'Game root folder')}
               help={tx(
-                'Derivada automaticamente da pasta do executável selecionado.',
-                'Automatically derived from selected executable folder.'
+                'Por padrão usa a pasta do executável principal, mas pode ser alterada se o .exe estiver em subpasta.',
+                'Defaults to the main executable folder, but can be changed if the .exe is in a subfolder.'
               )}
               hint={tx(
-                'Não é necessário selecionar pasta manualmente: ela vem do caminho do .exe.',
-                'No manual folder picker is needed: this comes from the .exe path.'
+                gameRootManualOverride()
+                  ? 'Pasta raiz alterada manualmente.'
+                  : 'Pasta raiz automática baseada no executável.',
+                gameRootManualOverride()
+                  ? 'Game root manually overridden.'
+                  : 'Automatic game root based on the executable.'
               )}
             >
-              <Input value={gameRoot()} placeholder="/home/user/Games/MyGame" readOnly class="readonly" />
+              <div class="picker-row">
+                <Input value={gameRoot()} placeholder="/home/user/Games/MyGame" readOnly class="readonly" />
+                <Button type="button" class="btn-secondary" onClick={pickGameRootOverride}>
+                  {tx('Escolher outra', 'Choose another')}
+                </Button>
+              </div>
             </FieldShell>
-
-            <TextInputField
-              label={tx('Path relativo do exe no payload', 'Relative exe path in payload')}
-              help={tx(
-                'Sempre relativo ao orquestrador, por exemplo ./game.exe.',
-                'Always relative to orchestrator, for example ./game.exe.'
-              )}
-              value={config().relative_exe_path}
-              onInput={(value) => patchConfig((prev) => ({ ...prev, relative_exe_path: value }))}
-            />
 
             <FieldShell
               label={tx('Hash SHA-256', 'SHA-256 hash')}
@@ -310,6 +312,8 @@ export default function CreatorPage() {
               onChange={(items) => patchConfig((prev) => ({ ...prev, integrity_files: items }))}
               placeholder={tx('./data/core.dll', './data/core.dll')}
               addLabel={tx('Adicionar arquivo', 'Add file')}
+              pickerLabel={tx('Escolher arquivo na pasta do jogo', 'Pick file from game folder')}
+              onPickValue={pickIntegrityFileRelative}
             />
           </section>
         </Show>

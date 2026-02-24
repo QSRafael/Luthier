@@ -168,6 +168,8 @@ type StringListFieldProps = {
   onChange: (items: string[]) => void
   placeholder?: string
   addLabel?: string
+  pickerLabel?: string
+  onPickValue?: () => Promise<string | null>
 }
 
 export function StringListField(props: StringListFieldProps) {
@@ -247,6 +249,21 @@ export function StringListField(props: StringListFieldProps) {
               }
             }}
           />
+
+          <Show when={props.onPickValue}>
+            <Button
+              type="button"
+              variant="outline"
+              class="justify-start"
+              onClick={async () => {
+                const picked = await props.onPickValue?.()
+                if (!picked) return
+                setDraft(picked)
+              }}
+            >
+              {props.pickerLabel ?? 'Escolher arquivo'}
+            </Button>
+          </Show>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

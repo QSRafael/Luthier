@@ -1899,3 +1899,25 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 32
+Escopo implementado:
+- `Executável principal`:
+  - picker agora filtra tipos comuns de launchers Windows (`.exe`, `.bat`, `.cmd`, `.com`).
+- `Pasta raiz do jogo`:
+  - continua derivada automaticamente da pasta do executável por padrão;
+  - novo botão `Escolher outra` para override manual quando o executável está em subpasta;
+  - indicador textual no `hint` informa se a pasta raiz está automática ou alterada manualmente.
+- `relative_exe_path`:
+  - campo removido da UI (continua sendo gerado automaticamente a partir de `exePath` + `gameRoot`).
+- `Arquivos obrigatórios (integrity_files)`:
+  - dialog de adição agora possui botão para escolher arquivo via picker;
+  - seleção tenta abrir na pasta raiz do jogo;
+  - valida que o arquivo selecionado esteja dentro da pasta raiz do jogo/subpastas (quando o path completo está disponível);
+  - valor salvo no payload como caminho relativo (`./...`).
+- Infraestrutura:
+  - `StringListField` passou a aceitar ação opcional de picker (`onPickValue`) para fluxos híbridos texto + seleção.
+  - `useCreatorController` ganhou helpers para override de pasta raiz e seleção de arquivo obrigatório relativo.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)

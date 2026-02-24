@@ -93,6 +93,7 @@ export function useCreatorController() {
 
   const [outputPath, setOutputPath] = createSignal('./tmp/game-orchestrator')
   const [gameRoot, setGameRoot] = createSignal('./tmp')
+  const [gameRootManualOverride, setGameRootManualOverride] = createSignal(false)
   const [exePath, setExePath] = createSignal('')
   const [registryImportPath, setRegistryImportPath] = createSignal('')
   const [iconPreviewPath, setIconPreviewPath] = createSignal('')
@@ -269,11 +270,17 @@ export function useCreatorController() {
     const detectedRoot = dirname(currentExePath)
     if (!detectedRoot || detectedRoot === currentExePath) return
 
-    if (gameRoot() !== detectedRoot) {
+    if (!gameRootManualOverride() && gameRoot() !== detectedRoot) {
       setGameRoot(detectedRoot)
     }
+  })
 
-    const relative = relativeFromRoot(detectedRoot, currentExePath)
+  createEffect(() => {
+    const currentExePath = exePath().trim()
+    if (!currentExePath) return
+
+    const baseRoot = gameRoot().trim() || dirname(currentExePath)
+    const relative = relativeFromRoot(baseRoot, currentExePath)
     const nextRelativePath = relative ? `./${relative}` : `./${basename(currentExePath)}`
     if (config().relative_exe_path !== nextRelativePath) {
       patchConfig((prev) => ({ ...prev, relative_exe_path: nextRelativePath }))
@@ -381,12 +388,13 @@ export function useCreatorController() {
   const pickExecutable = async () => {
     const selected = await pickFile({
       title: tx('Selecionar executável do jogo', 'Select game executable'),
-      filters: [{ name: 'Windows Executable', extensions: ['exe'] }]
+      filters: [{ name: 'Windows Launchers', extensions: ['exe', 'bat', 'cmd', 'com'] }]
     })
     if (!selected) return
 
     setExePath(selected)
     const detectedRoot = dirname(selected)
+    setGameRootManualOverride(false)
     setGameRoot(detectedRoot)
 
     const relative = relativeFromRoot(detectedRoot, selected)
@@ -404,6 +412,41 @@ export function useCreatorController() {
     })
     if (!selected) return
     setRegistryImportPath(selected)
+  }
+
+  const pickGameRootOverride = async () => {
+    const selected = await pickFolder({
+      title: tx('Selecionar pasta raiz do jogo', 'Select game root folder')
+    })
+    if (!selected) return
+    setGameRoot(selected)
+    setGameRootManualOverride(true)
+  }
+
+  const pickIntegrityFileRelative = async () => {
+    const selected = await pickFile({
+      title: tx('Selecionar arquivo obrigatório', 'Select required file'),
+      defaultPath: gameRoot() || undefined
+    })
+    if (!selected) return null
+
+    // Browser fallback may return only a file name; accept as relative input.
+    if (!selected.includes('/') && !selected.includes('\\')) {
+      return `./${basename(selected)}`
+    }
+
+    const relative = relativeFromRoot(gameRoot(), selected)
+    if (!relative) {
+      setStatusMessage(
+        tx(
+          'O arquivo selecionado precisa estar dentro da pasta raiz do jogo.',
+          'Selected file must be inside the game root folder.'
+        )
+      )
+      return null
+    }
+
+    return `./${relative}`
   }
 
   const pickMountFolder = async (index: number) => {
@@ -638,6 +681,7 @@ export function useCreatorController() {
     setOutputPath,
     gameRoot,
     setGameRoot,
+    gameRootManualOverride,
     exePath,
     setExePath,
     registryImportPath,
@@ -685,6 +729,8 @@ export function useCreatorController() {
     runCreate,
     loadWinetricksCatalog,
     pickExecutable,
+    pickGameRootOverride,
+    pickIntegrityFileRelative,
     pickRegistryFile,
     pickMountFolder,
     pickMountSourceRelative,
