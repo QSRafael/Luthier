@@ -1,5 +1,6 @@
 mod error;
 
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -71,40 +72,61 @@ pub fn to_relative_inside_game_root(
         candidate.to_path_buf()
     };
 
-    validate_relative_path(&relative)?;
-    Ok(path_to_unix_like(&relative))
+    let raw = path_to_unix_like(&relative);
+    normalize_relative_payload_path(&raw)
 }
 
 pub fn validate_game_config_relative_paths(config: &GameConfig) -> Result<(), CreatorError> {
-    validate_relative_path(Path::new(&config.relative_exe_path))?;
+    normalize_relative_payload_path(&config.relative_exe_path)?;
 
     for path in &config.integrity_files {
-        validate_relative_path(Path::new(path))?;
+        normalize_relative_payload_path(path)?;
     }
 
+    let mut seen_mount_targets = HashSet::new();
     for mount in &config.folder_mounts {
-        validate_relative_path(Path::new(&mount.source_relative_path))?;
-    }
+        normalize_relative_payload_path(&mount.source_relative_path)?;
+        let normalized_target = normalize_windows_mount_target(&mount.target_windows_path)?;
 
-    Ok(())
-}
-
-fn validate_relative_path(path: &Path) -> Result<(), CreatorError> {
-    if path.is_absolute() {
-        return Err(CreatorError::AbsolutePathNotAllowed(
-            path.to_string_lossy().into_owned(),
-        ));
-    }
-
-    for component in path.components() {
-        if matches!(component, Component::ParentDir) {
-            return Err(CreatorError::PathTraversalNotAllowed(
-                path.to_string_lossy().into_owned(),
+        if !seen_mount_targets.insert(normalized_target.to_ascii_lowercase()) {
+            return Err(CreatorError::DuplicateFolderMountTarget(
+                mount.target_windows_path.clone(),
             ));
         }
     }
 
     Ok(())
+}
+
+fn normalize_relative_payload_path(raw: &str) -> Result<String, CreatorError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(CreatorError::InvalidRelativePath(raw.to_string()));
+    }
+
+    let normalized = trimmed.replace('\\', "/");
+    if normalized.starts_with('/') || has_windows_drive_prefix(&normalized) {
+        return Err(CreatorError::AbsolutePathNotAllowed(raw.to_string()));
+    }
+
+    let mut out = Vec::new();
+    for part in normalized.split('/') {
+        if part.is_empty() || part == "." {
+            continue;
+        }
+
+        if part == ".." {
+            return Err(CreatorError::PathTraversalNotAllowed(raw.to_string()));
+        }
+
+        out.push(part);
+    }
+
+    if out.is_empty() {
+        return Err(CreatorError::InvalidRelativePath(raw.to_string()));
+    }
+
+    Ok(out.join("/"))
 }
 
 fn path_to_unix_like(path: &Path) -> String {
@@ -116,6 +138,57 @@ fn path_to_unix_like(path: &Path) -> String {
         })
         .collect::<Vec<String>>()
         .join("/")
+}
+
+fn has_windows_drive_prefix(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic()
+}
+
+fn normalize_windows_mount_target(raw: &str) -> Result<String, CreatorError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(CreatorError::InvalidFolderMountTarget(raw.to_string()));
+    }
+
+    if trimmed.contains('%') {
+        return Err(CreatorError::InvalidFolderMountTarget(raw.to_string()));
+    }
+
+    if trimmed.starts_with("\\\\") || trimmed.starts_with("//") {
+        return Err(CreatorError::InvalidFolderMountTarget(raw.to_string()));
+    }
+
+    let normalized = trimmed.replace('/', "\\");
+    let bytes = normalized.as_bytes();
+    if bytes.len() < 2 || bytes[1] != b':' || !bytes[0].is_ascii_alphabetic() {
+        return Err(CreatorError::InvalidFolderMountTarget(raw.to_string()));
+    }
+
+    let drive = (bytes[0] as char).to_ascii_uppercase();
+    let remainder = normalized[2..].trim_start_matches('\\');
+    if remainder.is_empty() {
+        return Err(CreatorError::InvalidFolderMountTarget(raw.to_string()));
+    }
+
+    let mut segments = Vec::new();
+    for segment in remainder.split('\\') {
+        if segment.is_empty() || segment == "." {
+            continue;
+        }
+
+        if segment == ".." {
+            return Err(CreatorError::InvalidFolderMountTarget(raw.to_string()));
+        }
+
+        segments.push(segment);
+    }
+
+    if segments.is_empty() {
+        return Err(CreatorError::InvalidFolderMountTarget(raw.to_string()));
+    }
+
+    Ok(format!(r"{drive}:\{}", segments.join("\\")))
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -166,11 +239,74 @@ mod tests {
     }
 
     #[test]
+    fn rejects_windows_absolute_relative_exe_path() {
+        let mut cfg = sample_config();
+        cfg.relative_exe_path = r"C:\games\sample.exe".to_string();
+
+        let err = validate_game_config_relative_paths(&cfg)
+            .expect_err("must reject windows absolute path");
+        assert!(matches!(err, CreatorError::AbsolutePathNotAllowed(_)));
+    }
+
+    #[test]
+    fn rejects_backslash_traversal_in_integrity_files() {
+        let mut cfg = sample_config();
+        cfg.integrity_files = vec![r"..\secret.dll".to_string()];
+
+        let err =
+            validate_game_config_relative_paths(&cfg).expect_err("must reject backslash traversal");
+        assert!(matches!(err, CreatorError::PathTraversalNotAllowed(_)));
+    }
+
+    #[test]
+    fn rejects_invalid_folder_mount_target() {
+        let mut cfg = sample_config();
+        cfg.folder_mounts = vec![FolderMount {
+            source_relative_path: "save".to_string(),
+            target_windows_path: r"C:\users\%USERPROFILE%\Game".to_string(),
+            create_source_if_missing: true,
+        }];
+
+        let err = validate_game_config_relative_paths(&cfg)
+            .expect_err("must reject invalid mount target");
+        assert!(matches!(err, CreatorError::InvalidFolderMountTarget(_)));
+    }
+
+    #[test]
+    fn rejects_duplicate_folder_mount_target() {
+        let mut cfg = sample_config();
+        cfg.folder_mounts = vec![
+            FolderMount {
+                source_relative_path: "save_a".to_string(),
+                target_windows_path: r"C:\users\steamuser\Documents\Game".to_string(),
+                create_source_if_missing: true,
+            },
+            FolderMount {
+                source_relative_path: "save_b".to_string(),
+                target_windows_path: r"c:/users/steamuser/documents/game".to_string(),
+                create_source_if_missing: true,
+            },
+        ];
+
+        let err = validate_game_config_relative_paths(&cfg)
+            .expect_err("must reject duplicate mount targets");
+        assert!(matches!(err, CreatorError::DuplicateFolderMountTarget(_)));
+    }
+
+    #[test]
     fn keeps_relative_path_inside_root() {
         let root = Path::new("/games/sample");
         let relative =
             to_relative_inside_game_root(root, Path::new("data/game.exe")).expect("valid relative");
         assert_eq!(relative, "data/game.exe");
+    }
+
+    #[test]
+    fn normalizes_backslash_relative_path_inside_root() {
+        let root = Path::new("/games/sample");
+        let relative = to_relative_inside_game_root(root, Path::new(r"data\bin\game.exe"))
+            .expect("valid relative");
+        assert_eq!(relative, "data/bin/game.exe");
     }
 
     fn sample_config() -> GameConfig {

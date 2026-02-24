@@ -1594,6 +1594,32 @@ Validacao do checkpoint:
 - `cargo build --workspace`
 - `cargo clippy -p orchestrator --all-targets -- -D warnings`
 
+### 2026-02-24 - Checkpoint 19
+Escopo implementado:
+- Hardening de validacao no `creator-core` (antes de gerar o binario):
+  - paths relativos agora sao validados de forma lexical e cross-platform:
+    - bloqueia vazio;
+    - bloqueia absolutos Linux (`/`) e Windows (`C:\...`);
+    - bloqueia traversal com `/..` e `\..`.
+  - validacao de `folder_mounts.target_windows_path` no App Criador:
+    - exige formato `X:\...`;
+    - bloqueia `%ENV%`, UNC (`\\server\share`) e traversal;
+    - normaliza e detecta destinos duplicados (case-insensitive).
+- `to_relative_inside_game_root` agora retorna path normalizado em formato unix-like.
+- Novas variantes de erro em `CreatorError` para falhas de mount target e path invalido.
+- Testes adicionados para:
+  - absoluto Windows em path relativo;
+  - traversal com backslash;
+  - mount target invalido;
+  - mount target duplicado;
+  - normalizacao de path com backslash.
+
+Validacao do checkpoint:
+- `cargo fmt --all`
+- `cargo test -p creator-core -- --nocapture`
+- `cargo build --workspace`
+- `cargo clippy -p creator-core --all-targets -- -D warnings`
+
 ### 2026-02-24 - Checkpoint 18
 Escopo implementado:
 - Lock de instancia por jogo (`exe_hash`) no Orquestrador:
