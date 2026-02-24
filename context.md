@@ -1342,3 +1342,19 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Integrar `creator-core` ao backend Tauri (`src-tauri`) com comandos de alto nivel para UI.
 - Executar `PrefixSetupPlan` de forma real no Orquestrador com logs por etapa.
+
+### 2026-02-24 - Checkpoint 06
+Escopo implementado:
+- Backend inicial do App Criador em `apps/creator-tauri/src-tauri`:
+  - funcao `create_executable(...)`:
+    - recebe JSON de config;
+    - desserializa para `GameConfig`;
+    - chama `creator-core` para gerar o orquestrador.
+  - funcao `hash_executable(...)` para SHA-256 do executavel alvo.
+- Arquitetura isolada:
+  - regra de negocio continua em crates (`creator-core` + `orchestrator-core`);
+  - `src-tauri` atua como camada de adaptacao para futura exposicao de `#[tauri::command]`.
+
+Proximo checkpoint planejado:
+- Adicionar comandos Tauri reais no backend (`#[tauri::command]`) e conectar ao frontend.
+- Implementar execucao real do `PrefixSetupPlan` no fluxo `--play` do Orquestrador.

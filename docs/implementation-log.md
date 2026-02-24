@@ -73,5 +73,14 @@
   - utilitário `to_relative_inside_game_root(...)`.
 - `orchestrator-core::injector` ganhou `inject_from_parts(...)` para uso direto do backend sem arquivo intermediário.
 - Próximo passo técnico:
-  - ligar `creator-core` ao `src-tauri` com comandos invocáveis pela UI;
-  - iniciar execução real do `PrefixSetupPlan` no Orquestrador.
+- ligar `creator-core` ao `src-tauri` com comandos invocáveis pela UI;
+- iniciar execução real do `PrefixSetupPlan` no Orquestrador.
+
+## 2026-02-24 (checkpoint 06)
+- Criado backend inicial do App Criador em `apps/creator-tauri/src-tauri`:
+  - `create_executable(...)` (parse JSON -> `creator-core` -> gera binário);
+  - `hash_executable(...)` (SHA-256 do `.exe`).
+- Estrutura preparada para virar `#[tauri::command]` sem reescrever regra de negócio.
+- Próximo passo técnico:
+  - adicionar comandos Tauri reais;
+  - iniciar execução real do `PrefixSetupPlan` em `--play`.

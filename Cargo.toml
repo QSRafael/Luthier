@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "apps/creator-tauri/src-tauri",
   "crates/orchestrator-core",
   "crates/creator-core",
   "bins/orchestrator",

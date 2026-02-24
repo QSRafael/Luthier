@@ -8,3 +8,4 @@ Motivo do placeholder neste commit:
 
 Proximo passo:
 - gerar scaffold Tauri real e integrar com `orchestrator-core`.
+- backend Rust inicial já está em `src-tauri/` usando `creator-core`.
