@@ -209,6 +209,7 @@ type FeatureStateFieldProps = {
   help: string
   value: FeatureState
   onChange: (value: FeatureState) => void
+  footer?: JSX.Element
 }
 
 type FeatureToggleCardProps = {
@@ -253,7 +254,7 @@ export function FeatureStateField(props: FeatureStateFieldProps) {
   const state = createMemo(() => decodeFeatureState(props.value))
 
   return (
-    <FieldShell label={props.label} help={props.help} controlClass="grid gap-2 md:grid-cols-2">
+    <FieldShell label={props.label} help={props.help} controlClass="grid gap-2 md:grid-cols-2" footer={props.footer}>
       <>
         <FeatureToggleCard
           title="Ativado"

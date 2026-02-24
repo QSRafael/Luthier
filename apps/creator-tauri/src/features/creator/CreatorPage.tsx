@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from 'solid-js'
+import { createMemo, createSignal, For, Show } from 'solid-js'
 import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import {
@@ -27,6 +27,7 @@ import { Input } from '../../components/ui/input'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemMain, ItemTitle } from '../../components/ui/item'
 import { Select } from '../../components/ui/select'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import type { Theme } from '../../components/theme-provider'
 import { Locale } from '../../i18n'
 import { CreatorTab, FeatureState, RuntimePreference } from '../../models/config'
@@ -226,6 +227,31 @@ export default function CreatorPage() {
       'Versão preferida para runtime quando o modo Auto escolher Proton/Wine conforme disponibilidade.',
       'Preferred runtime version when Auto mode picks Proton/Wine based on availability.'
     )
+  }
+
+  const gamescopeAdditionalOptionsList = createMemo(() => {
+    const raw = config().environment.gamescope.additional_options.trim()
+    if (!raw) return [] as string[]
+    if (raw.includes('\n')) {
+      return raw
+        .split('\n')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+    return [raw]
+  })
+
+  const setGamescopeAdditionalOptionsList = (items: string[]) => {
+    patchConfig((prev) => ({
+      ...prev,
+      environment: {
+        ...prev.environment,
+        gamescope: {
+          ...prev.environment.gamescope,
+          additional_options: items.join(' ').trim()
+        }
+      }
+    }))
   }
 
   return (
@@ -771,226 +797,264 @@ export default function CreatorPage() {
               )}
               value={config().environment.gamescope.state}
               onChange={setGamescopeState}
+              footer={
+                <Show
+                  when={gamescopeEnabled()}
+                  fallback={
+                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      {tx(
+                        'Gamescope está desativado. Ative para configurar resolução, upscale e janela.',
+                        'Gamescope is disabled. Enable it to configure resolution, upscale and window mode.'
+                      )}
+                    </div>
+                  }
+                >
+                  <div class="grid gap-3">
+                    <div class="grid gap-3 md:grid-cols-2">
+                      <div class="rounded-md border border-border/60 bg-background/70 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{tx('Método de upscale', 'Upscale method')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {tx('Método usado pelo gamescope para upscale.', 'Method used by gamescope for upscaling.')}
+                          </p>
+                        </div>
+                        <Tabs
+                          value={config().environment.gamescope.upscale_method}
+                          onChange={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  upscale_method: value as UpscaleMethod,
+                                  fsr: value === 'fsr'
+                                }
+                              }
+                            }))
+                          }
+                          class="mt-3"
+                        >
+                          <TabsList class="w-full justify-start overflow-x-auto">
+                            <For each={upscaleMethodOptions()}>
+                              {(option) => <TabsTrigger value={option.value}>{option.label}</TabsTrigger>}
+                            </For>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+
+                      <div class="rounded-md border border-border/60 bg-background/70 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{tx('Tipo de janela', 'Window type')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {tx('Define comportamento da janela no gamescope.', 'Defines gamescope window behavior.')}
+                          </p>
+                        </div>
+                        <Tabs
+                          value={config().environment.gamescope.window_type}
+                          onChange={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  window_type: value as GamescopeWindowType
+                                }
+                              }
+                            }))
+                          }
+                          class="mt-3"
+                        >
+                          <TabsList class="w-full justify-start overflow-x-auto">
+                            <For each={windowTypeOptions()}>
+                              {(option) => <TabsTrigger value={option.value}>{option.label}</TabsTrigger>}
+                            </For>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                    </div>
+
+                    <div class="table-grid table-grid-two">
+                      <TextInputField
+                        label={tx('Resolução do jogo - largura', 'Game resolution - width')}
+                        help={tx('Largura renderizada pelo jogo.', 'Width rendered by the game.')}
+                        value={config().environment.gamescope.game_width}
+                        onInput={(value) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            environment: {
+                              ...prev.environment,
+                              gamescope: {
+                                ...prev.environment.gamescope,
+                                game_width: value
+                              }
+                            }
+                          }))
+                        }
+                      />
+
+                      <TextInputField
+                        label={tx('Resolução do jogo - altura', 'Game resolution - height')}
+                        help={tx('Altura renderizada pelo jogo.', 'Height rendered by the game.')}
+                        value={config().environment.gamescope.game_height}
+                        onInput={(value) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            environment: {
+                              ...prev.environment,
+                              gamescope: {
+                                ...prev.environment.gamescope,
+                                game_height: value
+                              }
+                            }
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div class="table-grid table-grid-two">
+                      <TextInputField
+                        label={tx('Resolução da tela - largura', 'Display resolution - width')}
+                        help={tx('Largura final de saída do gamescope.', 'Final output width from gamescope.')}
+                        value={config().environment.gamescope.output_width}
+                        onInput={(value) =>
+                          patchConfig((prev) => {
+                            const nextHeight = prev.environment.gamescope.output_height
+                            return {
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  output_width: value,
+                                  resolution: value && nextHeight ? `${value}x${nextHeight}` : null
+                                }
+                              }
+                            }
+                          })
+                        }
+                      />
+
+                      <TextInputField
+                        label={tx('Resolução da tela - altura', 'Display resolution - height')}
+                        help={tx('Altura final de saída do gamescope.', 'Final output height from gamescope.')}
+                        value={config().environment.gamescope.output_height}
+                        onInput={(value) =>
+                          patchConfig((prev) => {
+                            const nextWidth = prev.environment.gamescope.output_width
+                            return {
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  output_height: value,
+                                  resolution: nextWidth && value ? `${nextWidth}x${value}` : null
+                                }
+                              }
+                            }
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div class="grid gap-3 md:grid-cols-2">
+                      <SwitchChoiceCard
+                        title={tx('Limitar FPS', 'Enable FPS limiter')}
+                        description={tx('Ativa limitador de FPS do gamescope.', 'Enables gamescope FPS limiter.')}
+                        checked={config().environment.gamescope.enable_limiter}
+                        onChange={(checked) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            environment: {
+                              ...prev.environment,
+                              gamescope: {
+                                ...prev.environment.gamescope,
+                                enable_limiter: checked
+                              }
+                            }
+                          }))
+                        }
+                      />
+
+                      <SwitchChoiceCard
+                        title={tx('Forçar captura de cursor', 'Force grab cursor')}
+                        description={tx(
+                          'Força modo relativo de mouse para evitar perda de foco.',
+                          'Forces relative mouse mode to avoid focus loss.'
+                        )}
+                        checked={config().environment.gamescope.force_grab_cursor}
+                        onChange={(checked) =>
+                          patchConfig((prev) => ({
+                            ...prev,
+                            environment: {
+                              ...prev.environment,
+                              gamescope: {
+                                ...prev.environment.gamescope,
+                                force_grab_cursor: checked
+                              }
+                            }
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <Show when={config().environment.gamescope.enable_limiter}>
+                      <div class="table-grid table-grid-two">
+                        <TextInputField
+                          label={tx('FPS limite', 'FPS limit')}
+                          help={tx('Limite de FPS quando o jogo está em foco.', 'FPS limit when game is focused.')}
+                          value={config().environment.gamescope.fps_limiter}
+                          onInput={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  fps_limiter: value
+                                }
+                              }
+                            }))
+                          }
+                        />
+
+                        <TextInputField
+                          label={tx('FPS sem foco', 'FPS limit without focus')}
+                          help={tx('Limite de FPS quando o jogo perde foco.', 'FPS limit when game loses focus.')}
+                          value={config().environment.gamescope.fps_limiter_no_focus}
+                          onInput={(value) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              environment: {
+                                ...prev.environment,
+                                gamescope: {
+                                  ...prev.environment.gamescope,
+                                  fps_limiter_no_focus: value
+                                }
+                              }
+                            }))
+                          }
+                        />
+                      </div>
+                    </Show>
+
+                    <StringListField
+                      label={tx('Opções adicionais do gamescope', 'Gamescope additional options')}
+                      help={tx(
+                        'Adicione flags extras que serão anexadas ao comando do gamescope.',
+                        'Add extra flags that will be appended to the gamescope command.'
+                      )}
+                      items={gamescopeAdditionalOptionsList()}
+                      onChange={setGamescopeAdditionalOptionsList}
+                      placeholder={tx('--prefer-vk-device 1002:73bf', '--prefer-vk-device 1002:73bf')}
+                      addLabel={tx('Adicionar opção', 'Add option')}
+                    />
+                  </div>
+                </Show>
+              }
             />
-
-            <Show when={gamescopeEnabled()} fallback={<div class="info-card"><span>{tx('Gamescope está desativado. Ative para configurar resolução, upscale e janela.', 'Gamescope is disabled. Enable it to configure resolution, upscale and window mode.')}</span></div>}>
-              <SelectField<UpscaleMethod>
-                label={tx('Método de upscale', 'Upscale method')}
-                help={tx('Método usado pelo gamescope para upscale.', 'Method used by gamescope for upscaling.')}
-                value={config().environment.gamescope.upscale_method}
-                options={upscaleMethodOptions()}
-                onChange={(value) =>
-                  patchConfig((prev) => ({
-                    ...prev,
-                    environment: {
-                      ...prev.environment,
-                      gamescope: {
-                        ...prev.environment.gamescope,
-                        upscale_method: value,
-                        fsr: value === 'fsr'
-                      }
-                    }
-                  }))
-                }
-              />
-
-              <div class="table-grid table-grid-two">
-                <TextInputField
-                  label={tx('Resolução do jogo - largura', 'Game resolution - width')}
-                  help={tx('Largura renderizada pelo jogo.', 'Width rendered by the game.')}
-                  value={config().environment.gamescope.game_width}
-                  onInput={(value) =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      environment: {
-                        ...prev.environment,
-                        gamescope: {
-                          ...prev.environment.gamescope,
-                          game_width: value
-                        }
-                      }
-                    }))
-                  }
-                />
-
-                <TextInputField
-                  label={tx('Resolução do jogo - altura', 'Game resolution - height')}
-                  help={tx('Altura renderizada pelo jogo.', 'Height rendered by the game.')}
-                  value={config().environment.gamescope.game_height}
-                  onInput={(value) =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      environment: {
-                        ...prev.environment,
-                        gamescope: {
-                          ...prev.environment.gamescope,
-                          game_height: value
-                        }
-                      }
-                    }))
-                  }
-                />
-              </div>
-
-              <div class="table-grid table-grid-two">
-                <TextInputField
-                  label={tx('Resolução da tela - largura', 'Display resolution - width')}
-                  help={tx('Largura final de saída do gamescope.', 'Final output width from gamescope.')}
-                  value={config().environment.gamescope.output_width}
-                  onInput={(value) =>
-                    patchConfig((prev) => {
-                      const nextHeight = prev.environment.gamescope.output_height
-                      return {
-                        ...prev,
-                        environment: {
-                          ...prev.environment,
-                          gamescope: {
-                            ...prev.environment.gamescope,
-                            output_width: value,
-                            resolution: value && nextHeight ? `${value}x${nextHeight}` : null
-                          }
-                        }
-                      }
-                    })
-                  }
-                />
-
-                <TextInputField
-                  label={tx('Resolução da tela - altura', 'Display resolution - height')}
-                  help={tx('Altura final de saída do gamescope.', 'Final output height from gamescope.')}
-                  value={config().environment.gamescope.output_height}
-                  onInput={(value) =>
-                    patchConfig((prev) => {
-                      const nextWidth = prev.environment.gamescope.output_width
-                      return {
-                        ...prev,
-                        environment: {
-                          ...prev.environment,
-                          gamescope: {
-                            ...prev.environment.gamescope,
-                            output_height: value,
-                            resolution: nextWidth && value ? `${nextWidth}x${value}` : null
-                          }
-                        }
-                      }
-                    })
-                  }
-                />
-              </div>
-
-              <SelectField<GamescopeWindowType>
-                label={tx('Tipo de janela', 'Window type')}
-                help={tx('Define comportamento da janela no gamescope.', 'Defines gamescope window behavior.')}
-                value={config().environment.gamescope.window_type}
-                options={windowTypeOptions()}
-                onChange={(value) =>
-                  patchConfig((prev) => ({
-                    ...prev,
-                    environment: {
-                      ...prev.environment,
-                      gamescope: {
-                        ...prev.environment.gamescope,
-                        window_type: value
-                      }
-                    }
-                  }))
-                }
-              />
-
-              <ToggleField
-                label={tx('Limitar FPS', 'Enable FPS limiter')}
-                help={tx('Ativa limitador de FPS do gamescope.', 'Enables gamescope FPS limiter.')}
-                checked={config().environment.gamescope.enable_limiter}
-                onChange={(checked) =>
-                  patchConfig((prev) => ({
-                    ...prev,
-                    environment: {
-                      ...prev.environment,
-                      gamescope: {
-                        ...prev.environment.gamescope,
-                        enable_limiter: checked
-                      }
-                    }
-                  }))
-                }
-              />
-
-              <Show when={config().environment.gamescope.enable_limiter}>
-                <div class="table-grid table-grid-two">
-                  <TextInputField
-                    label={tx('FPS limite', 'FPS limit')}
-                    help={tx('Limite de FPS quando o jogo está em foco.', 'FPS limit when game is focused.')}
-                    value={config().environment.gamescope.fps_limiter}
-                    onInput={(value) =>
-                      patchConfig((prev) => ({
-                        ...prev,
-                        environment: {
-                          ...prev.environment,
-                          gamescope: {
-                            ...prev.environment.gamescope,
-                            fps_limiter: value
-                          }
-                        }
-                      }))
-                    }
-                  />
-
-                  <TextInputField
-                    label={tx('FPS sem foco', 'FPS limit without focus')}
-                    help={tx('Limite de FPS quando o jogo perde foco.', 'FPS limit when game loses focus.')}
-                    value={config().environment.gamescope.fps_limiter_no_focus}
-                    onInput={(value) =>
-                      patchConfig((prev) => ({
-                        ...prev,
-                        environment: {
-                          ...prev.environment,
-                          gamescope: {
-                            ...prev.environment.gamescope,
-                            fps_limiter_no_focus: value
-                          }
-                        }
-                      }))
-                    }
-                  />
-                </div>
-              </Show>
-
-              <ToggleField
-                label={tx('Forçar captura de cursor', 'Force grab cursor')}
-                help={tx('Força modo relativo de mouse para evitar perda de foco.', 'Forces relative mouse mode to avoid focus loss.')}
-                checked={config().environment.gamescope.force_grab_cursor}
-                onChange={(checked) =>
-                  patchConfig((prev) => ({
-                    ...prev,
-                    environment: {
-                      ...prev.environment,
-                      gamescope: {
-                        ...prev.environment.gamescope,
-                        force_grab_cursor: checked
-                      }
-                    }
-                  }))
-                }
-              />
-
-              <TextInputField
-                label={tx('Opções adicionais do gamescope', 'Gamescope additional options')}
-                help={tx('Flags extras adicionadas ao comando do gamescope.', 'Extra flags appended to gamescope command.')}
-                value={config().environment.gamescope.additional_options}
-                onInput={(value) =>
-                  patchConfig((prev) => ({
-                    ...prev,
-                    environment: {
-                      ...prev.environment,
-                      gamescope: {
-                        ...prev.environment.gamescope,
-                        additional_options: value
-                      }
-                    }
-                  }))
-                }
-              />
-            </Show>
 
             <FeatureStateField
               label="Gamemode"

@@ -1940,6 +1940,18 @@ Compatibilidade de payload:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 45
+Escopo implementado:
+- `FeatureStateField` ganhou suporte a `footer`, permitindo colocar opcoes avancadas dentro do mesmo item.
+- Aba `Performance` / item `Gamescope` reestruturado:
+  - opcoes avancadas agora aparecem no rodape do proprio item `Gamescope` (quando ativado), em vez de itens soltos abaixo;
+  - `Metodo de upscale` e `Tipo de janela` migrados para seletores segmentados (estilo tabs lado a lado);
+  - `Limitar FPS` e `Forcar captura de cursor` migrados para cards clicaveis com switch, lado a lado;
+  - `Opcoes adicionais do gamescope` migradas para fluxo de lista com dialog (estilo `Argumentos de launch`), armazenando o payload como string concatenada para preservar o schema atual.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27
