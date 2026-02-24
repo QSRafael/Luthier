@@ -1895,6 +1895,20 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 42
+Escopo implementado:
+- Novo padrao reutilizavel de toggle em `card clicavel + switch` aplicado na aba `Runtime`:
+  - clicar no card inteiro alterna o switch;
+  - estilo visual destaca o card quando ativo.
+- Item `Versao de runtime` reestruturado:
+  - topo do item volta ao padrao esquerda/direita (`titulo+descricao` na esquerda, campo de versao na direita);
+  - `Versao obrigatoria` e `Auto update` foram movidos para o rodape do item;
+  - ambos agora usam o novo padrao de card clicavel e receberam descricoes curtas.
+- `ESYNC` e `FSYNC` tambem foram migrados para o mesmo padrao de card clicavel.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

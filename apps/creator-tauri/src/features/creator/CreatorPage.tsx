@@ -23,7 +23,7 @@ import {
   DialogTitle
 } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMain, ItemTitle } from '../../components/ui/item'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemMain, ItemTitle } from '../../components/ui/item'
 import { Select } from '../../components/ui/select'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
 import type { Theme } from '../../components/theme-provider'
@@ -48,6 +48,48 @@ function tabLabel(tab: CreatorTab, controller: CreatorController) {
   if (tab === 'wrappers') return tx('Wrappers e Ambiente', 'Wrappers and Environment')
   if (tab === 'scripts') return tx('Scripts', 'Scripts')
   return tx('Revisão e Gerar', 'Review and Generate')
+}
+
+type SwitchChoiceCardProps = {
+  title: string
+  description: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}
+
+function SwitchChoiceCard(props: SwitchChoiceCardProps) {
+  const toggle = () => props.onChange(!props.checked)
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      class={
+        'flex items-center justify-between gap-3 rounded-md border px-3 py-3 transition-colors ' +
+        (props.checked
+          ? 'border-primary/40 bg-accent/30'
+          : 'border-border/60 bg-background/70 hover:border-border hover:bg-accent/20')
+      }
+      onClick={toggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          toggle()
+        }
+      }}
+    >
+      <div class="min-w-0">
+        <p class="text-sm font-medium">{props.title}</p>
+        <p class="text-xs text-muted-foreground">{props.description}</p>
+      </div>
+      <Switch checked={props.checked} onChange={props.onChange} onClick={(e) => e.stopPropagation()}>
+        <SwitchInput />
+        <SwitchControl>
+          <SwitchThumb />
+        </SwitchControl>
+      </Switch>
+    </div>
+  )
 }
 
 export default function CreatorPage() {
@@ -367,7 +409,7 @@ export default function CreatorPage() {
 
             <Item>
               <ItemMain>
-                <ItemContent class="space-y-3">
+                <ItemContent>
                   <div class="flex items-center gap-2">
                     <ItemTitle>{runtimeVersionFieldLabel()}</ItemTitle>
                     <span
@@ -378,6 +420,9 @@ export default function CreatorPage() {
                     </span>
                   </div>
                   <ItemDescription>{runtimeVersionFieldHelp()}</ItemDescription>
+                </ItemContent>
+
+                <ItemActions class="md:self-end">
                   <Input
                     value={config().runner.proton_version}
                     placeholder={
@@ -393,117 +438,87 @@ export default function CreatorPage() {
                       }))
                     }
                   />
-                </ItemContent>
-
-                <ItemActions class="grid gap-3 sm:grid-cols-2 md:self-end">
-                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium">{tx('Versão obrigatória', 'Required version')}</p>
-                    </div>
-                    <Switch
-                      checked={config().requirements.runtime.strict}
-                      onChange={(checked) =>
-                        patchConfig((prev) => ({
-                          ...prev,
-                          requirements: {
-                            ...prev.requirements,
-                            runtime: {
-                              ...prev.requirements.runtime,
-                              strict: checked
-                            }
-                          }
-                        }))
-                      }
-                    >
-                      <SwitchInput />
-                      <SwitchControl>
-                        <SwitchThumb />
-                      </SwitchControl>
-                    </Switch>
-                  </div>
-
-                  <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-2">
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium">{tx('Auto update', 'Auto update')}</p>
-                    </div>
-                    <Switch
-                      checked={config().runner.auto_update}
-                      onChange={(checked) =>
-                        patchConfig((prev) => ({
-                          ...prev,
-                          runner: {
-                            ...prev.runner,
-                            auto_update: checked
-                          }
-                        }))
-                      }
-                    >
-                      <SwitchInput />
-                      <SwitchControl>
-                        <SwitchThumb />
-                      </SwitchControl>
-                    </Switch>
-                  </div>
                 </ItemActions>
               </ItemMain>
+
+              <ItemFooter>
+                <div class="grid gap-3 md:grid-cols-2">
+                  <SwitchChoiceCard
+                    title={tx('Versão obrigatória', 'Required version')}
+                    description={tx(
+                      'Quando ativado, exige exatamente a versão configurada para executar.',
+                      'When enabled, requires the configured runtime version to launch.'
+                    )}
+                    checked={config().requirements.runtime.strict}
+                    onChange={(checked) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        requirements: {
+                          ...prev.requirements,
+                          runtime: {
+                            ...prev.requirements.runtime,
+                            strict: checked
+                          }
+                        }
+                      }))
+                    }
+                  />
+
+                  <SwitchChoiceCard
+                    title={tx('Auto update', 'Auto update')}
+                    description={tx(
+                      'Atualiza metadados do runtime quando aplicável antes da execução.',
+                      'Updates runtime metadata when applicable before launching.'
+                    )}
+                    checked={config().runner.auto_update}
+                    onChange={(checked) =>
+                      patchConfig((prev) => ({
+                        ...prev,
+                        runner: {
+                          ...prev.runner,
+                          auto_update: checked
+                        }
+                      }))
+                    }
+                  />
+                </div>
+              </ItemFooter>
             </Item>
 
             <Item>
               <div class="grid gap-3 md:grid-cols-2">
-                <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-3">
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium">ESYNC</p>
-                    <p class="text-xs text-muted-foreground">
-                      {tx(
-                        'Ativa otimizações de sincronização no runtime.',
-                        'Enables synchronization optimizations in runtime.'
-                      )}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={config().runner.esync}
-                    onChange={(checked) =>
-                      patchConfig((prev) => ({
-                        ...prev,
-                        runner: {
-                          ...prev.runner,
-                          esync: checked
-                        }
-                      }))
-                    }
-                  >
-                    <SwitchInput />
-                    <SwitchControl>
-                      <SwitchThumb />
-                    </SwitchControl>
-                  </Switch>
-                </div>
+                <SwitchChoiceCard
+                  title="ESYNC"
+                  description={tx(
+                    'Ativa otimizações de sincronização no runtime.',
+                    'Enables synchronization optimizations in runtime.'
+                  )}
+                  checked={config().runner.esync}
+                  onChange={(checked) =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      runner: {
+                        ...prev.runner,
+                        esync: checked
+                      }
+                    }))
+                  }
+                />
 
-                <div class="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/70 px-3 py-3">
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium">FSYNC</p>
-                    <p class="text-xs text-muted-foreground">
-                      {tx('Ativa otimizações FSYNC quando suportado.', 'Enables FSYNC optimizations when supported.')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={config().runner.fsync}
-                    onChange={(checked) =>
-                      patchConfig((prev) => ({
-                        ...prev,
-                        runner: {
-                          ...prev.runner,
-                          fsync: checked
-                        }
-                      }))
-                    }
-                  >
-                    <SwitchInput />
-                    <SwitchControl>
-                      <SwitchThumb />
-                    </SwitchControl>
-                  </Switch>
-                </div>
+                <SwitchChoiceCard
+                  title="FSYNC"
+                  description={tx('Ativa otimizações FSYNC quando suportado.', 'Enables FSYNC optimizations when supported.')}
+                  checked={config().runner.fsync}
+                  onChange={(checked) =>
+                    patchConfig((prev) => ({
+                      ...prev,
+                      runner: {
+                        ...prev.runner,
+                        fsync: checked
+                      }
+                    }))
+                  }
+                />
               </div>
             </Item>
 
