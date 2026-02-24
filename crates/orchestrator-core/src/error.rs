@@ -14,6 +14,12 @@ pub enum OrchestratorError {
     #[error("payload integrity check failed")]
     InvalidChecksum,
 
+    #[error("output path has no parent directory")]
+    MissingOutputParent,
+
+    #[error("post-injection verification failed")]
+    VerificationFailed,
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 

@@ -1274,3 +1274,21 @@ Bloqueio observado no ambiente desta sessao:
 Proximo checkpoint planejado:
 - Implementar Fase 2 no App Criador (injeção de payload no binario base).
 - Adicionar comando de teste local no App Criador usando o mesmo pipeline do Orquestrador sem gerar arquivo final.
+
+### 2026-02-24 - Checkpoint 02
+Escopo implementado:
+- Fase 2 (parcial) entregue via utilitario CLI e modulo core:
+  - novo modulo `injector` em `orchestrator-core`;
+  - injeção de payload com:
+    - validacao de `GameConfig` antes de embutir;
+    - escrita atomica (tmp + rename);
+    - backup `.bak` quando output ja existe;
+    - marca de executavel (Unix);
+    - verificacao pos-injecao comparando payload extraido.
+- Novo binario `orchestrator-injector` para uso pelo App Criador:
+  - `--base`, `--config`, `--output`, `--no-backup`, `--no-exec-bit`.
+- Testes unitarios adicionados no modulo `injector` (roundtrip + backup).
+
+Proximo checkpoint planejado:
+- Integrar `injector` ao backend Tauri (command `create_orchestrator_binary`).
+- Comecar Fase 4 (`doctor/discovery`) no binario `orchestrator`.
