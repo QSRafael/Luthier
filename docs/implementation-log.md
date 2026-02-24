@@ -159,5 +159,20 @@
   - `test_configuration(...)` + wrapper `cmd_test_configuration(...)`
   - valida paths, checa arquivos obrigatórios, roda doctor e monta prefix plan.
 - Próximo passo técnico:
-  - expandir UI para cobrir mais campos por aba;
-  - integrar i18n na UI e backend.
+- expandir UI para cobrir mais campos por aba;
+- integrar i18n na UI e backend.
+
+## 2026-02-24 (checkpoint 13)
+- i18n inicial implementado no frontend (`apps/creator-tauri/src/App.tsx`):
+  - idiomas suportados:
+    - `pt-BR`
+    - `en-US`
+  - seletor de idioma na UI;
+  - persistência de preferência em `localStorage`.
+- Textos principais internacionalizados:
+  - título/subtítulo
+  - abas
+  - labels e tooltips da UI mínima
+  - mensagens de status dos fluxos (`hash`, `test`, `create`).
+- Próximo passo técnico:
+  - aplicar i18n no backend para mensagens retornadas por comandos.

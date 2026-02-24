@@ -1481,3 +1481,21 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Expandir UI para cobrir campos adicionais das abas do projeto.
 - Integrar i18n (`pt-BR`, `en-US`) no frontend e mensagens do backend.
+
+### 2026-02-24 - Checkpoint 13
+Escopo implementado:
+- i18n inicial da UI do Criador:
+  - idiomas:
+    - `pt-BR`
+    - `en-US`
+  - seletor de idioma no header;
+  - persistencia da preferencia via `localStorage`.
+- Textos principais internacionalizados:
+  - titulos da tela;
+  - abas;
+  - labels/tooltips da UI mínima;
+  - mensagens de status.
+
+Proximo checkpoint planejado:
+- Internacionalizar mensagens retornadas pelo backend (`src-tauri`).
+- Expandir a UI para mais campos de configuracao por aba.

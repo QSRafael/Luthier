@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
 
 type FeatureState = 'MandatoryOn' | 'MandatoryOff' | 'OptionalOn' | 'OptionalOff'
 
@@ -144,14 +144,131 @@ const defaultConfig = (): GameConfig => ({
   }
 })
 
+type Locale = 'pt-BR' | 'en-US'
+
+const i18n: Record<Locale, Record<string, string>> = {
+  'pt-BR': {
+    appName: 'Game Orchestrator Creator',
+    title: 'Fluxo mínimo para gerar e testar o Orquestrador',
+    subtitle: 'UI inicial para evoluir por fases, com foco em debug e rastreabilidade.',
+    language: 'Idioma',
+    statusReady: 'Pronto',
+    tabGame: 'Jogo',
+    tabRuntime: 'Runtime',
+    tabReview: 'Revisao e Gerar',
+    gameName: 'Nome do jogo',
+    gameNameHelp: 'Nome exibido na splash e nos logs.',
+    exePath: 'Executavel (.exe)',
+    exePathHelp: 'Caminho do exe para hash e referencia de integridade.',
+    gameRoot: 'Pasta raiz do jogo',
+    gameRootHelp: 'Usada no comando Testar para validar arquivos obrigatorios.',
+    relativeExePath: 'Path relativo do exe no payload',
+    relativeExePathHelp: 'Sempre relativo; ex.: ./game.exe',
+    exeHash: 'Hash SHA-256',
+    exeHashHelp: 'Identificador do perfil e do prefixo.',
+    hashButton: 'Calcular Hash',
+    launchArgs: 'Launch args (separados por espaço)',
+    launchArgsHelp: 'Ex.: -windowed -nointro',
+    integrityFiles: 'Arquivos obrigatórios (1 por linha)',
+    integrityFilesHelp: 'Cada linha vira um item em integrity_files.',
+    applyLists: 'Aplicar Listas',
+    protonVersion: 'Versão do Proton',
+    protonVersionHelp: 'Usado quando runtime selecionado for Proton.',
+    runtimePrimary: 'Runtime primário',
+    runtimePrimaryHelp: 'Candidato inicial: ProtonUmu, ProtonNative ou Wine.',
+    strictRuntime: 'Runtime estrito (sem fallback)',
+    strictRuntimeHelp: 'Se ativo, só tenta o runtime primário.',
+    restoreRuntimeDefaults: 'Restaurar defaults de runtime',
+    orchestratorBase: 'Orchestrator base',
+    orchestratorBaseHelp: 'Binário base pré-compilado usado para injetar o payload.',
+    outputExecutable: 'Saída do executável',
+    outputExecutableHelp: 'Caminho final do orquestrador gerado.',
+    testButton: 'Testar',
+    createButton: 'Criar Executável',
+    payloadPreview: 'Preview do Payload JSON',
+    resultTitle: 'Resultado',
+    noResult: 'Sem resultado ainda.',
+    msgHashStart: 'Calculando hash do executavel...',
+    msgHashOk: 'Hash calculado com sucesso',
+    msgHashFail: 'Falha ao calcular hash:',
+    msgTestStart: 'Testando configuracao (doctor + prefix plan)...',
+    msgTestOk: 'Teste concluido',
+    msgTestFail: 'Falha no teste:',
+    msgCreateStart: 'Gerando orquestrador...',
+    msgCreateOk: 'Executavel gerado com sucesso',
+    msgCreateFail: 'Falha ao gerar executavel:',
+    msgListsApplied: 'Listas aplicadas no payload'
+  },
+  'en-US': {
+    appName: 'Game Orchestrator Creator',
+    title: 'Minimal flow to test and build the Orchestrator',
+    subtitle: 'Initial UI that will evolve by phases, focused on debugging and traceability.',
+    language: 'Language',
+    statusReady: 'Ready',
+    tabGame: 'Game',
+    tabRuntime: 'Runtime',
+    tabReview: 'Review and Generate',
+    gameName: 'Game name',
+    gameNameHelp: 'Displayed in splash and logs.',
+    exePath: 'Executable (.exe)',
+    exePathHelp: 'EXE path used for hashing and integrity checks.',
+    gameRoot: 'Game root folder',
+    gameRootHelp: 'Used by Test to validate required files.',
+    relativeExePath: 'Relative EXE path in payload',
+    relativeExePathHelp: 'Always relative; ex.: ./game.exe',
+    exeHash: 'SHA-256 hash',
+    exeHashHelp: 'Profile and prefix identifier.',
+    hashButton: 'Calculate Hash',
+    launchArgs: 'Launch args (space separated)',
+    launchArgsHelp: 'Ex.: -windowed -nointro',
+    integrityFiles: 'Required files (1 per line)',
+    integrityFilesHelp: 'Each line becomes one integrity_files item.',
+    applyLists: 'Apply Lists',
+    protonVersion: 'Proton version',
+    protonVersionHelp: 'Used when selected runtime is Proton.',
+    runtimePrimary: 'Primary runtime',
+    runtimePrimaryHelp: 'Initial candidate: ProtonUmu, ProtonNative or Wine.',
+    strictRuntime: 'Strict runtime (no fallback)',
+    strictRuntimeHelp: 'When enabled, only the primary runtime is tried.',
+    restoreRuntimeDefaults: 'Restore runtime defaults',
+    orchestratorBase: 'Orchestrator base',
+    orchestratorBaseHelp: 'Prebuilt base binary used to inject payload.',
+    outputExecutable: 'Output executable',
+    outputExecutableHelp: 'Final generated orchestrator path.',
+    testButton: 'Test',
+    createButton: 'Create Executable',
+    payloadPreview: 'Payload JSON Preview',
+    resultTitle: 'Result',
+    noResult: 'No result yet.',
+    msgHashStart: 'Calculating executable hash...',
+    msgHashOk: 'Hash calculated successfully',
+    msgHashFail: 'Failed to calculate hash:',
+    msgTestStart: 'Testing configuration (doctor + prefix plan)...',
+    msgTestOk: 'Test completed',
+    msgTestFail: 'Test failed:',
+    msgCreateStart: 'Generating orchestrator...',
+    msgCreateOk: 'Executable created successfully',
+    msgCreateFail: 'Failed to create executable:',
+    msgListsApplied: 'Lists applied to payload'
+  }
+}
+
+function detectLocale(): Locale {
+  const saved = localStorage.getItem('creator.locale')
+  if (saved === 'pt-BR' || saved === 'en-US') return saved
+  const browserLocale = navigator.language
+  return browserLocale.startsWith('pt') ? 'pt-BR' : 'en-US'
+}
+
 async function invokeCommand<T>(command: string, input: unknown): Promise<T> {
   const core = await import('@tauri-apps/api/core')
   return core.invoke<T>(command, { input })
 }
 
 export default function App() {
-  const tabs = ['Jogo', 'Runtime', 'Revisao e Gerar'] as const
-  const [activeTab, setActiveTab] = createSignal<(typeof tabs)[number]>('Jogo')
+  const initialLocale = detectLocale()
+  const [locale, setLocale] = createSignal<Locale>(initialLocale)
+  const [activeTab, setActiveTab] = createSignal<'game' | 'runtime' | 'review'>('game')
 
   const [baseBinaryPath, setBaseBinaryPath] = createSignal('./target/debug/orchestrator')
   const [outputPath, setOutputPath] = createSignal('./tmp/game-orchestrator')
@@ -159,12 +276,24 @@ export default function App() {
   const [exePath, setExePath] = createSignal('')
   const [launchArgsInput, setLaunchArgsInput] = createSignal('')
   const [integrityInput, setIntegrityInput] = createSignal('')
-  const [statusMessage, setStatusMessage] = createSignal('Pronto')
+  const [statusMessage, setStatusMessage] = createSignal(i18n[initialLocale].statusReady)
   const [resultJson, setResultJson] = createSignal('')
 
   const [config, setConfig] = createSignal<GameConfig>(defaultConfig())
 
   const configPreview = createMemo(() => JSON.stringify(config(), null, 2))
+  const t = (key: string) => i18n[locale()][key] ?? key
+  const tabs: Array<'game' | 'runtime' | 'review'> = ['game', 'runtime', 'review']
+
+  const tabLabel = (tab: 'game' | 'runtime' | 'review') => {
+    if (tab === 'game') return t('tabGame')
+    if (tab === 'runtime') return t('tabRuntime')
+    return t('tabReview')
+  }
+
+  createEffect(() => {
+    localStorage.setItem('creator.locale', locale())
+  })
 
   const updateConfig = <K extends keyof GameConfig>(key: K, value: GameConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }))
@@ -180,34 +309,34 @@ export default function App() {
 
   const runHash = async () => {
     try {
-      setStatusMessage('Calculando hash do executavel...')
+      setStatusMessage(t('msgHashStart'))
       const result = await invokeCommand<{ sha256_hex: string }>('cmd_hash_executable', {
         executable_path: exePath()
       })
       setConfig((prev) => ({ ...prev, exe_hash: result.sha256_hex }))
-      setStatusMessage('Hash calculado com sucesso')
+      setStatusMessage(t('msgHashOk'))
     } catch (error) {
-      setStatusMessage(`Falha ao calcular hash: ${String(error)}`)
+      setStatusMessage(`${t('msgHashFail')} ${String(error)}`)
     }
   }
 
   const runTest = async () => {
     try {
-      setStatusMessage('Testando configuracao (doctor + prefix plan)...')
+      setStatusMessage(t('msgTestStart'))
       const result = await invokeCommand<unknown>('cmd_test_configuration', {
         config_json: configPreview(),
         game_root: gameRoot()
       })
       setResultJson(JSON.stringify(result, null, 2))
-      setStatusMessage('Teste concluido')
+      setStatusMessage(t('msgTestOk'))
     } catch (error) {
-      setStatusMessage(`Falha no teste: ${String(error)}`)
+      setStatusMessage(`${t('msgTestFail')} ${String(error)}`)
     }
   }
 
   const runCreate = async () => {
     try {
-      setStatusMessage('Gerando orquestrador...')
+      setStatusMessage(t('msgCreateStart'))
       const result = await invokeCommand<unknown>('cmd_create_executable', {
         base_binary_path: baseBinaryPath(),
         output_path: outputPath(),
@@ -216,9 +345,9 @@ export default function App() {
         make_executable: true
       })
       setResultJson(JSON.stringify(result, null, 2))
-      setStatusMessage('Executavel gerado com sucesso')
+      setStatusMessage(t('msgCreateOk'))
     } catch (error) {
-      setStatusMessage(`Falha ao gerar executavel: ${String(error)}`)
+      setStatusMessage(`${t('msgCreateFail')} ${String(error)}`)
     }
   }
 
@@ -251,18 +380,30 @@ export default function App() {
       launch_args: launchArgs,
       integrity_files: integrityFiles
     }))
-    setStatusMessage('Listas aplicadas no payload')
+    setStatusMessage(t('msgListsApplied'))
   }
 
   return (
     <div class="app-shell">
       <header class="hero">
         <div>
-          <p class="eyebrow">Game Orchestrator Creator</p>
-          <h1>Fluxo mínimo para gerar e testar o Orquestrador</h1>
-          <p class="subtitle">UI inicial para evoluir por fases, com foco em debug e rastreabilidade.</p>
+          <p class="eyebrow">{t('appName')}</p>
+          <h1>{t('title')}</h1>
+          <p class="subtitle">{t('subtitle')}</p>
         </div>
-        <div class="status-badge">{statusMessage()}</div>
+        <div class="status-column">
+          <label class="locale-switch">
+            <span>{t('language')}</span>
+            <select
+              value={locale()}
+              onInput={(e) => setLocale(e.currentTarget.value as Locale)}
+            >
+              <option value="pt-BR">pt-BR</option>
+              <option value="en-US">en-US</option>
+            </select>
+          </label>
+          <div class="status-badge">{statusMessage()}</div>
+        </div>
       </header>
 
       <nav class="tabs">
@@ -273,64 +414,64 @@ export default function App() {
               onClick={() => setActiveTab(tab)}
               type="button"
             >
-              {tab}
+              {tabLabel(tab)}
             </button>
           )}
         </For>
       </nav>
 
       <main class="panel">
-        <Show when={activeTab() === 'Jogo'}>
+        <Show when={activeTab() === 'game'}>
           <section class="stack">
             <Field
-              label="Nome do jogo"
-              help="Nome exibido na splash e nos logs."
+              label={t('gameName')}
+              help={t('gameNameHelp')}
               value={config().game_name}
               onInput={setGameName}
             />
             <Field
-              label="Executavel (.exe)"
-              help="Caminho do exe para hash e referencia de integridade."
+              label={t('exePath')}
+              help={t('exePathHelp')}
               value={exePath()}
               onInput={setExePath}
             />
             <Field
-              label="Pasta raiz do jogo"
-              help="Usada no comando Testar para validar arquivos obrigatorios."
+              label={t('gameRoot')}
+              help={t('gameRootHelp')}
               value={gameRoot()}
               onInput={setGameRoot}
             />
             <Field
-              label="Path relativo do exe no payload"
-              help="Sempre relativo; ex.: ./game.exe"
+              label={t('relativeExePath')}
+              help={t('relativeExePathHelp')}
               value={config().relative_exe_path}
               onInput={setRelativeExe}
             />
             <Field
-              label="Hash SHA-256"
-              help="Identificador do perfil e do prefixo."
+              label={t('exeHash')}
+              help={t('exeHashHelp')}
               value={config().exe_hash}
               onInput={(v) => setConfig((prev) => ({ ...prev, exe_hash: v }))}
             />
 
             <div class="row-actions">
               <button type="button" class="btn-secondary" onClick={runHash}>
-                Calcular Hash
+                {t('hashButton')}
               </button>
             </div>
 
             <label class="field">
               <div class="label-row">
-                <span>Launch args (separados por espaço)</span>
-                <span class="help" title="Ex.: -windowed -nointro">?</span>
+                <span>{t('launchArgs')}</span>
+                <span class="help" title={t('launchArgsHelp')}>?</span>
               </div>
               <input value={launchArgsInput()} onInput={(e) => setLaunchArgsInput(e.currentTarget.value)} />
             </label>
 
             <label class="field">
               <div class="label-row">
-                <span>Arquivos obrigatórios (1 por linha)</span>
-                <span class="help" title="Cada linha vira um item em integrity_files.">?</span>
+                <span>{t('integrityFiles')}</span>
+                <span class="help" title={t('integrityFilesHelp')}>?</span>
               </div>
               <textarea
                 rows={6}
@@ -341,17 +482,17 @@ export default function App() {
 
             <div class="row-actions">
               <button type="button" class="btn-secondary" onClick={applyLists}>
-                Aplicar Listas
+                {t('applyLists')}
               </button>
             </div>
           </section>
         </Show>
 
-        <Show when={activeTab() === 'Runtime'}>
+        <Show when={activeTab() === 'runtime'}>
           <section class="stack">
             <Field
-              label="Versão do Proton"
-              help="Usado quando runtime selecionado for Proton."
+              label={t('protonVersion')}
+              help={t('protonVersionHelp')}
               value={config().runner.proton_version}
               onInput={(v) =>
                 setConfig((prev) => ({
@@ -363,8 +504,8 @@ export default function App() {
 
             <label class="field">
               <div class="label-row">
-                <span>Runtime primário</span>
-                <span class="help" title="Candidato inicial: ProtonUmu, ProtonNative ou Wine.">?</span>
+                <span>{t('runtimePrimary')}</span>
+                <span class="help" title={t('runtimePrimaryHelp')}>?</span>
               </div>
               <select
                 value={config().requirements.runtime.primary}
@@ -404,50 +545,50 @@ export default function App() {
                   }))
                 }
               />
-              <span>Runtime estrito (sem fallback)</span>
-              <span class="help" title="Se ativo, só tenta o runtime primário.">?</span>
+              <span>{t('strictRuntime')}</span>
+              <span class="help" title={t('strictRuntimeHelp')}>?</span>
             </label>
 
             <div class="row-actions">
               <button type="button" class="btn-secondary" onClick={applyRuntimeDefaults}>
-                Restaurar defaults de runtime
+                {t('restoreRuntimeDefaults')}
               </button>
             </div>
           </section>
         </Show>
 
-        <Show when={activeTab() === 'Revisao e Gerar'}>
+        <Show when={activeTab() === 'review'}>
           <section class="stack">
             <Field
-              label="Orchestrator base"
-              help="Binário base pré-compilado usado para injetar o payload."
+              label={t('orchestratorBase')}
+              help={t('orchestratorBaseHelp')}
               value={baseBinaryPath()}
               onInput={setBaseBinaryPath}
             />
             <Field
-              label="Saída do executável"
-              help="Caminho final do orquestrador gerado."
+              label={t('outputExecutable')}
+              help={t('outputExecutableHelp')}
               value={outputPath()}
               onInput={setOutputPath}
             />
 
             <div class="row-actions">
               <button type="button" class="btn-test" onClick={runTest}>
-                Testar
+                {t('testButton')}
               </button>
               <button type="button" class="btn-primary" onClick={runCreate}>
-                Criar Executável
+                {t('createButton')}
               </button>
             </div>
 
             <section class="preview">
-              <h3>Preview do Payload JSON</h3>
+              <h3>{t('payloadPreview')}</h3>
               <pre>{configPreview()}</pre>
             </section>
 
             <section class="preview">
-              <h3>Resultado</h3>
-              <pre>{resultJson() || 'Sem resultado ainda.'}</pre>
+              <h3>{t('resultTitle')}</h3>
+              <pre>{resultJson() || t('noResult')}</pre>
             </section>
           </section>
         </Show>
