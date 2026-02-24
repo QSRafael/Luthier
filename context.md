@@ -1440,3 +1440,22 @@ Proximo checkpoint planejado:
   - gerar payload
   - `Testar`
   - `Criar Executavel`.
+
+### 2026-02-24 - Checkpoint 11
+Escopo implementado:
+- Bootstrap do backend Tauri criado:
+  - `src-tauri/src/main.rs` com `tauri::Builder` e `generate_handler!`.
+  - comandos registrados:
+    - `cmd_create_executable`
+    - `cmd_hash_executable`
+- `tauri.conf.json` mínimo adicionado no `src-tauri`.
+- Feature gate preservada:
+  - build padrão sem runtime Tauri;
+  - runtime real habilitado com `--features tauri-commands`.
+
+Proximo checkpoint planejado:
+- Iniciar frontend mínimo com fluxo:
+  - selecionar `.exe`
+  - editar config base
+  - `Testar`
+  - `Criar Executavel`.

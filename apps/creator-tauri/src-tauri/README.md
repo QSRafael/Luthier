@@ -12,4 +12,7 @@ Status atual:
   - habilitados com feature `tauri-commands`.
 
 Próxima etapa:
-- integrar `Builder` Tauri e registrar comandos via `tauri::generate_handler!`.
+- integrar frontend em `devUrl`/`frontendDist` do `tauri.conf.json`.
+
+Execução (backend Tauri real):
+- `cargo run -p creator-tauri-backend --features tauri-commands`

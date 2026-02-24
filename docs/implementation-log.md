@@ -134,5 +134,13 @@
   - `cmd_hash_executable(...)`
 - Atributos `#[tauri::command]` foram preparados via `cfg_attr` com feature `tauri-commands`.
 - Próximo passo técnico:
-  - criar bootstrap Tauri `main.rs` com `generate_handler!`;
-  - adicionar UI mínima (abas principais + revisão/gerar/testar).
+- criar bootstrap Tauri `main.rs` com `generate_handler!`;
+- adicionar UI mínima (abas principais + revisão/gerar/testar).
+
+## 2026-02-24 (checkpoint 11)
+- Bootstrap Tauri criado em `src-tauri/src/main.rs`:
+  - registra `cmd_create_executable` e `cmd_hash_executable` via `generate_handler!`.
+  - fallback de execução quando feature `tauri-commands` não está ativa.
+- `tauri.conf.json` mínimo adicionado para inicializar runtime/app window.
+- Próximo passo técnico:
+  - iniciar frontend mínimo do Criador (estrutura de abas + formulário + revisão/gerar/testar).
