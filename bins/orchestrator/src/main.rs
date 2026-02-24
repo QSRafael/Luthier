@@ -3,7 +3,7 @@ use std::{fs, io};
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use orchestrator_core::{
-    doctor::run_doctor,
+    doctor::{run_doctor, CheckStatus},
     observability::{emit_ndjson, new_trace_id, LogEvent, LogLevel},
     prefix::build_prefix_setup_plan,
     trailer::extract_config_json,
@@ -78,15 +78,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if cli.play {
-        log_event(
-            &trace_id,
-            LogLevel::Info,
-            "launcher",
-            "GO-LN-001",
-            "play_requested_but_not_implemented",
-            serde_json::json!({}),
-        );
-        println!("--play ainda nao implementado.");
+        run_play_preflight(&trace_id).context("play preflight failed")?;
         return Ok(());
     }
 
@@ -157,6 +149,59 @@ fn run_doctor_command(trace_id: &str) -> anyhow::Result<()> {
     let pretty =
         serde_json::to_string_pretty(&output).context("failed to serialize doctor report")?;
     println!("{pretty}");
+
+    Ok(())
+}
+
+fn run_play_preflight(trace_id: &str) -> anyhow::Result<()> {
+    let config = load_embedded_config_required()?;
+    let report = run_doctor(Some(&config));
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "launcher",
+        "GO-LN-010",
+        "play_preflight_doctor_finished",
+        serde_json::json!({
+            "summary": report.summary,
+        }),
+    );
+
+    if matches!(report.summary, CheckStatus::BLOCKER) {
+        let pretty =
+            serde_json::to_string_pretty(&report).context("failed to serialize blocker report")?;
+        println!("{pretty}");
+        return Err(anyhow!(
+            "doctor returned BLOCKER; launch aborted before prefix/setup"
+        ));
+    }
+
+    let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "launcher",
+        "GO-LN-011",
+        "play_preflight_prefix_plan_ready",
+        serde_json::json!({
+            "needs_init": prefix_plan.needs_init,
+            "commands": prefix_plan.commands.len(),
+        }),
+    );
+
+    let output = serde_json::json!({
+        "doctor": report,
+        "prefix_setup_plan": prefix_plan,
+        "launch": {
+            "status": "pending",
+            "note": "game launch wiring is not implemented yet"
+        }
+    });
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&output).context("failed to serialize preflight output")?
+    );
 
     Ok(())
 }

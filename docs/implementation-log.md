@@ -82,5 +82,16 @@
   - `hash_executable(...)` (SHA-256 do `.exe`).
 - Estrutura preparada para virar `#[tauri::command]` sem reescrever regra de negócio.
 - Próximo passo técnico:
-  - adicionar comandos Tauri reais;
-  - iniciar execução real do `PrefixSetupPlan` em `--play`.
+- adicionar comandos Tauri reais;
+- iniciar execução real do `PrefixSetupPlan` em `--play`.
+
+## 2026-02-24 (checkpoint 07)
+- `orchestrator --play` evoluiu de placeholder para preflight:
+  - carrega config embutida obrigatoriamente;
+  - roda `doctor` com política;
+  - aborta com erro quando `summary == BLOCKER`;
+  - gera `prefix_setup_plan`;
+  - imprime JSON final de preflight.
+- Ainda pendente em `--play`:
+  - execução real dos comandos de setup do prefix;
+  - montagem do comando final de launch do jogo.

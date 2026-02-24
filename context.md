@@ -1358,3 +1358,18 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Adicionar comandos Tauri reais no backend (`#[tauri::command]`) e conectar ao frontend.
 - Implementar execucao real do `PrefixSetupPlan` no fluxo `--play` do Orquestrador.
+
+### 2026-02-24 - Checkpoint 07
+Escopo implementado:
+- `--play` deixou de ser placeholder e agora executa preflight:
+  - carrega config embutida (obrigatorio);
+  - roda `doctor` com regras do perfil;
+  - se houver `BLOCKER`, interrompe antes de qualquer launch;
+  - gera e exibe `prefix_setup_plan`.
+- Resultado atual do `--play`:
+  - etapa de validacao/preparacao pronta;
+  - launch do jogo ainda pendente.
+
+Proximo checkpoint planejado:
+- Executar comandos reais do `PrefixSetupPlan` com timeout e erro estruturado.
+- Implementar montagem do comando final do jogo (wrappers + runtime + exe).
