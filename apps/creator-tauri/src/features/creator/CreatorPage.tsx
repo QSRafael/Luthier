@@ -54,7 +54,7 @@ function tabLabel(tab: CreatorTab, controller: CreatorController) {
 
 type SwitchChoiceCardProps = {
   title: string
-  description: string
+  description?: string
   checked: boolean
   onChange: (checked: boolean) => void
 }
@@ -69,8 +69,8 @@ function SwitchChoiceCard(props: SwitchChoiceCardProps) {
       class={
         'flex items-center justify-between gap-3 rounded-md border px-3 py-3 transition-colors ' +
         (props.checked
-          ? 'border-primary/40 bg-accent/30'
-          : 'border-border/60 bg-background/70 hover:border-border hover:bg-accent/20')
+          ? 'border-primary/40 bg-muted/45'
+          : 'border-border/60 bg-muted/30 hover:border-border hover:bg-muted/40')
       }
       onClick={toggle}
       onKeyDown={(e) => {
@@ -82,7 +82,9 @@ function SwitchChoiceCard(props: SwitchChoiceCardProps) {
     >
       <div class="min-w-0">
         <p class="text-sm font-medium">{props.title}</p>
-        <p class="text-xs text-muted-foreground">{props.description}</p>
+        <Show when={props.description}>
+          <p class="text-xs text-muted-foreground">{props.description}</p>
+        </Show>
       </div>
       <Switch checked={props.checked} onChange={props.onChange} onClick={(e) => e.stopPropagation()}>
         <SwitchInput />
@@ -252,6 +254,46 @@ export default function CreatorPage() {
         }
       }
     }))
+  }
+
+  const gamescopeUsesMonitorResolution = createMemo(
+    () =>
+      !config().environment.gamescope.output_width.trim() &&
+      !config().environment.gamescope.output_height.trim()
+  )
+
+  const setGamescopeOutputWidth = (value: string) => {
+    patchConfig((prev) => {
+      const nextHeight = prev.environment.gamescope.output_height
+      return {
+        ...prev,
+        environment: {
+          ...prev.environment,
+          gamescope: {
+            ...prev.environment.gamescope,
+            output_width: value,
+            resolution: value && nextHeight ? `${value}x${nextHeight}` : null
+          }
+        }
+      }
+    })
+  }
+
+  const setGamescopeOutputHeight = (value: string) => {
+    patchConfig((prev) => {
+      const nextWidth = prev.environment.gamescope.output_width
+      return {
+        ...prev,
+        environment: {
+          ...prev.environment,
+          gamescope: {
+            ...prev.environment.gamescope,
+            output_height: value,
+            resolution: nextWidth && value ? `${nextWidth}x${value}` : null
+          }
+        }
+      }
+    })
   }
 
   return (
@@ -811,7 +853,7 @@ export default function CreatorPage() {
                 >
                   <div class="grid gap-3">
                     <div class="grid gap-3 md:grid-cols-2">
-                      <div class="rounded-md border border-border/60 bg-background/70 p-3">
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
                           <p class="text-sm font-medium">{tx('Método de upscale', 'Upscale method')}</p>
                           <p class="text-xs text-muted-foreground">
@@ -843,7 +885,7 @@ export default function CreatorPage() {
                         </Tabs>
                       </div>
 
-                      <div class="rounded-md border border-border/60 bg-background/70 p-3">
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
                           <p class="text-sm font-medium">{tx('Tipo de janela', 'Window type')}</p>
                           <p class="text-xs text-muted-foreground">
@@ -875,88 +917,95 @@ export default function CreatorPage() {
                       </div>
                     </div>
 
-                    <div class="table-grid table-grid-two">
-                      <TextInputField
-                        label={tx('Resolução do jogo - largura', 'Game resolution - width')}
-                        help={tx('Largura renderizada pelo jogo.', 'Width rendered by the game.')}
-                        value={config().environment.gamescope.game_width}
-                        onInput={(value) =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            environment: {
-                              ...prev.environment,
-                              gamescope: {
-                                ...prev.environment.gamescope,
-                                game_width: value
-                              }
-                            }
-                          }))
-                        }
-                      />
-
-                      <TextInputField
-                        label={tx('Resolução do jogo - altura', 'Game resolution - height')}
-                        help={tx('Altura renderizada pelo jogo.', 'Height rendered by the game.')}
-                        value={config().environment.gamescope.game_height}
-                        onInput={(value) =>
-                          patchConfig((prev) => ({
-                            ...prev,
-                            environment: {
-                              ...prev.environment,
-                              gamescope: {
-                                ...prev.environment.gamescope,
-                                game_height: value
-                              }
-                            }
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div class="table-grid table-grid-two">
-                      <TextInputField
-                        label={tx('Resolução da tela - largura', 'Display resolution - width')}
-                        help={tx('Largura final de saída do gamescope.', 'Final output width from gamescope.')}
-                        value={config().environment.gamescope.output_width}
-                        onInput={(value) =>
-                          patchConfig((prev) => {
-                            const nextHeight = prev.environment.gamescope.output_height
-                            return {
-                              ...prev,
-                              environment: {
-                                ...prev.environment,
-                                gamescope: {
-                                  ...prev.environment.gamescope,
-                                  output_width: value,
-                                  resolution: value && nextHeight ? `${value}x${nextHeight}` : null
+                    <div class="grid gap-3 md:grid-cols-2">
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{tx('Resolução do jogo', 'Game resolution')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {tx('Resolução renderizada pelo jogo (largura x altura).', 'Game render resolution (width x height).')}
+                          </p>
+                        </div>
+                        <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                          <Input
+                            value={config().environment.gamescope.game_width}
+                            placeholder="1080"
+                            onInput={(e) =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                environment: {
+                                  ...prev.environment,
+                                  gamescope: {
+                                    ...prev.environment.gamescope,
+                                    game_width: e.currentTarget.value
+                                  }
                                 }
-                              }
+                              }))
                             }
-                          })
-                        }
-                      />
-
-                      <TextInputField
-                        label={tx('Resolução da tela - altura', 'Display resolution - height')}
-                        help={tx('Altura final de saída do gamescope.', 'Final output height from gamescope.')}
-                        value={config().environment.gamescope.output_height}
-                        onInput={(value) =>
-                          patchConfig((prev) => {
-                            const nextWidth = prev.environment.gamescope.output_width
-                            return {
-                              ...prev,
-                              environment: {
-                                ...prev.environment,
-                                gamescope: {
-                                  ...prev.environment.gamescope,
-                                  output_height: value,
-                                  resolution: nextWidth && value ? `${nextWidth}x${value}` : null
+                          />
+                          <span class="text-sm font-semibold text-muted-foreground">x</span>
+                          <Input
+                            value={config().environment.gamescope.game_height}
+                            placeholder="720"
+                            onInput={(e) =>
+                              patchConfig((prev) => ({
+                                ...prev,
+                                environment: {
+                                  ...prev.environment,
+                                  gamescope: {
+                                    ...prev.environment.gamescope,
+                                    game_height: e.currentTarget.value
+                                  }
                                 }
-                              }
+                              }))
                             }
-                          })
-                        }
-                      />
+                          />
+                        </div>
+                      </div>
+
+                      <div class="rounded-md border border-border/60 bg-muted/30 p-3">
+                        <div class="space-y-1.5">
+                          <p class="text-sm font-medium">{tx('Resolução da tela', 'Display resolution')}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {tx('Resolução final de saída do gamescope (largura x altura).', 'Final gamescope output resolution (width x height).')}
+                          </p>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                          <Input
+                            value={config().environment.gamescope.output_width}
+                            placeholder={gamescopeUsesMonitorResolution() ? tx('Auto', 'Auto') : '1920'}
+                            onInput={(e) => setGamescopeOutputWidth(e.currentTarget.value)}
+                          />
+                          <span class="text-sm font-semibold text-muted-foreground">x</span>
+                          <Input
+                            value={config().environment.gamescope.output_height}
+                            placeholder={gamescopeUsesMonitorResolution() ? tx('Auto', 'Auto') : '1080'}
+                            onInput={(e) => setGamescopeOutputHeight(e.currentTarget.value)}
+                          />
+                        </div>
+
+                        <div class="mt-3">
+                          <SwitchChoiceCard
+                            title={tx('Obter resolução do monitor', 'Use monitor resolution')}
+                            checked={gamescopeUsesMonitorResolution()}
+                            onChange={(checked) => {
+                              if (!checked) return
+                              patchConfig((prev) => ({
+                                ...prev,
+                                environment: {
+                                  ...prev.environment,
+                                  gamescope: {
+                                    ...prev.environment.gamescope,
+                                    output_width: '',
+                                    output_height: '',
+                                    resolution: null
+                                  }
+                                }
+                              }))
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     <div class="grid gap-3 md:grid-cols-2">

@@ -1952,6 +1952,22 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 46
+Escopo implementado:
+- Refino visual do bloco de opcoes avancadas de `Gamescope`:
+  - paines de `Metodo de upscale`, `Tipo de janela`, `Limitar FPS` e `Forcar captura de cursor` unificados com fundo mais escuro (`muted`) para consistencia visual.
+- UI de resolucao do `Gamescope` simplificada:
+  - `Resolucao do jogo` agora usa um unico card com par de campos (`largura x altura`);
+  - `Resolucao da tela` tambem usa um unico card com par de campos (`largura x altura`);
+  - adicionado card clicavel `Obter resolucao do monitor` dentro do card de `Resolucao da tela`.
+
+Semantica atual do card `Obter resolucao do monitor`:
+- Quando ativado, limpa `output_width`/`output_height` e define `resolution = null`, sinalizando modo automatico (usar resolucao do monitor).
+- Ao digitar manualmente nos campos de resolucao da tela, o modo automatico e desativado implicitamente (pois os campos deixam de estar vazios).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27
