@@ -149,6 +149,7 @@ export function useCreatorController() {
   const [winetricksSource, setWinetricksSource] = createSignal('fallback')
   const [winetricksSearch, setWinetricksSearch] = createSignal('')
   const [winetricksLoaded, setWinetricksLoaded] = createSignal(false)
+  const [winetricksCatalogError, setWinetricksCatalogError] = createSignal(false)
 
   const [config, setConfig] = createSignal<GameConfig>(defaultGameConfig())
 
@@ -430,6 +431,7 @@ export function useCreatorController() {
       const result = await invokeCommand<WinetricksAvailableOutput>('cmd_winetricks_available')
       setWinetricksAvailable(result.components)
       setWinetricksSource(result.source)
+      setWinetricksCatalogError(false)
       setWinetricksLoaded(true)
       setStatusMessage(
         tx(
@@ -440,6 +442,7 @@ export function useCreatorController() {
     } catch (error) {
       setWinetricksAvailable([])
       setWinetricksSource('fallback')
+      setWinetricksCatalogError(true)
       setWinetricksLoaded(true)
       setStatusMessage(
         tx(
@@ -789,6 +792,7 @@ export function useCreatorController() {
     winetricksSource,
     winetricksSearch,
     setWinetricksSearch,
+    winetricksCatalogError,
     config,
     patchConfig,
     configPreview,

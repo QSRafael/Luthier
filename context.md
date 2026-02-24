@@ -2008,6 +2008,24 @@ Compatibilidade de payload / backend:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo build --workspace`
+
+### 2026-02-24 - Checkpoint 50
+Escopo implementado:
+- `Winetricks` (aba `Prefix`) consolidado em um unico item:
+  - removidos os dois itens separados (`estado` e `lista de verbos`);
+  - item unico agora contem titulo/descricao no topo e area de selecao no rodape.
+- Nova UX de selecao de verbos (combobox-like):
+  - chips removiveis com `x` para os verbos ja selecionados;
+  - campo de busca integrado aos chips;
+  - lista de resultados abaixo (catalogo filtrado) para clicar e adicionar;
+  - `Enter` tenta adicionar match exato ou primeira sugestao.
+- Tratamento de erro de catalogo:
+  - controller ganhou `winetricksCatalogError`;
+  - em erro, campo de busca fica desabilitado e exibe mensagem `Erro ao carregar o catálogo winetricks`;
+  - botao `Atualizar catálogo` permanece disponivel para retry.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27

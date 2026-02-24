@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from 'solid-js'
-import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
+import { IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
 import {
   FeatureStateField,
@@ -125,6 +125,7 @@ export default function CreatorPage() {
     winetricksSource,
     winetricksSearch,
     setWinetricksSearch,
+    winetricksCatalogError,
     config,
     patchConfig,
     configPreview,
@@ -1252,92 +1253,125 @@ export default function CreatorPage() {
             <FieldShell
               label="Winetricks"
               help={tx(
-                'Ativa automaticamente quando existir ao menos um verbo configurado.',
-                'Enabled automatically when at least one verb is configured.'
+                'Ativa automaticamente quando existir ao menos um verbo configurado. Use a busca para adicionar verbos do catálogo.',
+                'Enabled automatically when at least one verb is configured. Use search to add verbs from the catalog.'
               )}
-            >
-              <div class="info-card">
-                <span>
-                  {tx('Estado atual:', 'Current state:')} <strong>{config().requirements.winetricks}</strong>
-                </span>
-              </div>
-            </FieldShell>
+              controlClass="flex flex-col items-end gap-2"
+              footer={
+                <div class="grid gap-2">
+                  <div class="rounded-md border border-input bg-background px-2 py-2">
+                    <div class="flex min-h-9 flex-wrap items-center gap-1.5">
+                      <For each={config().dependencies}>
+                        {(verb) => (
+                          <span class="inline-flex max-w-full items-center gap-1 rounded-md border border-border/60 bg-muted/35 px-2 py-1 text-xs">
+                            <span class="truncate">{verb}</span>
+                            <button
+                              type="button"
+                              class="inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:text-destructive"
+                              onClick={() => removeWinetricksVerb(verb)}
+                              aria-label={tx('Remover verbo', 'Remove verb')}
+                              title={tx('Remover verbo', 'Remove verb')}
+                            >
+                              <IconX class="size-3" />
+                            </button>
+                          </span>
+                        )}
+                      </For>
 
-            <FieldShell
-              label={tx('Lista de verbos Winetricks', 'Winetricks verbs list')}
-              help={tx(
-                'Selecione da lista de componentes disponíveis (modelo Heroic).',
-                'Select from available components list (Heroic-like model).'
-              )}
-            >
-              <div class="table-list">
-                <div class="winetricks-toolbar">
-                  <Input
-                    value={winetricksSearch()}
-                    placeholder={tx('Digite para buscar (ex.: vcrun, corefonts)', 'Type to search (e.g. vcrun, corefonts)')}
-                    onInput={(e) => setWinetricksSearch(e.currentTarget.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        addWinetricksFromSearch()
-                      }
-                    }}
-                  />
-                  <Button type="button" class="btn-secondary" onClick={addWinetricksFromSearch}>
-                    {tx('Adicionar', 'Add')}
-                  </Button>
-                  <Button type="button" class="btn-secondary" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
-                    {winetricksLoading() ? tx('Carregando...', 'Loading...') : tx('Atualizar catálogo', 'Refresh catalog')}
-                  </Button>
-                </div>
-
-                <div class="info-card">
-                  <span>
-                    {tx('Fonte do catálogo:', 'Catalog source:')} <strong>{winetricksSource()}</strong>
-                  </span>
-                  <span>
-                    {tx('Itens no catálogo:', 'Catalog items:')} <strong>{winetricksAvailable().length}</strong>
-                  </span>
-                  <span>
-                    {tx('Resultados atuais:', 'Current matches:')} <strong>{winetricksCandidates().length}</strong>
-                  </span>
-                </div>
-
-                <Show
-                  when={normalizedWinetricksSearch().length >= 2}
-                  fallback={
-                    <div class="info-card">
-                      {tx(
-                        'Digite ao menos 2 caracteres para buscar verbos e evitar travamentos na UI.',
-                        'Type at least 2 characters to search verbs and keep UI responsive.'
-                      )}
+                      <Input
+                        value={winetricksSearch()}
+                        disabled={winetricksCatalogError() || winetricksLoading()}
+                        placeholder={
+                          winetricksCatalogError()
+                            ? tx('Erro ao carregar o catálogo winetricks', 'Failed to load winetricks catalog')
+                            : tx('Buscar e adicionar verbos (ex.: vcrun, corefonts)', 'Search and add verbs (e.g. vcrun, corefonts)')
+                        }
+                        class="h-7 min-w-[220px] flex-1 border-0 bg-transparent px-1 py-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        onInput={(e) => setWinetricksSearch(e.currentTarget.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            if (winetricksCatalogError()) return
+                            const exact = winetricksCandidates().find(
+                              (item) => item.toLowerCase() === winetricksSearch().trim().toLowerCase()
+                            )
+                            if (exact) {
+                              addWinetricksVerb(exact)
+                              setWinetricksSearch('')
+                              return
+                            }
+                            const first = winetricksCandidates()[0]
+                            if (first) {
+                              addWinetricksVerb(first)
+                              setWinetricksSearch('')
+                              return
+                            }
+                            addWinetricksFromSearch()
+                          }
+                        }}
+                      />
                     </div>
-                  }
-                >
-                  <div class="winetricks-results">
-                    <For each={winetricksCandidates()}>
-                      {(verb) => (
-                        <Button type="button" class="winetricks-result" onClick={() => addWinetricksVerb(verb)}>
-                          <span>{verb}</span>
-                          <span>{tx('Adicionar', 'Add')}</span>
-                        </Button>
-                      )}
-                    </For>
                   </div>
-                </Show>
 
-                <div class="table-list">
-                  <For each={config().dependencies}>
-                    {(verb) => (
-                      <div class="table-row table-row-single">
-                        <Input value={verb} readOnly class="readonly" />
-                        <Button type="button" class="btn-danger" onClick={() => removeWinetricksVerb(verb)}>
-                          {tx('Remover', 'Remove')}
-                        </Button>
-                      </div>
-                    )}
-                  </For>
+                  <Show when={winetricksCatalogError()}>
+                    <div class="rounded-md border border-dashed border-destructive/40 px-3 py-2 text-xs text-destructive">
+                      {tx('Erro ao carregar o catálogo winetricks', 'Failed to load winetricks catalog')}
+                    </div>
+                  </Show>
+
+                  <Show
+                    when={!winetricksCatalogError() && normalizedWinetricksSearch().length >= 2}
+                    fallback={
+                      <Show when={!winetricksCatalogError()}>
+                        <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                          {tx(
+                            'Digite ao menos 2 caracteres para buscar verbos no catálogo.',
+                            'Type at least 2 characters to search verbs in the catalog.'
+                          )}
+                        </div>
+                      </Show>
+                    }
+                  >
+                    <div class="max-h-52 overflow-auto rounded-md border border-border/60 bg-muted/25 p-1">
+                      <Show
+                        when={winetricksCandidates().length > 0}
+                        fallback={
+                          <div class="px-2 py-2 text-xs text-muted-foreground">
+                            {tx('Nenhum item encontrado.', 'No items found.')}
+                          </div>
+                        }
+                      >
+                        <div class="grid gap-1">
+                          <For each={winetricksCandidates()}>
+                            {(verb) => (
+                              <button
+                                type="button"
+                                class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm hover:bg-accent/40"
+                                onClick={() => {
+                                  addWinetricksVerb(verb)
+                                  setWinetricksSearch('')
+                                }}
+                              >
+                                <span class="truncate">{verb}</span>
+                                <span class="text-xs text-muted-foreground">{tx('Adicionar', 'Add')}</span>
+                              </button>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </div>
+                  </Show>
                 </div>
+              }
+            >
+              <div class="flex flex-col items-end gap-1">
+                <Button type="button" class="btn-secondary" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
+                  {winetricksLoading() ? tx('Carregando...', 'Loading...') : tx('Atualizar catálogo', 'Refresh catalog')}
+                </Button>
+                <p class="text-xs text-muted-foreground">
+                  {tx('Fonte:', 'Source:')} <strong>{winetricksSource()}</strong> ·{' '}
+                  {tx('Catálogo:', 'Catalog:')} <strong>{winetricksAvailable().length}</strong>
+                </p>
               </div>
             </FieldShell>
 
