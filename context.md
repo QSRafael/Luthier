@@ -1921,3 +1921,16 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 33
+Escopo implementado:
+- UX do dialog de `StringListField` com picker opcional melhorada:
+  - quando existe `onPickValue`, o dialog agora mostra `input + botão` na mesma linha (em vez de botão solto abaixo);
+  - fluxo ficou mais consistente com os demais itens `campo + ação`.
+- Aplicado diretamente ao caso de `Arquivos obrigatórios (integrity_files)`.
+
+Observacao de arquitetura:
+- `input type=file` nativo nao foi adotado como fonte principal nesses casos porque o Creator precisa de caminho real/absoluto (Tauri dialog) para calcular/validar caminhos relativos com confianca. O fallback web continua existindo via `pickFile`.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)

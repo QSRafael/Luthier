@@ -238,31 +238,51 @@ export function StringListField(props: StringListFieldProps) {
             <DialogDescription>Insira um novo valor para esta lista.</DialogDescription>
           </DialogHeader>
 
-          <Input
-            value={draft()}
-            placeholder={props.placeholder}
-            onInput={(e) => setDraft(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                addItem()
-              }
-            }}
-          />
-
-          <Show when={props.onPickValue}>
-            <Button
-              type="button"
-              variant="outline"
-              class="justify-start"
-              onClick={async () => {
-                const picked = await props.onPickValue?.()
-                if (!picked) return
-                setDraft(picked)
-              }}
-            >
-              {props.pickerLabel ?? 'Escolher arquivo'}
-            </Button>
+          <Show
+            when={props.onPickValue}
+            fallback={
+              <Input
+                value={draft()}
+                placeholder={props.placeholder}
+                onInput={(e) => setDraft(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addItem()
+                  }
+                }}
+              />
+            }
+          >
+            <div class="grid gap-1.5">
+              <div class="picker-row">
+                <Input
+                  value={draft()}
+                  placeholder={props.placeholder}
+                  onInput={(e) => setDraft(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addItem()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    const picked = await props.onPickValue?.()
+                    if (!picked) return
+                    setDraft(picked)
+                  }}
+                >
+                  {props.pickerLabel ?? 'Escolher arquivo'}
+                </Button>
+              </div>
+              <p class="text-xs text-muted-foreground">
+                Selecione um arquivo para preencher este campo automaticamente.
+              </p>
+            </div>
           </Show>
 
           <DialogFooter>
