@@ -1887,3 +1887,15 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 31
+Escopo implementado:
+- Alinhamento do item `Ícone extraído`:
+  - preview do ícone + botão de ação agora ficam alinhados à direita na coluna de ações;
+  - em telas menores, o empilhamento vertical também permanece alinhado à direita.
+- Itens de lista sem rodapé vazio:
+  - `StringListField` e `KeyValueListField` não renderizam mais a área inferior (nem separador) quando a lista está vazia;
+  - removeu placeholders como `Nenhum item adicionado` / `Nenhuma linha adicionada` nesses componentes.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)

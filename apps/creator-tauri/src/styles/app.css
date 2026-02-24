@@ -181,7 +181,7 @@ body {
 }
 
 .icon-preview {
-  @apply flex items-center gap-3;
+  @apply flex items-center justify-end gap-3;
 }
 
 .icon-box {
@@ -290,6 +290,6 @@ body {
   }
 
   .icon-preview {
-    @apply flex-col items-start;
+    @apply flex-col items-end;
   }
 }

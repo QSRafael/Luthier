@@ -194,11 +194,8 @@ export function StringListField(props: StringListFieldProps) {
       help={props.help}
       controlClass="flex justify-end"
       footer={
-        <div class="grid gap-2">
-          <Show
-            when={props.items.length > 0}
-            fallback={<div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">Nenhum item adicionado.</div>}
-          >
+        props.items.length > 0 ? (
+          <div class="grid gap-2">
             <For each={props.items}>
               {(item, index) => (
                 <div class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
@@ -217,8 +214,8 @@ export function StringListField(props: StringListFieldProps) {
                 </div>
               )}
             </For>
-          </Show>
-        </div>
+          </div>
+        ) : undefined
       }
     >
       <Dialog open={open()} onOpenChange={setOpen}>
@@ -308,11 +305,8 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
       help={props.help}
       controlClass="flex justify-end"
       footer={
-        <div class="grid gap-2">
-          <Show
-            when={props.items.length > 0}
-            fallback={<div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">Nenhuma linha adicionada.</div>}
-          >
+        props.items.length > 0 ? (
+          <div class="grid gap-2">
             <For each={props.items}>
               {(item, index) => (
                 <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
@@ -330,8 +324,8 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
                 </div>
               )}
             </For>
-          </Show>
-        </div>
+          </div>
+        ) : undefined
       }
     >
       <Dialog open={open()} onOpenChange={setOpen}>
