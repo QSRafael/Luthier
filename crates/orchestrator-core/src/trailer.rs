@@ -40,8 +40,7 @@ pub fn extract_config_json(binary: &[u8]) -> Result<&[u8], OrchestratorError> {
     let mut len_buf = [0_u8; JSON_LEN_BYTES];
     len_buf.copy_from_slice(&binary[len_start..len_end]);
 
-    let config_len = u64::from_le_bytes(len_buf)
-        .try_into()
+    let config_len = usize::try_from(u64::from_le_bytes(len_buf))
         .map_err(|_| OrchestratorError::InvalidLength)?;
 
     if config_len > trailer_start {

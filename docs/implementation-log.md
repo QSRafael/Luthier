@@ -184,4 +184,11 @@
   - `creator-cli create --base <orchestrator-base> --config <config.json> --output <path>`
 - Com isso, o fluxo de validação/geração pode ser testado sem frontend e sem runtime Tauri.
 - Próximo passo técnico:
-  - internacionalizar mensagens de erro/sucesso no backend (`src-tauri`).
+- internacionalizar mensagens de erro/sucesso no backend (`src-tauri`).
+
+## 2026-02-24 (checkpoint 15)
+- Hotfix de compilação após teste real:
+  - corrigido parse de `json_len` no trailer (`usize::try_from(u64)` explícito);
+  - adicionada dependência `serde` no binário `orchestrator` para serialização de `LaunchCommandPlan`.
+- Validação:
+  - `cargo build --workspace` concluindo com sucesso no ambiente local.

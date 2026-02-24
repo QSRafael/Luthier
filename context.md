@@ -1512,3 +1512,15 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Internacionalizar mensagens de backend (`src-tauri`).
 - Expandir a UI para mais campos e tabelas por aba.
+
+### 2026-02-24 - Checkpoint 15
+Escopo implementado:
+- Hotfix de build validado com feedback de execução real:
+  - parser de trailer corrigido para converter `json_len` com tipo explícito;
+  - dependência `serde` adicionada no binário `orchestrator`.
+- Resultado:
+  - `cargo build --workspace` agora finaliza com sucesso.
+
+Proximo checkpoint planejado:
+- Internacionalizar respostas do backend (`src-tauri`) e mapear `error_code` para UI.
+- Expandir UI para incluir mais configurações avançadas por aba.
