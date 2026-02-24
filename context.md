@@ -1873,3 +1873,17 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
+### 2026-02-24 - Checkpoint 30
+Escopo implementado:
+- Ajuste de alinhamento do layout dos itens (`ItemMain`):
+  - colunas esquerda/direita agora dividem melhor a largura (`1fr / 1fr`) em telas maiores, conforme regra visual definida.
+- Ajuste de largura dos campos simples (`TextInputField`):
+  - campos de texto passaram a ocupar toda a largura da coluna direita por padrão;
+  - `compact` virou opcional e só deve ser usado quando o campo realmente precisa ser estreito.
+- Resultado esperado:
+  - itens como `Nome do jogo` ocupam toda a largura do lado direito;
+  - itens `campo + botão` (ex.: `Executável principal`, `Hash SHA-256`) mantêm botão no tamanho do texto e input ocupando o espaço restante.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)

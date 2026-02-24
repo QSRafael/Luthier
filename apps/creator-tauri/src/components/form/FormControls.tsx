@@ -77,11 +77,12 @@ type TextInputFieldProps = {
   onInput: (value: string) => void
   placeholder?: string
   readonly?: boolean
+  compact?: boolean
 }
 
 export function TextInputField(props: TextInputFieldProps) {
   return (
-    <FieldShell label={props.label} help={props.help} compact>
+    <FieldShell label={props.label} help={props.help} compact={props.compact ?? false}>
       <Input
         value={props.value}
         readOnly={props.readonly}

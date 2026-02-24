@@ -45,7 +45,12 @@ export const ItemSeparator = (props: ItemSeparatorProps) => {
 export type ItemMainProps = ComponentProps<'div'>
 export const ItemMain = (props: ItemMainProps) => {
   const [, rest] = splitProps(props, ['class'])
-  return <div class={cn('grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,420px)] md:items-start', props.class)} {...rest} />
+  return (
+    <div
+      class={cn('grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start', props.class)}
+      {...rest}
+    />
+  )
 }
 
 export type ItemMediaProps = ComponentProps<'div'> & {
