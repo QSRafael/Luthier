@@ -1854,3 +1854,22 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
+
+### 2026-02-24 - Checkpoint 29
+Escopo implementado:
+- Correção visual da sidebar:
+  - item longo `Performance e Compatibilidade` deixou de ficar centralizado;
+  - `SidebarMenuButton` passou a usar alinhamento `text-left` e suporte melhor a quebra de linha.
+- Tema no padrão do site do shadcn (paleta neutral):
+  - variaveis CSS reorganizadas em `:root` (light) e `.dark` (dark);
+  - tokens migrados para esquema `oklch` (compatível com o padrão atual do shadcn/ui);
+  - fundo e superfícies ajustados para visual neutro, sem viés teal/cyan.
+- Suporte real a troca de tema no frontend:
+  - novo `ThemeProvider` em Solid com persistência (`localStorage`) e suporte `light` / `dark` / `system`;
+  - toggle de tema adicionado ao lado do seletor de idioma no header do Creator;
+  - `App.tsx` agora envolve a aplicação com `ThemeProvider`.
+- Tailwind ajustado para tokens `oklch` com alpha:
+  - `tailwind.config.ts` usa `oklch(var(--token) / <alpha-value>)` para manter suporte a classes como `bg-muted/40`, `ring-ring/50`, etc.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)

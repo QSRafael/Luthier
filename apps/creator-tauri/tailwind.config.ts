@@ -1,39 +1,52 @@
 import type { Config } from 'tailwindcss'
 
+const oklch = (name: string) => `oklch(var(${name}))`
+const oklchAlpha = (name: string) => `oklch(var(${name}) / <alpha-value>)`
+
 const config: Config = {
   darkMode: ['class'],
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        border: oklch('--border'),
+        input: oklch('--input'),
+        ring: oklchAlpha('--ring'),
+        background: oklchAlpha('--background'),
+        foreground: oklchAlpha('--foreground'),
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
+          DEFAULT: oklchAlpha('--primary'),
+          foreground: oklchAlpha('--primary-foreground')
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
+          DEFAULT: oklchAlpha('--secondary'),
+          foreground: oklchAlpha('--secondary-foreground')
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
+          DEFAULT: oklchAlpha('--destructive'),
+          foreground: oklchAlpha('--destructive-foreground')
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
+          DEFAULT: oklchAlpha('--muted'),
+          foreground: oklchAlpha('--muted-foreground')
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
+          DEFAULT: oklchAlpha('--accent'),
+          foreground: oklchAlpha('--accent-foreground')
         },
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))'
+          DEFAULT: oklchAlpha('--card'),
+          foreground: oklchAlpha('--card-foreground')
+        },
+        sidebar: {
+          DEFAULT: oklch('--sidebar'),
+          foreground: oklch('--sidebar-foreground'),
+          primary: oklch('--sidebar-primary'),
+          'primary-foreground': oklch('--sidebar-primary-foreground'),
+          accent: oklch('--sidebar-accent'),
+          'accent-foreground': oklch('--sidebar-accent-foreground'),
+          border: oklch('--sidebar-border'),
+          ring: oklch('--sidebar-ring')
         }
       },
       borderRadius: {

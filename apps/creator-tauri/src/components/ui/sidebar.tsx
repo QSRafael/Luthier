@@ -12,7 +12,7 @@ export const Sidebar = (props: SidebarProps) => {
   return (
     <aside
       class={cn(
-        'flex h-full min-h-[calc(100vh-2rem)] w-full max-w-[280px] flex-col rounded-xl border bg-card/90 backdrop-blur',
+        'flex h-full min-h-[calc(100vh-2rem)] w-full max-w-[280px] flex-col rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground backdrop-blur',
         props.class
       )}
       {...rest}
@@ -23,7 +23,7 @@ export const Sidebar = (props: SidebarProps) => {
 export type SidebarHeaderProps = ComponentProps<'div'>
 export const SidebarHeader = (props: SidebarHeaderProps) => {
   const [, rest] = splitProps(props, ['class'])
-  return <div class={cn('border-b px-3 py-3', props.class)} {...rest} />
+  return <div class={cn('border-b border-sidebar-border px-3 py-3', props.class)} {...rest} />
 }
 
 export type SidebarContentProps = ComponentProps<'div'>
@@ -35,7 +35,7 @@ export const SidebarContent = (props: SidebarContentProps) => {
 export type SidebarFooterProps = ComponentProps<'div'>
 export const SidebarFooter = (props: SidebarFooterProps) => {
   const [, rest] = splitProps(props, ['class'])
-  return <div class={cn('border-t px-3 py-3', props.class)} {...rest} />
+  return <div class={cn('border-t border-sidebar-border px-3 py-3', props.class)} {...rest} />
 }
 
 export type SidebarMenuProps = ComponentProps<'ul'>
@@ -63,9 +63,9 @@ export const SidebarMenuButton = (props: SidebarMenuButtonProps) => {
       type={props.type ?? 'button'}
       data-active={props.active ? '' : undefined}
       class={cn(
-        'group flex w-full items-center gap-2 rounded-md border border-transparent px-2.5 py-2 text-sm font-medium text-muted-foreground transition',
-        'hover:bg-accent hover:text-accent-foreground',
-        'data-[active]:border-border data-[active]:bg-accent data-[active]:text-accent-foreground',
+        'group flex w-full items-center justify-start gap-2 rounded-md border border-transparent px-2.5 py-2 text-left text-sm font-medium text-muted-foreground transition',
+        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        'data-[active]:border-sidebar-border data-[active]:bg-sidebar-accent data-[active]:text-sidebar-accent-foreground',
         props.class
       )}
       {...rest}

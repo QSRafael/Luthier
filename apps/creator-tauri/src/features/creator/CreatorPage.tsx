@@ -12,6 +12,7 @@ import {
 } from '../../components/form/FormControls'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { useTheme } from '../../components/theme-provider'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
 } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
+import type { Theme } from '../../components/theme-provider'
 import { Locale } from '../../i18n'
 import { CreatorTab, FeatureState, RuntimePreference, RuntimePrimary } from '../../models/config'
 import {
@@ -47,6 +49,7 @@ function tabLabel(tab: CreatorTab, controller: CreatorController) {
 
 export default function CreatorPage() {
   const controller = useCreatorController()
+  const { theme, setTheme } = useTheme()
 
   const {
     ORCHESTRATOR_BASE_PATH,
@@ -163,12 +166,24 @@ export default function CreatorPage() {
             </CardDescription>
           </div>
 
-          <div class="w-full max-w-[180px]">
-            <label class="mb-1 block text-xs font-medium text-muted-foreground">{t('language')}</label>
-            <Select value={locale()} onInput={(e) => setLocale(e.currentTarget.value as Locale)}>
-              <option value="pt-BR">pt-BR</option>
-              <option value="en-US">en-US</option>
-            </Select>
+          <div class="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+            <div class="w-full sm:min-w-[150px]">
+              <label class="mb-1 block text-xs font-medium text-muted-foreground">{t('language')}</label>
+              <Select value={locale()} onInput={(e) => setLocale(e.currentTarget.value as Locale)}>
+                <option value="pt-BR">pt-BR</option>
+                <option value="en-US">en-US</option>
+              </Select>
+            </div>
+            <div class="w-full sm:min-w-[150px]">
+              <label class="mb-1 block text-xs font-medium text-muted-foreground">
+                {tx('Tema', 'Theme')}
+              </label>
+              <Select value={theme()} onInput={(e) => setTheme(e.currentTarget.value as Theme)}>
+                <option value="dark">{tx('Escuro', 'Dark')}</option>
+                <option value="light">{tx('Claro', 'Light')}</option>
+                <option value="system">{tx('Sistema', 'System')}</option>
+              </Select>
+            </div>
           </div>
         </CardHeader>
       </Card>
