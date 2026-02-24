@@ -151,30 +151,6 @@ pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
     })
 }
 
-#[cfg_attr(feature = "tauri-commands", tauri::command)]
-pub fn cmd_create_executable(
-    input: CreateExecutableInput,
-) -> Result<CreateExecutableOutput, String> {
-    create_executable(input)
-}
-
-#[cfg_attr(feature = "tauri-commands", tauri::command)]
-pub fn cmd_hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
-    hash_executable(input)
-}
-
-#[cfg_attr(feature = "tauri-commands", tauri::command)]
-pub fn cmd_test_configuration(
-    input: TestConfigurationInput,
-) -> Result<TestConfigurationOutput, String> {
-    test_configuration(input)
-}
-
-#[cfg_attr(feature = "tauri-commands", tauri::command)]
-pub fn cmd_winetricks_available() -> Result<WinetricksAvailableOutput, String> {
-    winetricks_available()
-}
-
 fn collect_missing_files(config: &GameConfig, game_root: &Path) -> Result<Vec<String>, String> {
     let mut missing = Vec::new();
 
@@ -313,7 +289,7 @@ mod tests {
         let input = HashExeInput {
             executable_path: "/does/not/exist.exe".to_string(),
         };
-        let err = cmd_hash_executable(input).expect_err("missing file must fail");
+        let err = hash_executable(input).expect_err("missing file must fail");
         assert!(err.contains("io error"));
     }
 

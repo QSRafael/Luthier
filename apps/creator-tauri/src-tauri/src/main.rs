@@ -1,9 +1,34 @@
 #[cfg(feature = "tauri-commands")]
 fn main() {
     use creator_tauri_backend::{
-        cmd_create_executable, cmd_hash_executable, cmd_test_configuration,
-        cmd_winetricks_available,
+        create_executable, hash_executable, test_configuration, winetricks_available,
+        CreateExecutableInput, CreateExecutableOutput, HashExeInput, HashExeOutput,
+        TestConfigurationInput, TestConfigurationOutput, WinetricksAvailableOutput,
     };
+
+    #[tauri::command]
+    fn cmd_create_executable(
+        input: CreateExecutableInput,
+    ) -> Result<CreateExecutableOutput, String> {
+        create_executable(input)
+    }
+
+    #[tauri::command]
+    fn cmd_hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
+        hash_executable(input)
+    }
+
+    #[tauri::command]
+    fn cmd_test_configuration(
+        input: TestConfigurationInput,
+    ) -> Result<TestConfigurationOutput, String> {
+        test_configuration(input)
+    }
+
+    #[tauri::command]
+    fn cmd_winetricks_available() -> Result<WinetricksAvailableOutput, String> {
+        winetricks_available()
+    }
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![

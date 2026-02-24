@@ -1720,3 +1720,31 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
 - `cargo test -p creator-tauri-backend -- --nocapture`
+
+### 2026-02-24 - Checkpoint 23
+Escopo implementado:
+- Pipeline de build desktop do App Criador consolidado:
+  - `src-tauri/build.rs` adicionado com `tauri_build::build()`;
+  - `tauri-build` em `build-dependencies`;
+  - `tauri.conf.json` com `beforeDevCommand`/`beforeBuildCommand` e bundle ativo.
+- Comandos Tauri reorganizados para evitar conflito de macro em release:
+  - wrappers `#[tauri::command]` movidos para `src-tauri/src/main.rs`;
+  - `src-tauri/src/lib.rs` mantido como camada pura de logica.
+- Preparacao automatica de compatibilidade Linux para Tauri v1 em distros com WebKit 4.1:
+  - script `apps/creator-tauri/scripts/prepare-linux-compat.sh`;
+  - gera `pkgconfig/*-4.0.pc` apontando para libs 4.1;
+  - gera `libshims/libwebkit2gtk-4.0.so` e `libshims/libjavascriptcoregtk-4.0.so`.
+- Scripts NPM atualizados:
+  - `tauri:dev` e `tauri:build` executam o script de compatibilidade antes do build;
+  - `tauri:build` usa `-b none` para gerar binario nativo sem depender do bundler AppImage;
+  - `tauri:bundle` mantido separado para empacotamento completo.
+- Icone minimo RGBA adicionado em `src-tauri/icons/icon.png` para satisfazer o `generate_context`.
+- Observacao de ambiente (Arch/CachyOS): bundling AppImage falha por limitacao do `strip` do `linuxdeploy` com binarios RELR; build de binario nativo funciona.
+
+Resultado operacional:
+- Binario desktop do Creator gerado em:
+  - `target/release/game-orchestrator-creator`
+
+Validacao do checkpoint:
+- `npm run tauri:build` (com `mise`, gerando binario release)
+- `cargo test -p creator-tauri-backend -- --nocapture`

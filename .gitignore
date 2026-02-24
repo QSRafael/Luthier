@@ -1,6 +1,9 @@
 /target
 node_modules
 /dist
+/apps/creator-tauri/dist
+/pkgconfig
+/libshims
 .DS_Store
 *.AppImage
 *.rpm

@@ -8,10 +8,14 @@ authors.workspace = true
 [features]
 default = []
 tauri-commands = ["dep:tauri"]
+custom-protocol = ["tauri/custom-protocol"]
 
 [dependencies]
 creator-core = { path = "../../../crates/creator-core" }
 orchestrator-core = { path = "../../../crates/orchestrator-core" }
 serde.workspace = true
 serde_json.workspace = true
-tauri = { version = "1", optional = true, default-features = false }
+tauri = { version = "1", optional = true, default-features = false, features = ["wry"] }
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
