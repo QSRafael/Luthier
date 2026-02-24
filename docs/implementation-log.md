@@ -107,4 +107,23 @@
   - inclui resultado das etapas no JSON de saída;
   - aborta quando etapa obrigatória falha.
 - Próximo passo técnico:
-  - montar comando final de launch (wrappers + runtime + exe) e fechar loop de execução.
+- montar comando final de launch (wrappers + runtime + exe) e fechar loop de execução.
+
+## 2026-02-24 (checkpoint 09)
+- `--play` agora executa fluxo completo de runtime:
+  - valida integridade (`relative_exe_path` + `integrity_files`);
+  - roda `doctor` e bloqueia em `BLOCKER`;
+  - executa setup de prefix planejado;
+  - executa `pre_launch` (bash) quando definido;
+  - monta comando final com wrappers + runtime + args;
+  - executa comando do jogo com `wait()` da thread principal;
+  - executa `post_launch` quando definido.
+- Launch command inclui:
+  - seleção de runtime (`ProtonUmu`, `ProtonNative`, `Wine`);
+  - wrappers: `gamescope`, `gamemoderun`, `mangohud`, wrappers customizados;
+  - env protegido: `WINEPREFIX`, `PROTON_VERB` + custom vars com proteção de chave;
+  - suporte a dry-run global com `GAME_ORCH_DRY_RUN=1`.
+- Observabilidade:
+  - eventos adicionais `GO-CFG-020`, `GO-PF-020`, `GO-SC-020`, `GO-SC-021`, `GO-LN-020`.
+- Próximo passo técnico:
+  - integrar comandos Tauri reais (`#[tauri::command]`) e iniciar UI mínima para fluxo de gerar/testar.

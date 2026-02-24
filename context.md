@@ -1394,3 +1394,33 @@ Escopo implementado:
 Proximo checkpoint planejado:
 - Implementar montagem e spawn do launch command final (wrappers + runtime + exe).
 - Incluir script `pre_launch` e `post_launch` no fluxo real.
+
+### 2026-02-24 - Checkpoint 09
+Escopo implementado:
+- `--play` agora executa pipeline completo de runtime:
+  - valida integridade de arquivos;
+  - executa `doctor` com politica;
+  - executa setup de prefix;
+  - roda `pre_launch` (bash) quando definido;
+  - monta e executa comando final do jogo;
+  - roda `post_launch` quando definido.
+- Montagem do launch command:
+  - runtime selecionado por `doctor` (`ProtonUmu`, `ProtonNative`, `Wine`);
+  - wrappers:
+    - `gamescope`
+    - `gamemoderun`
+    - `mangohud`
+    - wrappers customizados do perfil;
+  - env:
+    - base (`WINEPREFIX`, `PROTON_VERB`);
+    - `PROTONPATH` quando aplicavel;
+    - prime offload opcional;
+    - variaveis customizadas com bloqueio de chaves protegidas.
+- Execucao:
+  - `wait()` no processo principal do jogo;
+  - dry-run global por `GAME_ORCH_DRY_RUN=1`.
+- Logs adicionais por etapa para depuracao humana/IA.
+
+Proximo checkpoint planejado:
+- Expor comandos Tauri reais (`#[tauri::command]`) no backend do App Criador.
+- Criar UI mínima do Criador para gerar e testar sem sair da janela.

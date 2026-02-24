@@ -26,6 +26,16 @@ pub struct CommandExecutionResult {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ExternalCommand {
+    pub name: String,
+    pub program: String,
+    pub args: Vec<String>,
+    pub timeout_secs: Option<u64>,
+    pub cwd: Option<String>,
+    pub mandatory: bool,
+}
+
 pub fn execute_prefix_setup_plan(
     plan: &PrefixSetupPlan,
     env_pairs: &[(String, String)],
@@ -64,6 +74,88 @@ pub fn has_mandatory_failures(results: &[CommandExecutionResult]) -> bool {
     results.iter().any(|result| {
         result.mandatory && matches!(result.status, StepStatus::Failed | StepStatus::TimedOut)
     })
+}
+
+pub fn execute_external_command(
+    command: &ExternalCommand,
+    env_pairs: &[(String, String)],
+    dry_run: bool,
+) -> CommandExecutionResult {
+    if dry_run {
+        return CommandExecutionResult {
+            name: command.name.clone(),
+            program: command.program.clone(),
+            args: command.args.clone(),
+            mandatory: command.mandatory,
+            status: StepStatus::Skipped,
+            exit_code: None,
+            duration_ms: 0,
+            error: Some("dry-run mode".to_string()),
+        };
+    }
+
+    let start = Instant::now();
+    let mut process = match spawn_external_process(command, env_pairs) {
+        Ok(child) => child,
+        Err(err) => {
+            return CommandExecutionResult {
+                name: command.name.clone(),
+                program: command.program.clone(),
+                args: command.args.clone(),
+                mandatory: command.mandatory,
+                status: StepStatus::Failed,
+                exit_code: None,
+                duration_ms: start.elapsed().as_millis(),
+                error: Some(err.to_string()),
+            }
+        }
+    };
+
+    let wait_result = if let Some(timeout_secs) = command.timeout_secs {
+        wait_with_timeout(&mut process, Duration::from_secs(timeout_secs))
+    } else {
+        process.wait().map(Some)
+    };
+
+    match wait_result {
+        Ok(Some(status)) => CommandExecutionResult {
+            name: command.name.clone(),
+            program: command.program.clone(),
+            args: command.args.clone(),
+            mandatory: command.mandatory,
+            status: if status.success() {
+                StepStatus::Success
+            } else {
+                StepStatus::Failed
+            },
+            exit_code: status.code(),
+            duration_ms: start.elapsed().as_millis(),
+            error: None,
+        },
+        Ok(None) => CommandExecutionResult {
+            name: command.name.clone(),
+            program: command.program.clone(),
+            args: command.args.clone(),
+            mandatory: command.mandatory,
+            status: StepStatus::TimedOut,
+            exit_code: None,
+            duration_ms: start.elapsed().as_millis(),
+            error: Some(format!(
+                "timeout after {}s",
+                command.timeout_secs.unwrap_or_default()
+            )),
+        },
+        Err(err) => CommandExecutionResult {
+            name: command.name.clone(),
+            program: command.program.clone(),
+            args: command.args.clone(),
+            mandatory: command.mandatory,
+            status: StepStatus::Failed,
+            exit_code: None,
+            duration_ms: start.elapsed().as_millis(),
+            error: Some(err.to_string()),
+        },
+    }
 }
 
 fn run_command(command: &PlannedCommand, env_pairs: &[(String, String)]) -> CommandExecutionResult {
@@ -141,6 +233,27 @@ fn spawn_process(
     process.spawn()
 }
 
+fn spawn_external_process(
+    command: &ExternalCommand,
+    env_pairs: &[(String, String)],
+) -> Result<Child, std::io::Error> {
+    let mut process = Command::new(&command.program);
+    process
+        .args(&command.args)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    if let Some(cwd) = &command.cwd {
+        process.current_dir(cwd);
+    }
+
+    for (key, value) in env_pairs {
+        process.env(key, value);
+    }
+
+    process.spawn()
+}
+
 fn wait_with_timeout(
     child: &mut Child,
     timeout: Duration,
@@ -198,5 +311,21 @@ mod tests {
         let results = execute_prefix_setup_plan(&plan, &[], true);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].status, StepStatus::Skipped);
+    }
+
+    #[test]
+    fn dry_run_external_command_is_skipped() {
+        let cmd = ExternalCommand {
+            name: "pre-launch".to_string(),
+            program: "bash".to_string(),
+            args: vec!["-lc".to_string(), "echo test".to_string()],
+            timeout_secs: Some(10),
+            cwd: None,
+            mandatory: true,
+        };
+
+        let result = execute_external_command(&cmd, &[], true);
+        assert_eq!(result.status, StepStatus::Skipped);
+        assert!(result.error.unwrap_or_default().contains("dry-run"));
     }
 }

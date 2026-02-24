@@ -1,15 +1,22 @@
-use std::{fs, io, path::Path};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use orchestrator_core::{
-    doctor::{run_doctor, CheckStatus},
+    doctor::{run_doctor, CheckStatus, DoctorReport},
     observability::{emit_ndjson, new_trace_id, LogEvent, LogLevel},
     prefix::{base_env_for_prefix, build_prefix_setup_plan},
-    process::{execute_prefix_setup_plan, has_mandatory_failures},
+    process::{
+        execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
+        CommandExecutionResult, ExternalCommand, StepStatus,
+    },
     trailer::extract_config_json,
-    GameConfig, OrchestratorError,
+    FeatureState, GameConfig, OrchestratorError, RuntimeCandidate,
 };
+use serde::Serialize;
 
 #[derive(Debug, Parser)]
 #[command(name = "orchestrator")]
@@ -34,6 +41,15 @@ struct Cli {
     lang: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+struct LaunchCommandPlan {
+    program: String,
+    args: Vec<String>,
+    cwd: String,
+    runtime: String,
+    env: Vec<(String, String)>,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -51,6 +67,7 @@ async fn main() -> anyhow::Result<()> {
             "doctor": cli.doctor,
             "show_config": cli.show_config,
             "lang": cli.lang,
+            "verbose": cli.verbose,
         }),
     );
 
@@ -79,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if cli.play {
-        run_play_preflight(&trace_id).context("play preflight failed")?;
+        run_play(&trace_id).context("play flow failed")?;
         return Ok(());
     }
 
@@ -154,48 +171,87 @@ fn run_doctor_command(trace_id: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn run_play_preflight(trace_id: &str) -> anyhow::Result<()> {
+fn run_play(trace_id: &str) -> anyhow::Result<()> {
     let config = load_embedded_config_required()?;
-    let report = run_doctor(Some(&config));
+    let game_root = resolve_game_root().context("failed to resolve game root")?;
+    let dry_run = dry_run_enabled();
 
+    let missing_files = validate_integrity(&config, &game_root);
+    if !missing_files.is_empty() {
+        let output = serde_json::json!({
+            "integrity": {
+                "status": "BLOCKER",
+                "missing_files": missing_files,
+            },
+            "launch": {
+                "status": "aborted",
+                "reason": "required game files are missing"
+            }
+        });
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output).context("failed to serialize integrity error")?
+        );
+
+        return Err(anyhow!("integrity check failed"));
+    }
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "integrity",
+        "GO-CFG-020",
+        "integrity_check_passed",
+        serde_json::json!({
+            "integrity_files_count": config.integrity_files.len(),
+            "relative_exe_path": config.relative_exe_path,
+        }),
+    );
+
+    let report = run_doctor(Some(&config));
     log_event(
         trace_id,
         LogLevel::Info,
         "launcher",
         "GO-LN-010",
-        "play_preflight_doctor_finished",
+        "play_doctor_finished",
         serde_json::json!({
             "summary": report.summary,
         }),
     );
 
     if matches!(report.summary, CheckStatus::BLOCKER) {
-        let pretty =
-            serde_json::to_string_pretty(&report).context("failed to serialize blocker report")?;
-        println!("{pretty}");
-        return Err(anyhow!(
-            "doctor returned BLOCKER; launch aborted before prefix/setup"
-        ));
+        let output = serde_json::json!({
+            "doctor": report,
+            "launch": {
+                "status": "aborted",
+                "reason": "doctor returned BLOCKER"
+            }
+        });
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output).context("failed to serialize doctor blocker")?
+        );
+
+        return Err(anyhow!("doctor returned BLOCKER"));
     }
 
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
     let prefix_env = base_env_for_prefix(Path::new(&prefix_plan.prefix_path));
-    let dry_run = std::env::var("GAME_ORCH_DRY_RUN")
-        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
     let setup_results = execute_prefix_setup_plan(&prefix_plan, &prefix_env, dry_run);
 
     log_event(
         trace_id,
         LogLevel::Info,
-        "launcher",
-        "GO-LN-011",
-        "play_preflight_prefix_plan_ready",
+        "prefix",
+        "GO-PF-020",
+        "prefix_setup_executed",
         serde_json::json!({
             "needs_init": prefix_plan.needs_init,
-            "commands": prefix_plan.commands.len(),
+            "steps": setup_results.len(),
             "dry_run": dry_run,
-            "setup_steps": setup_results.len(),
         }),
     );
 
@@ -209,10 +265,11 @@ fn run_play_preflight(trace_id: &str) -> anyhow::Result<()> {
                 "reason": "mandatory prefix setup command failed"
             }
         });
+
         println!(
             "{}",
             serde_json::to_string_pretty(&output)
-                .context("failed to serialize preflight output")?
+                .context("failed to serialize prefix failure output")?
         );
 
         return Err(anyhow!(
@@ -220,21 +277,383 @@ fn run_play_preflight(trace_id: &str) -> anyhow::Result<()> {
         ));
     }
 
+    let prefix_path = PathBuf::from(&prefix_plan.prefix_path);
+    let launch_plan = build_launch_command(&config, &report, &game_root, &prefix_path)
+        .context("failed to build launch command")?;
+
+    let pre_script_result = execute_script_if_present(
+        "pre-launch-script",
+        &config.scripts.pre_launch,
+        &launch_plan.cwd,
+        &launch_plan.env,
+        dry_run,
+        true,
+    );
+
+    if let Some(result) = &pre_script_result {
+        log_event(
+            trace_id,
+            LogLevel::Info,
+            "scripts",
+            "GO-SC-020",
+            "pre_launch_script_executed",
+            serde_json::json!({
+                "status": result.status,
+                "exit_code": result.exit_code,
+                "duration_ms": result.duration_ms,
+            }),
+        );
+    }
+
+    if let Some(result) = &pre_script_result {
+        if matches!(result.status, StepStatus::Failed | StepStatus::TimedOut) {
+            let output = serde_json::json!({
+                "doctor": report,
+                "prefix_setup_plan": prefix_plan,
+                "prefix_setup_execution": setup_results,
+                "pre_launch": result,
+                "launch": {
+                    "status": "aborted",
+                    "reason": "pre-launch script failed"
+                }
+            });
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .context("failed to serialize pre-launch failure")?
+            );
+
+            return Err(anyhow!("pre-launch script failed"));
+        }
+    }
+
+    let game_result = execute_external_command(
+        &ExternalCommand {
+            name: "game-launch".to_string(),
+            program: launch_plan.program.clone(),
+            args: launch_plan.args.clone(),
+            timeout_secs: None,
+            cwd: Some(launch_plan.cwd.clone()),
+            mandatory: true,
+        },
+        &launch_plan.env,
+        dry_run,
+    );
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "launcher",
+        "GO-LN-020",
+        "game_command_executed",
+        serde_json::json!({
+            "status": game_result.status,
+            "exit_code": game_result.exit_code,
+            "duration_ms": game_result.duration_ms,
+            "dry_run": dry_run,
+        }),
+    );
+
+    let post_script_result = execute_script_if_present(
+        "post-launch-script",
+        &config.scripts.post_launch,
+        &launch_plan.cwd,
+        &launch_plan.env,
+        dry_run,
+        false,
+    );
+
+    if let Some(result) = &post_script_result {
+        log_event(
+            trace_id,
+            LogLevel::Info,
+            "scripts",
+            "GO-SC-021",
+            "post_launch_script_executed",
+            serde_json::json!({
+                "status": result.status,
+                "exit_code": result.exit_code,
+                "duration_ms": result.duration_ms,
+            }),
+        );
+    }
+
+    let launch_status = match game_result.status {
+        StepStatus::Success => "completed",
+        StepStatus::Skipped => "skipped",
+        StepStatus::Failed | StepStatus::TimedOut => "failed",
+    };
+
     let output = serde_json::json!({
         "doctor": report,
         "prefix_setup_plan": prefix_plan,
         "prefix_setup_execution": setup_results,
+        "launch_plan": launch_plan,
+        "pre_launch": pre_script_result,
+        "game_launch": game_result,
+        "post_launch": post_script_result,
         "launch": {
-            "status": "pending",
-            "note": "game launch wiring is not implemented yet"
+            "status": launch_status,
+            "dry_run": dry_run
         }
     });
+
     println!(
         "{}",
-        serde_json::to_string_pretty(&output).context("failed to serialize preflight output")?
+        serde_json::to_string_pretty(&output).context("failed to serialize play output")?
     );
 
+    if matches!(
+        game_result.status,
+        StepStatus::Failed | StepStatus::TimedOut
+    ) {
+        return Err(anyhow!("game launch command failed"));
+    }
+
     Ok(())
+}
+
+fn build_launch_command(
+    config: &GameConfig,
+    report: &DoctorReport,
+    game_root: &Path,
+    prefix_path: &Path,
+) -> anyhow::Result<LaunchCommandPlan> {
+    let selected_runtime = report
+        .runtime
+        .selected_runtime
+        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
+
+    let runtime_program =
+        match selected_runtime {
+            RuntimeCandidate::ProtonUmu => {
+                report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected runtime ProtonUmu but umu-run path is missing")
+                })?
+            }
+            RuntimeCandidate::ProtonNative => report.runtime.proton.clone().ok_or_else(|| {
+                anyhow!("selected runtime ProtonNative but proton path is missing")
+            })?,
+            RuntimeCandidate::Wine => report
+                .runtime
+                .wine
+                .clone()
+                .ok_or_else(|| anyhow!("selected runtime Wine but wine path is missing"))?,
+        };
+
+    let game_exe = resolve_relative_path(game_root, &config.relative_exe_path);
+    let game_exe_str = game_exe.to_string_lossy().into_owned();
+
+    let mut runtime_args = vec![game_exe_str];
+    runtime_args.extend(config.launch_args.clone());
+
+    let mut command_tokens = vec![runtime_program.clone()];
+    command_tokens.extend(runtime_args);
+
+    let gamescope_active = feature_enabled(config.environment.gamescope.state);
+    let mangohud_active = feature_enabled(config.requirements.mangohud);
+
+    if feature_enabled(config.requirements.gamemode) {
+        if let Some(path) = dependency_path(report, "gamemoderun") {
+            command_tokens = wrap_command(path, vec![], command_tokens);
+        }
+    }
+
+    if mangohud_active && !gamescope_active {
+        if let Some(path) = dependency_path(report, "mangohud") {
+            command_tokens = wrap_command(path, vec![], command_tokens);
+        }
+    }
+
+    for wrapper in config.compatibility.wrapper_commands.iter().rev() {
+        if feature_enabled(wrapper.state) {
+            let args = split_wrapper_args(&wrapper.args);
+            command_tokens = wrap_command(wrapper.executable.clone(), args, command_tokens);
+        }
+    }
+
+    if gamescope_active {
+        if let Some(path) = dependency_path(report, "gamescope") {
+            let mut gamescope_args = Vec::new();
+
+            if let Some(resolution) = &config.environment.gamescope.resolution {
+                if let Some((w, h)) = parse_resolution(resolution) {
+                    gamescope_args.push("-w".to_string());
+                    gamescope_args.push(w.to_string());
+                    gamescope_args.push("-h".to_string());
+                    gamescope_args.push(h.to_string());
+                }
+            }
+
+            if config.environment.gamescope.fsr {
+                gamescope_args.push("-F".to_string());
+                gamescope_args.push("fsr".to_string());
+            }
+
+            if mangohud_active {
+                gamescope_args.push("--mangoapp".to_string());
+            }
+
+            gamescope_args.push("--".to_string());
+            gamescope_args.extend(command_tokens);
+            command_tokens = wrap_command(path, gamescope_args, Vec::new());
+        }
+    }
+
+    let (program, args) = split_program_and_args(command_tokens)
+        .ok_or_else(|| anyhow!("failed to build launch command"))?;
+
+    let mut env_pairs = base_env_for_prefix(prefix_path);
+
+    if matches!(selected_runtime, RuntimeCandidate::ProtonUmu) {
+        if let Some(proton_path) = &report.runtime.proton {
+            upsert_env(&mut env_pairs, "PROTONPATH", proton_path);
+        }
+    }
+
+    if config.environment.prime_offload {
+        upsert_env(&mut env_pairs, "__NV_PRIME_RENDER_OFFLOAD", "1");
+        upsert_env(&mut env_pairs, "__GLX_VENDOR_LIBRARY_NAME", "nvidia");
+        upsert_env(&mut env_pairs, "DRI_PRIME", "1");
+    }
+
+    for (key, value) in &config.environment.custom_vars {
+        if is_protected_env_key(key) {
+            continue;
+        }
+        upsert_env(&mut env_pairs, key, value);
+    }
+
+    Ok(LaunchCommandPlan {
+        program,
+        args,
+        cwd: game_root.to_string_lossy().into_owned(),
+        runtime: format!("{:?}", selected_runtime),
+        env: env_pairs,
+    })
+}
+
+fn execute_script_if_present(
+    name: &str,
+    script: &str,
+    cwd: &str,
+    env_pairs: &[(String, String)],
+    dry_run: bool,
+    mandatory: bool,
+) -> Option<CommandExecutionResult> {
+    if script.trim().is_empty() {
+        return None;
+    }
+
+    let command = ExternalCommand {
+        name: name.to_string(),
+        program: "bash".to_string(),
+        args: vec!["-lc".to_string(), script.to_string()],
+        timeout_secs: Some(600),
+        cwd: Some(cwd.to_string()),
+        mandatory,
+    };
+
+    Some(execute_external_command(&command, env_pairs, dry_run))
+}
+
+fn validate_integrity(config: &GameConfig, game_root: &Path) -> Vec<String> {
+    let mut missing = Vec::new();
+
+    let exe_path = resolve_relative_path(game_root, &config.relative_exe_path);
+    if !exe_path.exists() {
+        missing.push(config.relative_exe_path.clone());
+    }
+
+    for file in &config.integrity_files {
+        let path = resolve_relative_path(game_root, file);
+        if !path.exists() {
+            missing.push(file.clone());
+        }
+    }
+
+    missing
+}
+
+fn resolve_game_root() -> anyhow::Result<PathBuf> {
+    let current_exe = std::env::current_exe().context("failed to resolve current executable")?;
+    let root = current_exe
+        .parent()
+        .ok_or_else(|| anyhow!("current executable has no parent directory"))?;
+    Ok(root.to_path_buf())
+}
+
+fn resolve_relative_path(base: &Path, relative: &str) -> PathBuf {
+    let clean = relative.strip_prefix("./").unwrap_or(relative);
+    base.join(clean)
+}
+
+fn feature_enabled(state: FeatureState) -> bool {
+    matches!(state, FeatureState::MandatoryOn | FeatureState::OptionalOn)
+}
+
+fn dependency_path(report: &DoctorReport, name: &str) -> Option<String> {
+    report
+        .dependencies
+        .iter()
+        .find(|dep| dep.name == name && dep.found)
+        .and_then(|dep| dep.resolved_path.clone())
+}
+
+fn split_wrapper_args(raw: &str) -> Vec<String> {
+    raw.split_whitespace().map(ToString::to_string).collect()
+}
+
+fn wrap_command(program: String, args: Vec<String>, inner: Vec<String>) -> Vec<String> {
+    let mut out = Vec::with_capacity(1 + args.len() + inner.len());
+    out.push(program);
+    out.extend(args);
+    out.extend(inner);
+    out
+}
+
+fn split_program_and_args(tokens: Vec<String>) -> Option<(String, Vec<String>)> {
+    let mut iter = tokens.into_iter();
+    let program = iter.next()?;
+    let args = iter.collect::<Vec<String>>();
+    Some((program, args))
+}
+
+fn parse_resolution(raw: &str) -> Option<(u32, u32)> {
+    let (w, h) = raw.split_once('x')?;
+    let width = w.parse::<u32>().ok()?;
+    let height = h.parse::<u32>().ok()?;
+    Some((width, height))
+}
+
+fn upsert_env(
+    env_pairs: &mut Vec<(String, String)>,
+    key: impl Into<String>,
+    value: impl Into<String>,
+) {
+    let key = key.into();
+    let value = value.into();
+
+    if let Some((_, existing_value)) = env_pairs
+        .iter_mut()
+        .find(|(existing_key, _)| existing_key == &key)
+    {
+        *existing_value = value;
+        return;
+    }
+
+    env_pairs.push((key, value));
+}
+
+fn is_protected_env_key(key: &str) -> bool {
+    matches!(key, "WINEPREFIX" | "PROTON_VERB")
+}
+
+fn dry_run_enabled() -> bool {
+    std::env::var("GAME_ORCH_DRY_RUN")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
 }
 
 fn load_embedded_config_required() -> anyhow::Result<GameConfig> {
