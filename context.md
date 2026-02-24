@@ -1924,6 +1924,24 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 40
+Escopo implementado:
+- Itens de politica do `winecfg` (os que antes tinham apenas `Ativado` + `Obrigatorio`) agora usam 3 cards:
+  - `Padrao do Wine`
+  - `Ativado`
+  - `Obrigatorio`
+- Regras de UX:
+  - `Padrao do Wine = ligado` -> card `Ativado` fica desabilitado (nao editavel);
+  - `Obrigatorio` continua independente e preserva o papel de expor/bloquear edicao futura no launcher/config do orquestrador;
+  - somente itens da aba `winecfg` usam esse comportamento (nao afeta `FeatureStateField` generico).
+- Schema expandido para suportar isso explicitamente:
+  - novo tipo `WinecfgFeaturePolicy` (`state` + `use_wine_default`) no frontend e no Rust;
+  - desserializacao Rust compativel com payload antigo (aceita `FeatureState` legado e converte para `use_wine_default = false`).
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+- `/home/rafael/.cargo/bin/cargo build --workspace`
+
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
 - Layout do item `Versão de runtime` reorganizado:

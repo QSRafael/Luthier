@@ -58,15 +58,15 @@ pub struct WinecfgConfig {
     #[serde(default)]
     pub windows_version: Option<String>,
     pub dll_overrides: Vec<DllOverrideRule>,
-    pub auto_capture_mouse: FeatureState,
-    pub window_decorations: FeatureState,
-    pub window_manager_control: FeatureState,
+    pub auto_capture_mouse: WinecfgFeaturePolicy,
+    pub window_decorations: WinecfgFeaturePolicy,
+    pub window_manager_control: WinecfgFeaturePolicy,
     pub virtual_desktop: VirtualDesktopConfig,
     #[serde(default)]
     pub screen_dpi: Option<u16>,
-    pub desktop_integration: FeatureState,
-    #[serde(default = "default_feature_state_optional_off")]
-    pub mime_associations: FeatureState,
+    pub desktop_integration: WinecfgFeaturePolicy,
+    #[serde(default = "default_winecfg_feature_policy_optional_off")]
+    pub mime_associations: WinecfgFeaturePolicy,
     #[serde(default)]
     pub desktop_folders: Vec<WineDesktopFolderMapping>,
     pub drives: Vec<WineDriveMapping>,
@@ -95,6 +95,59 @@ impl FeatureState {
 
     pub fn is_mandatory(self) -> bool {
         matches!(self, Self::MandatoryOn | Self::MandatoryOff)
+    }
+}
+
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq)]
+pub struct WinecfgFeaturePolicy {
+    pub state: FeatureState,
+    pub use_wine_default: bool,
+}
+
+impl WinecfgFeaturePolicy {
+    pub fn is_enabled(self) -> bool {
+        self.state.is_enabled()
+    }
+}
+
+impl Default for WinecfgFeaturePolicy {
+    fn default() -> Self {
+        Self {
+            state: FeatureState::OptionalOff,
+            use_wine_default: false,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for WinecfgFeaturePolicy {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Compat {
+            Legacy(FeatureState),
+            Structured {
+                state: FeatureState,
+                #[serde(default)]
+                use_wine_default: bool,
+            },
+        }
+
+        match Compat::deserialize(deserializer)? {
+            Compat::Legacy(state) => Ok(Self {
+                state,
+                use_wine_default: false,
+            }),
+            Compat::Structured {
+                state,
+                use_wine_default,
+            } => Ok(Self {
+                state,
+                use_wine_default,
+            }),
+        }
     }
 }
 
@@ -152,7 +205,7 @@ pub struct DllOverrideRule {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VirtualDesktopConfig {
-    pub state: FeatureState,
+    pub state: WinecfgFeaturePolicy,
     pub resolution: Option<String>,
 }
 
@@ -228,8 +281,11 @@ where
     }
 }
 
-fn default_feature_state_optional_off() -> FeatureState {
-    FeatureState::OptionalOff
+fn default_winecfg_feature_policy_optional_off() -> WinecfgFeaturePolicy {
+    WinecfgFeaturePolicy {
+        state: FeatureState::OptionalOff,
+        use_wine_default: false,
+    }
 }
 
 #[cfg(test)]

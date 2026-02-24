@@ -11,7 +11,8 @@ import {
   StringListField,
   TextAreaField,
   TextInputField,
-  ToggleField
+  ToggleField,
+  WinecfgFeatureStateField
 } from '../../components/form/FormControls'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
@@ -376,7 +377,7 @@ export default function CreatorPage() {
   })
 
   const winecfgVirtualDesktopEnabled = createMemo(() =>
-    featureStateEnabled(config().winecfg.virtual_desktop.state)
+    featureStateEnabled(config().winecfg.virtual_desktop.state.state)
   )
 
   const winecfgVirtualDesktopResolution = createMemo(() =>
@@ -2530,28 +2531,28 @@ export default function CreatorPage() {
                 )}
               >
                 <div class="grid gap-3">
-                  <FeatureStateField
+                  <WinecfgFeatureStateField
                     label={tx('Capturar o mouse automaticamente em janelas em tela cheia', 'Automatically capture mouse in fullscreen windows')}
                     help={tx('Equivalente à opção de captura automática do winecfg.', 'Equivalent to winecfg auto-capture mouse option.')}
                     value={config().winecfg.auto_capture_mouse}
                     onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, auto_capture_mouse: value } }))}
                   />
 
-                  <FeatureStateField
+                  <WinecfgFeatureStateField
                     label={tx('Permitir que o gerenciador de janelas decore as janelas', 'Allow the window manager to decorate windows')}
                     help={tx('Controla decorações de janela gerenciadas pelo WM.', 'Controls window decorations managed by the WM.')}
                     value={config().winecfg.window_decorations}
                     onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_decorations: value } }))}
                   />
 
-                  <FeatureStateField
+                  <WinecfgFeatureStateField
                     label={tx('Permitir que o gerenciador de janelas controle as janelas', 'Allow the window manager to control windows')}
                     help={tx('Permite que o WM controle posição/foco/estado das janelas.', 'Lets the WM control window position/focus/state.')}
                     value={config().winecfg.window_manager_control}
                     onChange={(value) => patchConfig((prev) => ({ ...prev, winecfg: { ...prev.winecfg, window_manager_control: value } }))}
                   />
 
-                  <FeatureStateField
+                  <WinecfgFeatureStateField
                     label={tx('Emular uma área de trabalho virtual', 'Emulate a virtual desktop')}
                     help={tx('Quando ativo, o jogo roda dentro de um desktop virtual do Wine.', 'When enabled, the game runs inside a Wine virtual desktop.')}
                     value={config().winecfg.virtual_desktop.state}
@@ -2664,7 +2665,7 @@ export default function CreatorPage() {
                 )}
               >
                 <div class="grid gap-3">
-                  <FeatureStateField
+                  <WinecfgFeatureStateField
                     label={tx('Integração com desktop (geral)', 'Desktop integration (general)')}
                     help={tx('Controla integração do Wine com shell/desktop do Linux.', 'Controls Wine integration with the Linux shell/desktop.')}
                     value={config().winecfg.desktop_integration}
@@ -2676,7 +2677,7 @@ export default function CreatorPage() {
                     }
                   />
 
-                  <FeatureStateField
+                  <WinecfgFeatureStateField
                     label={tx('Tipos MIME (associações de arquivo e protocolo)', 'MIME types (file/protocol associations)')}
                     help={tx('Equivalente a "Manage file and protocol associations".', 'Equivalent to "Manage file and protocol associations".')}
                     value={config().winecfg.mime_associations}

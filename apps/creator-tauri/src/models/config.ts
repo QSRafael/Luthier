@@ -1,4 +1,5 @@
 export type FeatureState = 'MandatoryOn' | 'MandatoryOff' | 'OptionalOn' | 'OptionalOff'
+export type WinecfgFeaturePolicy = { state: FeatureState; use_wine_default: boolean }
 
 export type RuntimePrimary = 'ProtonUmu' | 'ProtonNative' | 'Wine'
 
@@ -62,13 +63,13 @@ export type GameConfig = {
   winecfg: {
     windows_version: string | null
     dll_overrides: Array<{ dll: string; mode: string }>
-    auto_capture_mouse: FeatureState
-    window_decorations: FeatureState
-    window_manager_control: FeatureState
-    virtual_desktop: { state: FeatureState; resolution: string | null }
+    auto_capture_mouse: WinecfgFeaturePolicy
+    window_decorations: WinecfgFeaturePolicy
+    window_manager_control: WinecfgFeaturePolicy
+    virtual_desktop: { state: WinecfgFeaturePolicy; resolution: string | null }
     screen_dpi: number | null
-    desktop_integration: FeatureState
-    mime_associations: FeatureState
+    desktop_integration: WinecfgFeaturePolicy
+    mime_associations: WinecfgFeaturePolicy
     desktop_folders: Array<{ folder_key: string; shortcut_name: string; linux_path: string }>
     drives: Array<{
       letter: string
@@ -164,13 +165,13 @@ export function defaultGameConfig(): GameConfig {
     winecfg: {
       windows_version: null,
       dll_overrides: [],
-      auto_capture_mouse: 'OptionalOn',
-      window_decorations: 'OptionalOn',
-      window_manager_control: 'OptionalOn',
-      virtual_desktop: { state: 'OptionalOff', resolution: null },
+      auto_capture_mouse: { state: 'OptionalOn', use_wine_default: true },
+      window_decorations: { state: 'OptionalOn', use_wine_default: true },
+      window_manager_control: { state: 'OptionalOn', use_wine_default: true },
+      virtual_desktop: { state: { state: 'OptionalOff', use_wine_default: true }, resolution: null },
       screen_dpi: null,
-      desktop_integration: 'OptionalOn',
-      mime_associations: 'OptionalOff',
+      desktop_integration: { state: 'OptionalOn', use_wine_default: true },
+      mime_associations: { state: 'OptionalOff', use_wine_default: true },
       desktop_folders: [],
       drives: [
         {

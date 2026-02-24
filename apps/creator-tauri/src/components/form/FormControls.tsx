@@ -217,10 +217,14 @@ type FeatureToggleCardProps = {
   title: string
   checked: boolean
   onChange: (checked: boolean) => void
+  disabled?: boolean
 }
 
 function FeatureToggleCard(props: FeatureToggleCardProps) {
-  const toggle = () => props.onChange(!props.checked)
+  const toggle = () => {
+    if (props.disabled) return
+    props.onChange(!props.checked)
+  }
 
   return (
     <div
@@ -228,9 +232,11 @@ function FeatureToggleCard(props: FeatureToggleCardProps) {
       tabIndex={0}
       class={cn(
         'flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 transition-colors',
-        props.checked
-          ? 'border-primary/40 bg-accent/30'
-          : 'border-border/60 bg-background/70 hover:border-border hover:bg-accent/20'
+        props.disabled
+          ? 'cursor-not-allowed border-border/50 bg-muted/20 opacity-65'
+          : props.checked
+            ? 'border-primary/40 bg-accent/30'
+            : 'border-border/60 bg-background/70 hover:border-border hover:bg-accent/20'
       )}
       onClick={toggle}
       onKeyDown={(e) => {
@@ -241,7 +247,12 @@ function FeatureToggleCard(props: FeatureToggleCardProps) {
       }}
     >
       <p class="text-sm font-medium">{props.title}</p>
-      <Switch checked={props.checked} onChange={props.onChange} onClick={(e) => e.stopPropagation()}>
+      <Switch
+        checked={props.checked}
+        disabled={props.disabled}
+        onChange={props.onChange}
+        onClick={(e) => e.stopPropagation()}
+      >
         <SwitchInput />
         <SwitchControl>
           <SwitchThumb />
@@ -266,6 +277,61 @@ export function FeatureStateField(props: FeatureStateFieldProps) {
           title="Obrigatório"
           checked={state().mandatory}
           onChange={(mandatory) => props.onChange(encodeFeatureState(state().enabled, mandatory))}
+        />
+      </>
+    </FieldShell>
+  )
+}
+
+type WinecfgFeatureStatePolicy = {
+  state: FeatureState
+  use_wine_default: boolean
+}
+
+type WinecfgFeatureStateFieldProps = {
+  label: string
+  help: string
+  value: WinecfgFeatureStatePolicy
+  onChange: (value: WinecfgFeatureStatePolicy) => void
+  footer?: JSX.Element
+}
+
+export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
+  const decoded = createMemo(() => decodeFeatureState(props.value.state))
+
+  return (
+    <FieldShell
+      label={props.label}
+      help={props.help}
+      controlClass="grid gap-2 md:grid-cols-3"
+      footer={props.footer}
+    >
+      <>
+        <FeatureToggleCard
+          title="Padrão do Wine"
+          checked={props.value.use_wine_default}
+          onChange={(use_wine_default) => props.onChange({ ...props.value, use_wine_default })}
+        />
+        <FeatureToggleCard
+          title="Ativado"
+          checked={decoded().enabled}
+          disabled={props.value.use_wine_default}
+          onChange={(enabled) =>
+            props.onChange({
+              ...props.value,
+              state: encodeFeatureState(enabled, decoded().mandatory)
+            })
+          }
+        />
+        <FeatureToggleCard
+          title="Obrigatório"
+          checked={decoded().mandatory}
+          onChange={(mandatory) =>
+            props.onChange({
+              ...props.value,
+              state: encodeFeatureState(decoded().enabled, mandatory)
+            })
+          }
         />
       </>
     </FieldShell>

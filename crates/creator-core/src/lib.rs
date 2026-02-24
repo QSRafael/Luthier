@@ -347,16 +347,34 @@ mod tests {
             winecfg: WinecfgConfig {
                 windows_version: None,
                 dll_overrides: vec![],
-                auto_capture_mouse: FeatureState::OptionalOn,
-                window_decorations: FeatureState::OptionalOn,
-                window_manager_control: FeatureState::OptionalOn,
+                auto_capture_mouse: orchestrator_core::WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
+                window_decorations: orchestrator_core::WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
+                window_manager_control: orchestrator_core::WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
                 virtual_desktop: VirtualDesktopConfig {
-                    state: FeatureState::OptionalOff,
+                    state: orchestrator_core::WinecfgFeaturePolicy {
+                        state: FeatureState::OptionalOff,
+                        use_wine_default: true,
+                    },
                     resolution: None,
                 },
                 screen_dpi: None,
-                desktop_integration: FeatureState::OptionalOn,
-                mime_associations: FeatureState::OptionalOff,
+                desktop_integration: orchestrator_core::WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
+                mime_associations: orchestrator_core::WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOff,
+                    use_wine_default: true,
+                },
                 desktop_folders: vec![],
                 drives: vec![],
                 audio_driver: None,
