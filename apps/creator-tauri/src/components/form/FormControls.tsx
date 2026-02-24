@@ -348,6 +348,8 @@ type StringListFieldProps = {
   onPickValue?: () => Promise<string | null>
   emptyMessage?: string
   tableValueHeader?: string
+  addDisabled?: boolean
+  pickerDisabled?: boolean
 }
 
 export function StringListField(props: StringListFieldProps) {
@@ -440,6 +442,7 @@ export function StringListField(props: StringListFieldProps) {
           size="sm"
           class="inline-flex items-center gap-1.5"
           onClick={() => setOpen(true)}
+          disabled={props.addDisabled}
         >
           <IconPlus class="size-4" />
           {props.addLabel ?? 'Adicionar'}
@@ -483,6 +486,7 @@ export function StringListField(props: StringListFieldProps) {
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={props.pickerDisabled}
                   onClick={async () => {
                     const picked = await props.onPickValue?.()
                     if (!picked) return

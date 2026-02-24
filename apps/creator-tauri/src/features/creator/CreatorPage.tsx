@@ -151,6 +151,12 @@ function isLikelyAbsolutePath(path: string) {
   return trimmed.startsWith('/') || /^[A-Za-z]:[\\/]/.test(trimmed)
 }
 
+function isTauriLocalRuntime() {
+  if (typeof window === 'undefined') return false
+  const w = window as unknown as Record<string, unknown>
+  return typeof w.__TAURI_IPC__ !== 'undefined' || typeof w.__TAURI__ !== 'undefined'
+}
+
 function posixDirname(path: string) {
   const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
   if (!normalized || normalized === '/') return '/'
@@ -511,6 +517,13 @@ export default function CreatorPage() {
     })
   }
 
+  const canCalculateHash = createMemo(() => isTauriLocalRuntime() && isLikelyAbsolutePath(exePath()))
+  const canChooseGameRoot = createMemo(() => exePath().trim().length > 0)
+  const canPickIntegrityFromGameRoot = createMemo(() => isLikelyAbsolutePath(gameRoot().trim()))
+  const canAddMount = createMemo(() => gameRoot().trim().length > 0)
+  const canBrowseMountFolders = createMemo(() => isTauriLocalRuntime() && isLikelyAbsolutePath(gameRoot().trim()))
+  const canImportRegistryFromFile = createMemo(() => isTauriLocalRuntime())
+
   const importRegistryKeysFromRegFile = async () => {
     try {
       const selected = await pickRegistryFile()
@@ -831,7 +844,7 @@ export default function CreatorPage() {
             >
               <div class="picker-row">
                 <Input value={gameRootRelativeDisplay()} placeholder="./" readOnly class="readonly" />
-                <Button type="button" variant="outline" onClick={openGameRootChooser}>
+                <Button type="button" variant="outline" onClick={openGameRootChooser} disabled={!canChooseGameRoot()}>
                   {tx('Escolher outra', 'Choose another')}
                 </Button>
               </div>
@@ -974,14 +987,10 @@ export default function CreatorPage() {
               <div class="picker-row">
                 <Input
                   value={config().exe_hash}
-                  onInput={(e) =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      exe_hash: e.currentTarget.value
-                    }))
-                  }
+                  readOnly
+                  class="readonly"
                 />
-                <Button type="button" variant="outline" onClick={runHash}>
+                <Button type="button" variant="outline" onClick={runHash} disabled={!canCalculateHash()}>
                   {t('hashButton')}
                 </Button>
               </div>
@@ -1056,6 +1065,7 @@ export default function CreatorPage() {
               addLabel={tx('Adicionar arquivo', 'Add file')}
               pickerLabel={tx('Escolher arquivo na pasta do jogo', 'Pick file from game folder')}
               onPickValue={pickIntegrityFileRelative}
+              pickerDisabled={!canPickIntegrityFromGameRoot()}
               emptyMessage={tx('Nenhum arquivo adicionado.', 'No file added.')}
               tableValueHeader={tx('Arquivo relativo', 'Relative file')}
             />
@@ -1132,7 +1142,14 @@ export default function CreatorPage() {
               }
             >
               <Dialog open={mountDialogOpen()} onOpenChange={setMountDialogOpen}>
-                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setMountDialogOpen(true)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="inline-flex items-center gap-1.5"
+                  onClick={() => setMountDialogOpen(true)}
+                  disabled={!canAddMount()}
+                >
                   <IconPlus class="size-4" />
                   {tx('Adicionar montagem', 'Add mount')}
                 </Button>
@@ -1163,6 +1180,7 @@ export default function CreatorPage() {
                       <Button
                         type="button"
                         variant="outline"
+                        disabled={!canBrowseMountFolders()}
                         onClick={() => void openMountSourceBrowser()}
                       >
                         {tx('Navegar pastas', 'Browse folders')}
@@ -1707,12 +1725,14 @@ export default function CreatorPage() {
                           <Input
                             value={config().environment.gamescope.output_width}
                             placeholder={gamescopeUsesMonitorResolution() ? tx('Auto', 'Auto') : '1920'}
+                            disabled={gamescopeUsesMonitorResolution()}
                             onInput={(e) => setGamescopeOutputWidth(e.currentTarget.value)}
                           />
                           <span class="text-sm font-semibold text-muted-foreground">x</span>
                           <Input
                             value={config().environment.gamescope.output_height}
                             placeholder={gamescopeUsesMonitorResolution() ? tx('Auto', 'Auto') : '1080'}
+                            disabled={gamescopeUsesMonitorResolution()}
                             onInput={(e) => setGamescopeOutputHeight(e.currentTarget.value)}
                           />
                         </div>
@@ -2223,6 +2243,7 @@ export default function CreatorPage() {
                 size="sm"
                 class="inline-flex items-center gap-1.5"
                 onClick={importRegistryKeysFromRegFile}
+                disabled={!canImportRegistryFromFile()}
               >
                 <IconPlus class="size-4" />
                 {tx('Adicionar de arquivo (.reg)', 'Add from file (.reg)')}

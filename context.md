@@ -1994,6 +1994,29 @@ Escopo implementado:
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
+### 2026-02-24 - Checkpoint 38
+Escopo implementado:
+- Regras de campos derivados / somente leitura:
+  - `Hash SHA-256` passou a ser somente leitura (preenchido pelo botao `Calcular hash`);
+  - `Prefix path final` ja permanece somente leitura;
+  - `Pasta raiz do jogo` (exibicao relativa) permanece somente leitura.
+- Botoes dependentes de contexto agora desabilitam preventivamente:
+  - `Calcular hash` exige runtime Tauri local + caminho absoluto do executavel;
+  - `Escolher outra` (pasta raiz do jogo) exige executavel preenchido;
+  - `Adicionar montagem` exige `game root` definido;
+  - `Navegar pastas` (mini navegador de mounts) exige Tauri local + `game root` absoluto;
+  - `Adicionar de arquivo (.reg)` exige runtime Tauri local.
+- `Arquivos obrigatorios (integrity_files)`:
+  - botao de picker interno (`Escolher arquivo na pasta do jogo`) agora pode ser desabilitado independentemente do botao `Adicionar` (suporte novo em `StringListField`).
+- `Gamescope > Resolucao da tela`:
+  - campos manuais de largura/altura ficam desabilitados quando `Obter resolucao do monitor` esta ativo.
+
+Observacao:
+- Estados condicionais ja existentes (ex.: `HDR` oculto quando Wine-Wayland desativado; opcoes avancadas de Gamescope ocultas quando Gamescope desligado) foram mantidos.
+
+Validacao do checkpoint:
+- `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
+
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
 - Itens de listas do Creator migrados de "cards/linhas soltas" para tabelas simples com cabecalho (melhor legibilidade de colunas):
