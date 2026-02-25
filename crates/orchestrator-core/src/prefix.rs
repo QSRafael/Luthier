@@ -28,7 +28,7 @@ pub struct PlannedCommand {
 pub fn prefix_path_for_hash(exe_hash: &str) -> Result<PathBuf, OrchestratorError> {
     let home = env::var_os("HOME").ok_or(OrchestratorError::MissingHomeDir)?;
     let prefixes_dir = PathBuf::from(home).join(".local/share/GameOrchestrator/prefixes");
-    let short_key = prefix_hash_key(exe_hash);
+    let short_key = compact_exe_hash_key(exe_hash);
     let short_path = prefixes_dir.join(&short_key);
     let legacy_path = prefixes_dir.join(exe_hash.trim());
 
@@ -110,7 +110,7 @@ fn path_to_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
-fn prefix_hash_key(raw_hash: &str) -> String {
+pub fn compact_exe_hash_key(raw_hash: &str) -> String {
     let trimmed = raw_hash.trim();
     if trimmed.is_empty() {
         return String::new();
@@ -171,13 +171,15 @@ mod tests {
     #[test]
     fn truncates_hex_hash_for_prefix_key() {
         let key =
-            prefix_hash_key("d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9");
+            compact_exe_hash_key(
+                "d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9",
+            );
         assert_eq!(key, "d21d0173c302");
     }
 
     #[test]
     fn keeps_non_hex_placeholder_prefix_key() {
-        assert_eq!(prefix_hash_key("<exe_hash>"), "<exe_hash>");
+        assert_eq!(compact_exe_hash_key("<exe_hash>"), "<exe_hash>");
     }
 
     fn sample_config() -> GameConfig {

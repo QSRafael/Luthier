@@ -211,12 +211,7 @@ pub fn create_executable_with_base_hints(
         message
     })?;
 
-    let icon_sidecar_path = match input.icon_png_data_url.as_deref() {
-        Some(data_url) if !data_url.trim().is_empty() => {
-            Some(write_icon_sidecar_png(&request.output_path, data_url)?)
-        }
-        _ => None,
-    };
+    let icon_sidecar_path = None;
 
     log_backend_event(
         "INFO",
@@ -638,34 +633,6 @@ fn pe_is_64(bin: &[u8]) -> Result<bool, String> {
         0x20b => Ok(true),
         _ => Err(format!("unknown PE optional header magic: {magic:#x}")),
     }
-}
-
-fn write_icon_sidecar_png(output_path: &Path, data_url: &str) -> Result<String, String> {
-    let png_bytes = decode_png_data_url(data_url)?;
-    let icon_path = output_path.with_extension("png");
-
-    if let Some(parent) = icon_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|err| format!("failed to create icon sidecar directory: {err}"))?;
-    }
-
-    fs::write(&icon_path, png_bytes)
-        .map_err(|err| format!("failed to write icon sidecar PNG: {err}"))?;
-
-    Ok(icon_path.to_string_lossy().into_owned())
-}
-
-fn decode_png_data_url(data_url: &str) -> Result<Vec<u8>, String> {
-    let trimmed = data_url.trim();
-    let payload = trimmed
-        .strip_prefix("data:image/png;base64,")
-        .ok_or_else(|| {
-            "unsupported icon data URL (expected data:image/png;base64,...)".to_string()
-        })?;
-
-    general_purpose::STANDARD
-        .decode(payload)
-        .map_err(|err| format!("failed to decode icon PNG data URL: {err}"))
 }
 
 fn parse_hero_search_response_url(body: &str) -> Option<String> {

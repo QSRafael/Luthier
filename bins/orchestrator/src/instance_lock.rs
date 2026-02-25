@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
+use orchestrator_core::prefix::compact_exe_hash_key;
 
 #[derive(Debug)]
 pub struct InstanceLockGuard {
@@ -37,8 +38,7 @@ fn acquire_instance_lock_in_dir(
     fs::create_dir_all(lock_dir)
         .with_context(|| format!("failed to create lock directory {}", lock_dir.display()))?;
 
-    let safe_key = sanitize_lock_key(exe_hash)?;
-    let lock_path = lock_dir.join(format!("{safe_key}.lock"));
+    let lock_path = resolve_lock_path(lock_dir, exe_hash)?;
 
     match create_lock_file(&lock_path) {
         Ok(file) => Ok(InstanceLockGuard {
@@ -90,6 +90,21 @@ fn sanitize_lock_key(raw: &str) -> anyhow::Result<String> {
     }
 
     Ok(key)
+}
+
+fn resolve_lock_path(lock_dir: &Path, exe_hash: &str) -> anyhow::Result<PathBuf> {
+    let short_key = sanitize_lock_key(&compact_exe_hash_key(exe_hash))?;
+    let short_path = lock_dir.join(format!("{short_key}.lock"));
+
+    let legacy_key = sanitize_lock_key(exe_hash)?;
+    let legacy_path = lock_dir.join(format!("{legacy_key}.lock"));
+
+    // Backward compatibility: if an older full-hash lock exists, keep using it.
+    if legacy_path.exists() && !short_path.exists() {
+        return Ok(legacy_path);
+    }
+
+    Ok(short_path)
 }
 
 fn create_lock_file(lock_path: &Path) -> std::io::Result<File> {
@@ -190,6 +205,21 @@ mod tests {
 
         let guard = acquire_instance_lock_in_dir("abc123", &dir).expect("lock should be reclaimed");
         assert_eq!(guard.lock_path(), lock_path.as_path());
+
+        drop(guard);
+        fs::remove_dir_all(&dir).expect("cleanup test dir");
+    }
+
+    #[test]
+    fn prefers_legacy_full_hash_lock_when_it_already_exists() {
+        let dir = create_test_dir("legacy-path");
+        let full_hash = "d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9";
+        let legacy_path = dir.join(format!("{full_hash}.lock"));
+        fs::write(&legacy_path, "pid=4294967295\ncreated_at=0\n").expect("write stale lock");
+
+        let guard =
+            acquire_instance_lock_in_dir(full_hash, &dir).expect("lock should reuse legacy path");
+        assert_eq!(guard.lock_path(), legacy_path.as_path());
 
         drop(guard);
         fs::remove_dir_all(&dir).expect("cleanup test dir");
