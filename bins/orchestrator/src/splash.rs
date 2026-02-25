@@ -1990,18 +1990,26 @@ fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
     if count == 0 {
         return Vec::new();
     }
-    let cols = if count > 2 { 2 } else { 1 };
-    let col_gap = 18;
+    let cols = if count > 8 {
+        3
+    } else if count > 2 {
+        2
+    } else {
+        1
+    };
+    let col_gap = if cols == 3 { 12 } else { 18 };
     let inner_w = WIN_W as i32 - 56;
     let col_w = if cols == 2 {
         (inner_w - col_gap) / 2
+    } else if cols == 3 {
+        (inner_w - (col_gap * 2)) / 3
     } else {
         inner_w
     };
     let rows = ((count + cols - 1) / cols) as i32;
-    let row_h = 54;
+    let row_h = if cols == 3 { 48 } else { 54 };
     let content_h = rows * row_h;
-    let start_y = ((WIN_H as i32 / 2) - (content_h / 2) - 4).max(88);
+    let start_y = ((WIN_H as i32 / 2) - (content_h / 2) - 4).max(if cols == 3 { 80 } else { 88 });
     let start_x = 28;
 
     let mut out = Vec::with_capacity(count);
@@ -2014,14 +2022,18 @@ fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
             x,
             y,
             w: col_w,
-            h: 16,
+            h: if cols == 3 { 14 } else { 16 },
         };
-        let btn_w = (col_w - 24).clamp(132, 180);
+        let btn_w = if cols == 3 {
+            (col_w - 18).clamp(108, 156)
+        } else {
+            (col_w - 24).clamp(132, 180)
+        };
         let button = Rect {
             x: x + ((col_w - btn_w) / 2),
-            y: y + 18,
+            y: y + if cols == 3 { 15 } else { 18 },
             w: btn_w,
-            h: 24,
+            h: if cols == 3 { 22 } else { 24 },
         };
         out.push((label, button));
     }
