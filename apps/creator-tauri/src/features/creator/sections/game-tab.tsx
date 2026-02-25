@@ -98,26 +98,20 @@ export function GameTabSection(props: CreatorPageSectionProps) {
               help={ct('creator_hero_image_used_as_splash_background_downloaded_and_emb')}
               hint={ct('creator_hero_image_ratio_96_31_and_converted_to_webp')}
               footer={
-                <div class="rounded-md border border-border/60 bg-muted/15 p-3">
-                  <Show
-                    when={config().splash.hero_image_data_url.trim()}
-                    fallback={
-                      <div class="flex min-h-[96px] items-center justify-center rounded-md border border-dashed border-border/60 bg-background/40 px-3 text-xs text-muted-foreground">
-                        {heroImageProcessing()
-                          ? ct('creator_processing_hero_image')
-                          : ct('creator_no_hero_image_selected')}
+                config().splash.hero_image_data_url.trim()
+                  ? (
+                      <div class="rounded-md border border-border/60 bg-muted/15 p-3">
+                        <div class="relative overflow-hidden rounded-md border border-border/60 bg-black">
+                          <div class="aspect-[96/31] w-full" />
+                          <img
+                            src={config().splash.hero_image_data_url}
+                            alt={ct('creator_splash_hero_image_preview')}
+                            class="absolute inset-0 h-full w-full object-contain"
+                          />
+                        </div>
                       </div>
-                    }
-                  >
-                    <div class="overflow-hidden rounded-md border border-border/60 bg-black">
-                      <img
-                        src={config().splash.hero_image_data_url}
-                        alt={ct('creator_splash_hero_image_preview')}
-                        class="block aspect-[96/31] w-full object-cover"
-                      />
-                    </div>
-                  </Show>
-                </div>
+                    )
+                  : undefined
               }
             >
               <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
