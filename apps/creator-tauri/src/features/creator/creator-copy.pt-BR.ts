@@ -61,6 +61,7 @@ export const creatorMessagesPtBR = {
     "creator_no_hero_image_selected": "Nenhuma hero image selecionada.",
     "creator_splash_hero_image_preview": "Preview da hero image da splash",
     "creator_search_automatically": "Buscar automaticamente",
+    "creator_search_another": "Buscar outra",
     "creator_searching": "Buscando...",
     "creator_processing": "Processando...",
     "creator_processing_hero_image": "Processando hero image...",

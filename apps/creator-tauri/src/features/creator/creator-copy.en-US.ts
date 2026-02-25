@@ -61,6 +61,7 @@ export const creatorMessagesEnUS = {
     "creator_no_hero_image_selected": "No hero image selected.",
     "creator_splash_hero_image_preview": "Splash hero image preview",
     "creator_search_automatically": "Search automatically",
+    "creator_search_another": "Find another",
     "creator_searching": "Searching...",
     "creator_processing": "Processing...",
     "creator_processing_hero_image": "Processing hero image...",

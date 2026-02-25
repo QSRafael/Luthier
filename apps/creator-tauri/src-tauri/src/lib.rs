@@ -75,6 +75,24 @@ pub struct SearchHeroImageInput {
 pub struct SearchHeroImageOutput {
     pub source: String,
     pub image_url: String,
+    #[serde(default)]
+    pub game_id: Option<u64>,
+    #[serde(default)]
+    pub candidate_image_urls: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct HeroSearchResult {
+    source: String,
+    image_url: String,
+    game_id: Option<u64>,
+    candidate_image_urls: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct PublicHeroSearchGame {
+    game_id: u64,
+    hero_urls: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -298,37 +316,45 @@ pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageO
         .build()
         .map_err(|err| format!("failed to build HTTP client: {err}"))?;
 
-    if let Some((hero_url, source)) = search_hero_image_via_steamgriddb_public(game_name, &client)? {
+    if let Some(result) = search_hero_image_via_steamgriddb_public(game_name, &client)? {
         log_backend_event(
             "INFO",
             "GO-CR-122",
             "search_hero_image_completed",
             serde_json::json!({
                 "game_name": game_name,
-                "image_url": hero_url,
-                "source": source,
+                "image_url": result.image_url,
+                "source": result.source,
+                "game_id": result.game_id,
+                "candidate_count": result.candidate_image_urls.len(),
             }),
         );
         return Ok(SearchHeroImageOutput {
-            source,
-            image_url: hero_url,
+            source: result.source,
+            image_url: result.image_url,
+            game_id: result.game_id,
+            candidate_image_urls: result.candidate_image_urls,
         });
     }
 
-    if let Some((hero_url, source)) = search_hero_image_via_steamgriddb_api(game_name, &client)? {
+    if let Some(result) = search_hero_image_via_steamgriddb_api(game_name, &client)? {
         log_backend_event(
             "INFO",
             "GO-CR-122",
             "search_hero_image_completed",
             serde_json::json!({
                 "game_name": game_name,
-                "image_url": hero_url,
-                "source": source,
+                "image_url": result.image_url,
+                "source": result.source,
+                "game_id": result.game_id,
+                "candidate_count": result.candidate_image_urls.len(),
             }),
         );
         return Ok(SearchHeroImageOutput {
-            source,
-            image_url: hero_url,
+            source: result.source,
+            image_url: result.image_url,
+            game_id: result.game_id,
+            candidate_image_urls: result.candidate_image_urls,
         });
     }
 
@@ -371,7 +397,9 @@ pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageO
 
     Ok(SearchHeroImageOutput {
         source: "steamgrid-usebottles-hero".to_string(),
-        image_url,
+        image_url: image_url.clone(),
+        game_id: None,
+        candidate_image_urls: vec![image_url],
     })
 }
 
@@ -656,7 +684,7 @@ fn parse_hero_search_response_url(body: &str) -> Option<String> {
 fn search_hero_image_via_steamgriddb_api(
     game_name: &str,
     client: &Client,
-) -> Result<Option<(String, String)>, String> {
+) -> Result<Option<HeroSearchResult>, String> {
     let Some(api_key) = read_steamgriddb_api_key() else {
         return Ok(None);
     };
@@ -707,28 +735,84 @@ fn search_hero_image_via_steamgriddb_api(
         .json()
         .map_err(|err| format!("failed to decode SteamGridDB heroes response: {err}"))?;
     if !heroes_status.is_success() {
-        return Err(format!("SteamGridDB heroes lookup failed with HTTP {heroes_status}"));
+        return Err(format!(
+            "SteamGridDB heroes lookup failed with HTTP {heroes_status}"
+        ));
     }
 
-    let hero_url = heroes_json
-        .get("data")
-        .and_then(|data| data.as_array())
-        .and_then(|items| items.iter().find_map(extract_steamgriddb_hero_url))
+    let hero_urls = collect_steamgriddb_hero_urls(
+        heroes_json
+            .get("data")
+            .and_then(|data| data.as_array())
+            .into_iter()
+            .flatten(),
+    );
+    let hero_url = hero_urls
+        .first()
+        .cloned()
         .ok_or_else(|| "SteamGridDB heroes lookup returned no hero image".to_string())?;
 
-    Ok(Some((hero_url, "steamgriddb-api-hero".to_string())))
+    Ok(Some(HeroSearchResult {
+        source: "steamgriddb-api-hero".to_string(),
+        image_url: hero_url,
+        game_id: Some(game_id),
+        candidate_image_urls: hero_urls,
+    }))
 }
 
 fn search_hero_image_via_steamgriddb_public(
     game_name: &str,
     client: &Client,
-) -> Result<Option<(String, String)>, String> {
-    if let Some(game_id) = search_steamgriddb_public_autocomplete_game_id(game_name, client)? {
-        if let Some(hero_url) = fetch_steamgriddb_public_game_header_hero(game_id, client)? {
-            return Ok(Some((hero_url, "steamgriddb-public-hero".to_string())));
-        }
-    }
+) -> Result<Option<HeroSearchResult>, String> {
+    let autocomplete_game_id = search_steamgriddb_public_autocomplete_game_id(game_name, client)?;
+    let header_hero_url = if let Some(game_id) = autocomplete_game_id {
+        fetch_steamgriddb_public_game_header_hero(game_id, client)?
+    } else {
+        None
+    };
 
+    let search_games = match search_steamgriddb_public_hero_games(game_name, client) {
+        Ok(games) => games,
+        Err(_) if header_hero_url.is_some() => Vec::new(),
+        Err(err) => return Err(err),
+    };
+    let matched_game = if let Some(game_id) = autocomplete_game_id {
+        search_games
+            .iter()
+            .find(|game| game.game_id == game_id)
+            .cloned()
+    } else {
+        None
+    };
+    let selected_search_game = matched_game.or_else(|| search_games.first().cloned());
+
+    let selected_game_id =
+        autocomplete_game_id.or_else(|| selected_search_game.as_ref().map(|g| g.game_id));
+    let mut candidate_urls = Vec::new();
+    if let Some(url) = header_hero_url.clone() {
+        candidate_urls.push(url);
+    }
+    if let Some(game) = selected_search_game {
+        candidate_urls.extend(game.hero_urls);
+    }
+    let candidate_urls = dedupe_urls_preserve_order(candidate_urls);
+
+    let image_url = header_hero_url
+        .or_else(|| candidate_urls.first().cloned())
+        .ok_or_else(|| "SteamGridDB public hero search returned no hero image".to_string())?;
+
+    Ok(Some(HeroSearchResult {
+        source: "steamgriddb-public-hero".to_string(),
+        image_url,
+        game_id: selected_game_id,
+        candidate_image_urls: candidate_urls,
+    }))
+}
+
+fn search_steamgriddb_public_hero_games(
+    game_name: &str,
+    client: &Client,
+) -> Result<Vec<PublicHeroSearchGame>, String> {
     let search_url = format!("{STEAMGRIDDB_PUBLIC_API_BASE}/search/main/games");
     let search_response = client
         .post(&search_url)
@@ -758,9 +842,9 @@ fn search_hero_image_via_steamgriddb_public(
         .map_err(|err| format!("failed to query SteamGridDB public hero search: {err}"))?;
 
     let search_status = search_response.status();
-    let search_json: serde_json::Value = search_response
-        .json()
-        .map_err(|err| format!("failed to decode SteamGridDB public hero search response: {err}"))?;
+    let search_json: serde_json::Value = search_response.json().map_err(|err| {
+        format!("failed to decode SteamGridDB public hero search response: {err}")
+    })?;
     if !search_status.is_success() {
         return Err(format!(
             "SteamGridDB public hero search failed with HTTP {search_status}"
@@ -774,34 +858,36 @@ fn search_hero_image_via_steamgriddb_public(
         return Err("SteamGridDB public hero search returned success=false".to_string());
     }
 
-    let games = search_json
+    let Some(games) = search_json
         .get("data")
         .and_then(|v| v.get("games"))
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "SteamGridDB public hero search returned no games list".to_string())?;
-    let first_game = games
-        .first()
-        .ok_or_else(|| "SteamGridDB public hero search returned no matching game".to_string())?;
-    let game_id = first_game
-        .get("game")
-        .and_then(|v| v.get("id"))
-        .and_then(|v| v.as_u64())
-        .ok_or_else(|| "SteamGridDB public hero search returned no game id".to_string())?;
+    else {
+        return Ok(Vec::new());
+    };
 
-    let fallback_first_asset_url = first_game
-        .get("assets")
-        .and_then(|v| v.as_array())
-        .and_then(|assets| assets.iter().find_map(extract_steamgriddb_hero_url));
-
-    if let Some(hero_url) = fetch_steamgriddb_public_game_header_hero(game_id, client)? {
-        return Ok(Some((hero_url, "steamgriddb-public-hero-search".to_string())));
+    let mut out = Vec::new();
+    for game in games {
+        let Some(game_id) = game
+            .get("game")
+            .and_then(|v| v.get("id"))
+            .and_then(|v| v.as_u64())
+        else {
+            continue;
+        };
+        let hero_urls = collect_steamgriddb_hero_urls(
+            game.get("assets")
+                .and_then(|v| v.as_array())
+                .into_iter()
+                .flatten(),
+        );
+        if hero_urls.is_empty() {
+            continue;
+        }
+        out.push(PublicHeroSearchGame { game_id, hero_urls });
     }
 
-    if let Some(hero_url) = fallback_first_asset_url {
-        return Ok(Some((hero_url, "steamgriddb-public-hero-search".to_string())));
-    }
-
-    Ok(None)
+    Ok(out)
 }
 
 fn search_steamgriddb_public_autocomplete_game_id(
@@ -822,9 +908,9 @@ fn search_steamgriddb_public_autocomplete_game_id(
         .map_err(|err| format!("failed to query SteamGridDB public autocomplete: {err}"))?;
 
     let status = response.status();
-    let json: serde_json::Value = response
-        .json()
-        .map_err(|err| format!("failed to decode SteamGridDB public autocomplete response: {err}"))?;
+    let json: serde_json::Value = response.json().map_err(|err| {
+        format!("failed to decode SteamGridDB public autocomplete response: {err}")
+    })?;
 
     if !status.is_success() {
         return Err(format!(
@@ -904,6 +990,23 @@ fn read_steamgriddb_api_key() -> Option<String> {
         }
     }
     None
+}
+
+fn collect_steamgriddb_hero_urls<'a>(
+    items: impl IntoIterator<Item = &'a serde_json::Value>,
+) -> Vec<String> {
+    dedupe_urls_preserve_order(items.into_iter().filter_map(extract_steamgriddb_hero_url))
+}
+
+fn dedupe_urls_preserve_order(urls: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::new();
+    for url in urls {
+        if seen.insert(url.clone()) {
+            out.push(url);
+        }
+    }
+    out
 }
 
 fn extract_steamgriddb_hero_url(item: &serde_json::Value) -> Option<String> {

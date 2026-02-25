@@ -53,6 +53,8 @@ type ExtractExecutableIconOutput = {
 type SearchHeroImageOutput = {
   source: string
   image_url: string
+  game_id?: number | null
+  candidate_image_urls?: string[]
 }
 
 type PrepareHeroImageOutput = {
@@ -65,6 +67,18 @@ type PrepareHeroImageOutput = {
 }
 
 type StatusTone = 'info' | 'success' | 'error'
+
+const dedupeUrls = (values: string[]) => {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const value of values) {
+    const trimmed = value.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    out.push(trimmed)
+  }
+  return out
+}
 
 export function useCreatorController() {
   const initialLocale = detectLocale()
@@ -91,6 +105,10 @@ export function useCreatorController() {
   const [hashingExePath, setHashingExePath] = createSignal('')
   const [lastHashedExePath, setLastHashedExePath] = createSignal('')
   const [lastPreparedHeroImageUrl, setLastPreparedHeroImageUrl] = createSignal('')
+  const [heroImageSearchCacheGameName, setHeroImageSearchCacheGameName] = createSignal('')
+  const [heroImageSearchCacheGameId, setHeroImageSearchCacheGameId] = createSignal<number | null>(null)
+  const [heroImageSearchCandidates, setHeroImageSearchCandidates] = createSignal<string[]>([])
+  const [heroImageSearchIndex, setHeroImageSearchIndex] = createSignal(0)
 
   const [config, setConfig] = createSignal<GameConfig>(defaultGameConfig())
 
@@ -212,6 +230,7 @@ export function useCreatorController() {
   )
 
   const normalizedWinetricksSearch = createMemo(() => winetricksSearch().trim().toLowerCase())
+  const normalizedHeroSearchGameName = createMemo(() => config().game_name.trim().toLowerCase())
 
   const winetricksCandidates = createMemo(() => {
     const search = normalizedWinetricksSearch()
@@ -266,11 +285,33 @@ export function useCreatorController() {
     return 'info'
   })
 
+  const canSearchAnotherHeroImage = createMemo(() => {
+    const key = normalizedHeroSearchGameName()
+    return (
+      !!key &&
+      heroImageSearchCacheGameName() === key &&
+      heroImageSearchCacheGameId() !== null &&
+      heroImageSearchCandidates().length > 1
+    )
+  })
+
   const patchConfig = (updater: (prev: GameConfig) => GameConfig) => {
     setConfig((prev) => updater(prev))
   }
 
+  const clearHeroImageSearchCache = () => {
+    setHeroImageSearchCacheGameName('')
+    setHeroImageSearchCacheGameId(null)
+    setHeroImageSearchCandidates([])
+    setHeroImageSearchIndex(0)
+  }
+
   const setHeroImageUrl = (value: string) => {
+    const normalized = value.trim()
+    const index = heroImageSearchCandidates().findIndex((candidate) => candidate === normalized)
+    if (index >= 0) {
+      setHeroImageSearchIndex(index)
+    }
     patchConfig((prev) => ({
       ...prev,
       splash: {
@@ -282,6 +323,14 @@ export function useCreatorController() {
 
   createEffect(() => {
     localStorage.setItem('creator.locale', locale())
+  })
+
+  createEffect(() => {
+    const currentNormalizedName = normalizedHeroSearchGameName()
+    const cachedName = heroImageSearchCacheGameName()
+    if (!cachedName) return
+    if (currentNormalizedName === cachedName) return
+    clearHeroImageSearchCache()
   })
 
   // Runtime UX simplification: default to Proton-GE and enforce UMU in the authoring UI.
@@ -717,12 +766,36 @@ export function useCreatorController() {
       return
     }
 
+    const normalizedGameName = gameName.toLowerCase()
+    const cachedCandidates = heroImageSearchCandidates()
+    if (canSearchAnotherHeroImage() && heroImageSearchCacheGameName() === normalizedGameName) {
+      const currentUrl = config().splash.hero_image_url.trim()
+      const currentIndex = cachedCandidates.findIndex((candidate) => candidate === currentUrl)
+      const baseIndex = currentIndex >= 0 ? currentIndex : heroImageSearchIndex()
+      const nextIndex = (baseIndex + 1) % cachedCandidates.length
+      const nextUrl = cachedCandidates[nextIndex]
+      setHeroImageSearchIndex(nextIndex)
+      setHeroImageUrl(nextUrl)
+      setStatusMessage(ct('creator_hero_image_found_processing_preview'))
+      await prepareHeroImageFromUrl(nextUrl)
+      return
+    }
+
     try {
       setHeroImageAutoSearching(true)
       setStatusMessage(ct('creator_searching_hero_image'))
       const search = await invokeCommand<SearchHeroImageOutput>('cmd_search_hero_image', {
         game_name: gameName
       })
+      const candidates = dedupeUrls([
+        ...(search.candidate_image_urls ?? []),
+        search.image_url
+      ])
+      const selectedIndex = Math.max(0, candidates.findIndex((candidate) => candidate === search.image_url))
+      setHeroImageSearchCacheGameName(normalizedGameName)
+      setHeroImageSearchCacheGameId(search.game_id ?? null)
+      setHeroImageSearchCandidates(candidates)
+      setHeroImageSearchIndex(selectedIndex)
       setHeroImageUrl(search.image_url)
       setStatusMessage(ct('creator_hero_image_found_processing_preview'))
       await prepareHeroImageFromUrl(search.image_url)
@@ -916,6 +989,7 @@ export function useCreatorController() {
     setIconPreviewPath,
     heroImageProcessing,
     heroImageAutoSearching,
+    canSearchAnotherHeroImage,
     statusMessage,
     setStatusMessage,
     resultJson,

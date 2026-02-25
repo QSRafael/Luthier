@@ -59,6 +59,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
     extractExecutableIcon,
     heroImageProcessing,
     heroImageAutoSearching,
+    canSearchAnotherHeroImage,
     setHeroImageUrl,
     prepareHeroImageFromUrl,
     searchHeroImageAutomatically,
@@ -133,7 +134,11 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                 >
                   <Show
                     when={heroImageAutoSearching() || heroImageProcessing()}
-                    fallback={ct('creator_search_automatically')}
+                    fallback={
+                      canSearchAnotherHeroImage()
+                        ? ct('creator_search_another')
+                        : ct('creator_search_automatically')
+                    }
                   >
                     <span class="inline-flex items-center gap-2">
                       <Spinner class="size-3" />
