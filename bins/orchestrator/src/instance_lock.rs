@@ -94,17 +94,7 @@ fn sanitize_lock_key(raw: &str) -> anyhow::Result<String> {
 
 fn resolve_lock_path(lock_dir: &Path, exe_hash: &str) -> anyhow::Result<PathBuf> {
     let short_key = sanitize_lock_key(&compact_exe_hash_key(exe_hash))?;
-    let short_path = lock_dir.join(format!("{short_key}.lock"));
-
-    let legacy_key = sanitize_lock_key(exe_hash)?;
-    let legacy_path = lock_dir.join(format!("{legacy_key}.lock"));
-
-    // Backward compatibility: if an older full-hash lock exists, keep using it.
-    if legacy_path.exists() && !short_path.exists() {
-        return Ok(legacy_path);
-    }
-
-    Ok(short_path)
+    Ok(lock_dir.join(format!("{short_key}.lock")))
 }
 
 fn create_lock_file(lock_path: &Path) -> std::io::Result<File> {
@@ -211,15 +201,14 @@ mod tests {
     }
 
     #[test]
-    fn prefers_legacy_full_hash_lock_when_it_already_exists() {
-        let dir = create_test_dir("legacy-path");
+    fn uses_short_hash_lock_path_for_hex_hashes() {
+        let dir = create_test_dir("short-key");
         let full_hash = "d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9";
-        let legacy_path = dir.join(format!("{full_hash}.lock"));
-        fs::write(&legacy_path, "pid=4294967295\ncreated_at=0\n").expect("write stale lock");
 
         let guard =
-            acquire_instance_lock_in_dir(full_hash, &dir).expect("lock should reuse legacy path");
-        assert_eq!(guard.lock_path(), legacy_path.as_path());
+            acquire_instance_lock_in_dir(full_hash, &dir).expect("lock should be created");
+        let expected = dir.join("d21d0173c302.lock");
+        assert_eq!(guard.lock_path(), expected.as_path());
 
         drop(guard);
         fs::remove_dir_all(&dir).expect("cleanup test dir");

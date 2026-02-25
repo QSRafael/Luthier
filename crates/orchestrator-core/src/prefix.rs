@@ -29,15 +29,7 @@ pub fn prefix_path_for_hash(exe_hash: &str) -> Result<PathBuf, OrchestratorError
     let home = env::var_os("HOME").ok_or(OrchestratorError::MissingHomeDir)?;
     let prefixes_dir = PathBuf::from(home).join(".local/share/GameOrchestrator/prefixes");
     let short_key = compact_exe_hash_key(exe_hash);
-    let short_path = prefixes_dir.join(&short_key);
-    let legacy_path = prefixes_dir.join(exe_hash.trim());
-
-    // Backward compatibility: keep using an existing full-hash prefix if present.
-    if legacy_path.exists() && !short_path.exists() {
-        return Ok(legacy_path);
-    }
-
-    Ok(short_path)
+    Ok(prefixes_dir.join(short_key))
 }
 
 pub fn build_prefix_setup_plan(config: &GameConfig) -> Result<PrefixSetupPlan, OrchestratorError> {

@@ -90,16 +90,9 @@ pub fn set_optional_override(target: &mut Option<bool>, requested: OptionalToggl
 
 pub fn runtime_overrides_path(exe_hash: &str) -> anyhow::Result<PathBuf> {
     let home = std::env::var_os("HOME").ok_or_else(|| anyhow!("HOME is not set"))?;
-    let overrides_dir = PathBuf::from(home).join(".local/share/GameOrchestrator/overrides");
-    let short_path = overrides_dir.join(format!("{}.json", compact_exe_hash_key(exe_hash)));
-    let legacy_path = overrides_dir.join(format!("{exe_hash}.json"));
-
-    // Backward compatibility: keep using an existing full-hash override file.
-    if legacy_path.exists() && !short_path.exists() {
-        return Ok(legacy_path);
-    }
-
-    Ok(short_path)
+    Ok(PathBuf::from(home)
+        .join(".local/share/GameOrchestrator/overrides")
+        .join(format!("{}.json", compact_exe_hash_key(exe_hash))))
 }
 
 pub fn load_runtime_overrides(exe_hash: &str) -> anyhow::Result<RuntimeOverrides> {
