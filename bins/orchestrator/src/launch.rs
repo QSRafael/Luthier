@@ -383,8 +383,9 @@ pub fn build_prefix_setup_execution_context(
 
     apply_heroic_like_runtime_env_defaults(&mut env, config, report, runtime, None, false);
 
-    let mut adapted_plan = adapt_prefix_setup_plan_for_runtime(plan, report, runtime)?;
-    filter_installed_winetricks_verbs(&mut adapted_plan, &effective_prefix_path);
+    let mut filtered_plan = plan.clone();
+    filter_installed_winetricks_verbs(&mut filtered_plan, &effective_prefix_path);
+    let adapted_plan = adapt_prefix_setup_plan_for_runtime(&filtered_plan, report, runtime)?;
 
     Ok(PrefixSetupExecutionContext {
         plan: adapted_plan,
