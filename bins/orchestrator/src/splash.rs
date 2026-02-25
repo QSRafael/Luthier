@@ -1401,6 +1401,21 @@ fn read_mouse(window: &Window, last_left_down: bool) -> MouseSnapshot {
 }
 
 fn draw_splash_background(buffer: &mut [u32], hero_background: Option<&HeroBackground>) {
+    draw_splash_background_with_options(buffer, hero_background, true);
+}
+
+fn draw_splash_background_without_center_scrim(
+    buffer: &mut [u32],
+    hero_background: Option<&HeroBackground>,
+) {
+    draw_splash_background_with_options(buffer, hero_background, false);
+}
+
+fn draw_splash_background_with_options(
+    buffer: &mut [u32],
+    hero_background: Option<&HeroBackground>,
+    extra_center_scrim: bool,
+) {
     if let Some(hero) = hero_background {
         if hero.pixels.len() == buffer.len() {
             buffer.copy_from_slice(&hero.pixels);
@@ -1418,18 +1433,20 @@ fn draw_splash_background(buffer: &mut [u32], hero_background: Option<&HeroBackg
             0x000000,
             156,
         );
-        // Extra darkening behind central content for contrast on bright images.
-        fill_rect_alpha(
-            buffer,
-            Rect {
-                x: 0,
-                y: 42,
-                w: WIN_W as i32,
-                h: WIN_H as i32 - 84,
-            },
-            0x000000,
-            72,
-        );
+        if extra_center_scrim {
+            // Extra darkening behind central content for contrast on bright images.
+            fill_rect_alpha(
+                buffer,
+                Rect {
+                    x: 0,
+                    y: 42,
+                    w: WIN_W as i32,
+                    h: WIN_H as i32 - 84,
+                },
+                0x000000,
+                72,
+            );
+        }
     } else {
         clear(buffer, BG);
     }
@@ -1556,18 +1573,7 @@ fn draw_config(
     mouse: &MouseSnapshot,
     hero_background: Option<&HeroBackground>,
 ) {
-    draw_splash_background(buffer, hero_background);
-    fill_rect_alpha(
-        buffer,
-        Rect {
-            x: 22,
-            y: 20,
-            w: WIN_W as i32 - 44,
-            h: WIN_H as i32 - 40,
-        },
-        0x000000,
-        96,
-    );
+    draw_splash_background_without_center_scrim(buffer, hero_background);
     stroke_rect(
         buffer,
         Rect {
@@ -1578,44 +1584,40 @@ fn draw_config(
         },
         BORDER,
     );
-    draw_text_centered(
+    draw_text_centered_with_scrim(
         buffer,
         WIN_W as i32 / 2,
         28,
         t(SplashTextKey::ScreenConfig),
         TEXT,
         2,
+        74,
     );
-    draw_text_centered(
+    draw_text_centered_with_scrim(
         buffer,
         WIN_W as i32 / 2,
         72,
         t(SplashTextKey::ConfigSubtitle),
         MUTED,
         1,
+        58,
     );
 
     if rows.is_empty() {
-        draw_text_centered(
+        draw_text_centered_with_scrim(
             buffer,
             WIN_W as i32 / 2,
             144,
             t(SplashTextKey::ConfigNone),
             MUTED,
             1,
+            52,
         );
     } else {
         let layouts = config_toggle_layout(rows.len());
         for (idx, row) in rows.iter().enumerate() {
             let (label_rect, btn) = layouts[idx];
-            draw_text_centered(
-                buffer,
-                label_rect.x + (label_rect.w / 2),
-                label_rect.y,
-                row.label,
-                TEXT,
-                1,
-            );
+            draw_text_centered_in_rect_with_scrim(buffer, label_rect, row.label, TEXT, 1, 52);
 
             draw_button(
                 buffer,
@@ -2009,25 +2011,36 @@ fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
         return Vec::new();
     }
     let cols = if count > 8 {
+        4
+    } else if count > 4 {
         3
     } else if count > 2 {
         2
     } else {
         1
     };
-    let col_gap = if cols == 3 { 12 } else { 18 };
+    let col_gap = match cols {
+        4 => 12,
+        3 => 14,
+        2 => 18,
+        _ => 18,
+    };
     let inner_w = WIN_W as i32 - 56;
-    let col_w = if cols == 2 {
-        (inner_w - col_gap) / 2
-    } else if cols == 3 {
-        (inner_w - (col_gap * 2)) / 3
+    let col_w = if cols > 1 {
+        (inner_w - (col_gap * (cols as i32 - 1))) / cols as i32
     } else {
         inner_w
     };
     let rows = ((count + cols - 1) / cols) as i32;
-    let row_h = if cols == 3 { 48 } else { 54 };
+    let header_bottom = 104;
+    let footer_top = WIN_H as i32 - 62;
+    let available_h = (footer_top - header_bottom).max(48);
+    let row_h = (available_h / rows).clamp(
+        if cols >= 4 { 36 } else { 40 },
+        if cols >= 3 { 46 } else { 52 },
+    );
     let content_h = rows * row_h;
-    let start_y = ((WIN_H as i32 / 2) - (content_h / 2) - 4).max(if cols == 3 { 80 } else { 88 });
+    let start_y = (header_bottom + ((available_h - content_h).max(0) / 2)).max(header_bottom);
     let start_x = 28;
 
     let mut out = Vec::with_capacity(count);
@@ -2040,18 +2053,20 @@ fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
             x,
             y,
             w: col_w,
-            h: if cols == 3 { 14 } else { 16 },
+            h: if cols >= 4 { 14 } else { 16 },
         };
-        let btn_w = if cols == 3 {
-            (col_w - 18).clamp(108, 156)
-        } else {
-            (col_w - 24).clamp(132, 180)
+        let btn_w = match cols {
+            4 => (col_w - 24).clamp(100, 170),
+            3 => (col_w - 22).clamp(120, 176),
+            2 => (col_w - 24).clamp(132, 180),
+            _ => (col_w - 24).clamp(132, 220),
         };
+        let button_h = if cols >= 4 { 22 } else { 24 };
         let button = Rect {
             x: x + ((col_w - btn_w) / 2),
-            y: y + if cols == 3 { 15 } else { 18 },
+            y: y + if cols >= 4 { 16 } else { 18 },
             w: btn_w,
-            h: if cols == 3 { 22 } else { 24 },
+            h: button_h,
         };
         out.push((label, button));
     }
@@ -2071,6 +2086,36 @@ fn draw_button_label_centered(buffer: &mut [u32], rect: Rect, text: &str, color:
     // `draw_text` uses a y origin above the actual glyph top (fontdue layout offset),
     // so compensate using the measured glyph min_y to visually center in the rect.
     let y = rect.y + ((rect.h - metrics.height) / 2) - metrics.min_y;
+    draw_text(buffer, x, y, text, color, scale);
+}
+
+fn draw_text_centered_with_scrim(
+    buffer: &mut [u32],
+    center_x: i32,
+    y: i32,
+    text: &str,
+    color: u32,
+    scale: i32,
+    scrim_alpha: u8,
+) {
+    let metrics = measure_text_metrics(text, scale);
+    let x = (center_x - (metrics.width / 2)).max(18);
+    draw_text_soft_scrim(buffer, x, y, &metrics, scrim_alpha);
+    draw_text(buffer, x, y, text, color, scale);
+}
+
+fn draw_text_centered_in_rect_with_scrim(
+    buffer: &mut [u32],
+    rect: Rect,
+    text: &str,
+    color: u32,
+    scale: i32,
+    scrim_alpha: u8,
+) {
+    let metrics = measure_text_metrics(text, scale);
+    let x = (rect.x + ((rect.w - metrics.width) / 2)).max(rect.x + 2);
+    let y = rect.y + ((rect.h - metrics.height) / 2) - metrics.min_y;
+    draw_text_soft_scrim(buffer, x, y, &metrics, scrim_alpha);
     draw_text(buffer, x, y, text, color, scale);
 }
 
@@ -2121,6 +2166,39 @@ fn draw_centered_info_lines(buffer: &mut [u32], lines: &[String], center_y: i32,
         draw_text_centered(buffer, WIN_W as i32 / 2, y, &line, color, 1);
         y += line_h;
     }
+}
+
+fn draw_text_soft_scrim(buffer: &mut [u32], x: i32, y: i32, metrics: &TextMetrics, alpha: u8) {
+    if alpha == 0 || metrics.width <= 0 || metrics.height <= 0 {
+        return;
+    }
+    let top = y + metrics.min_y;
+    let base = Rect {
+        x: x - 8,
+        y: top - 4,
+        w: metrics.width + 16,
+        h: metrics.height + 8,
+    };
+    draw_soft_scrim_rect(buffer, base, 0x000000, alpha, 6);
+}
+
+fn draw_soft_scrim_rect(buffer: &mut [u32], rect: Rect, color: u32, core_alpha: u8, fade_px: i32) {
+    if rect.w <= 0 || rect.h <= 0 || core_alpha == 0 {
+        return;
+    }
+    let fade = fade_px.max(0);
+    for step in (1..=fade).rev() {
+        let ring = Rect {
+            x: rect.x - step,
+            y: rect.y - step,
+            w: rect.w + (step * 2),
+            h: rect.h + (step * 2),
+        };
+        let alpha =
+            ((core_alpha as i32 * (fade - step + 1)) / ((fade + 1) * 3)).clamp(0, 255) as u8;
+        fill_rect_alpha(buffer, ring, color, alpha);
+    }
+    fill_rect_alpha(buffer, rect, color, core_alpha);
 }
 
 fn wrap_text_lines(text: &str, max_width: i32, scale: i32) -> Vec<String> {
