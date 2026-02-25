@@ -4,6 +4,7 @@ import type { FeatureState } from '../../models/config'
 import { cn } from '../../lib/cva'
 import { FieldShell, useFormControlsI18n } from './form-controls-core'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../ui/switch'
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 function decodeFeatureState(value: FeatureState) {
   if (value === 'MandatoryOn') return { enabled: true, mandatory: true }
   if (value === 'MandatoryOff') return { enabled: false, mandatory: true }
@@ -116,42 +117,46 @@ type WinecfgFeatureStateFieldProps = {
 export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
   const i18n = useFormControlsI18n()
   const decoded = createMemo(() => decodeFeatureState(props.value.state))
+  const mode = createMemo<'default' | 'enabled' | 'disabled'>(() => {
+    if (props.value.use_wine_default) return 'default'
+    return decoded().enabled ? 'enabled' : 'disabled'
+  })
+
+  const applyMode = (next: 'default' | 'enabled' | 'disabled') => {
+    if (next === 'default') {
+      props.onChange({
+        use_wine_default: true,
+        state: decoded().enabled ? 'OptionalOn' : 'OptionalOff'
+      })
+      return
+    }
+
+    props.onChange({
+      use_wine_default: false,
+      state: next === 'enabled' ? 'OptionalOn' : 'OptionalOff'
+    })
+  }
 
   return (
     <FieldShell
       label={props.label}
       help={props.help}
-      controlClass="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]"
+      controlClass="flex justify-end"
       footer={props.footer}
     >
-      <>
-        <FeatureToggleCard
-          title={i18n.wineDefault}
-          checked={props.value.use_wine_default}
-          onChange={(use_wine_default) => props.onChange({ ...props.value, use_wine_default })}
-        />
-        <FeatureToggleCard
-          title={i18n.enabled}
-          checked={decoded().enabled}
-          disabled={props.value.use_wine_default}
-          onChange={(enabled) =>
-            props.onChange({
-              ...props.value,
-              state: encodeFeatureState(enabled, decoded().mandatory)
-            })
-          }
-        />
-        <FeatureToggleCard
-          title={i18n.mandatory}
-          checked={decoded().mandatory}
-          onChange={(mandatory) =>
-            props.onChange({
-              ...props.value,
-              state: encodeFeatureState(decoded().enabled, mandatory)
-            })
-          }
-        />
-      </>
+      <Tabs value={mode()} onChange={(value) => applyMode(value as 'default' | 'enabled' | 'disabled')} class="items-end">
+        <TabsList class="w-full justify-start md:w-auto">
+          <TabsTrigger value="default" class="min-w-[84px]">
+            {i18n.wineDefault}
+          </TabsTrigger>
+          <TabsTrigger value="enabled" class="min-w-[84px]">
+            {i18n.enabled}
+          </TabsTrigger>
+          <TabsTrigger value="disabled" class="min-w-[96px]">
+            {i18n.disabled}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     </FieldShell>
   )
 }

@@ -531,24 +531,10 @@ fn build_toggle_rows(config: &GameConfig, overrides: &RuntimeOverrides) -> Vec<T
     );
     push_optional_toggle_row(
         &mut rows,
-        "winetricks",
-        "Winetricks",
-        config.requirements.winetricks,
-        overrides.winetricks,
-    );
-    push_optional_toggle_row(
-        &mut rows,
         "umu",
         "UMU",
         config.requirements.umu,
         overrides.umu,
-    );
-    push_optional_toggle_row(
-        &mut rows,
-        "steam_runtime",
-        "Steam Runtime",
-        config.requirements.steam_runtime,
-        overrides.steam_runtime,
     );
     rows
 }
