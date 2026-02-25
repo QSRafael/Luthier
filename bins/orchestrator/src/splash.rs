@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Once, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -41,6 +41,7 @@ const BTN_HOVER: u32 = 0x181818;
 const SEPARATOR: u32 = 0x1f1f1f;
 
 static SYSTEM_FONT: OnceLock<Option<Font>> = OnceLock::new();
+static SYSTEM_FONT_PRELOAD_STARTED: Once = Once::new();
 static SPLASH_LOCALE: OnceLock<SplashLocale> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy)]
@@ -1465,18 +1466,7 @@ fn draw_prelaunch(
     mouse: MouseSnapshot,
     hero_background: Option<&HeroBackground>,
 ) {
-    draw_splash_background(buffer, hero_background);
-    fill_rect_alpha(
-        buffer,
-        Rect {
-            x: 34,
-            y: 40,
-            w: WIN_W as i32 - 68,
-            h: 136,
-        },
-        0x000000,
-        86,
-    );
+    draw_splash_background_without_center_scrim(buffer, hero_background);
     stroke_rect(
         buffer,
         Rect {
@@ -1493,7 +1483,7 @@ fn draw_prelaunch(
     } else {
         state.config.game_name.trim()
     };
-    draw_title_centered_fit(buffer, WIN_W as i32 / 2, 58, game_name, TEXT);
+    draw_title_centered_fit_with_scrim(buffer, WIN_W as i32 / 2, 52, game_name, TEXT, 78);
 
     let countdown = if countdown_left > 0 {
         t_countdown(countdown_left)
@@ -1510,19 +1500,18 @@ fn draw_prelaunch(
         second_line.to_string(),
         countdown,
     ];
-    draw_centered_info_lines(buffer, &info_lines, 138, ACCENT);
+    if let Some(line) = info_lines.first() {
+        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 108, line, TEXT, 1, 52);
+    }
+    if let Some(line) = info_lines.get(1) {
+        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 134, line, MUTED, 1, 42);
+    }
+    if let Some(line) = info_lines.get(2) {
+        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 160, line, ACCENT, 2, 62);
+    }
 
     if gear_visible {
-        draw_button(
-            buffer,
-            gear_button,
-            if gear_button.contains(mouse.x, mouse.y) {
-                BTN_HOVER
-            } else {
-                BTN
-            },
-            BORDER,
-        );
+        draw_button_secondary_clean(buffer, gear_button, gear_button.contains(mouse.x, mouse.y));
         draw_gear_icon(
             buffer,
             gear_button.x + ((gear_button.w - 12) / 2),
@@ -1531,27 +1520,13 @@ fn draw_prelaunch(
         );
     }
 
-    draw_button(
-        buffer,
-        exit_button,
-        if exit_button.contains(mouse.x, mouse.y) {
-            BTN_HOVER
-        } else {
-            BTN
-        },
-        BORDER,
-    );
+    draw_button_secondary_clean(buffer, exit_button, exit_button.contains(mouse.x, mouse.y));
     draw_button_label_centered(buffer, exit_button, t(SplashTextKey::ActionExit), TEXT, 1);
 
-    draw_button(
+    draw_button_primary_clean(
         buffer,
         start_button,
-        if start_button.contains(mouse.x, mouse.y) {
-            BTN_HOVER
-        } else {
-            BTN
-        },
-        ACCENT,
+        start_button.contains(mouse.x, mouse.y),
     );
     draw_button_label_centered(
         buffer,
@@ -1617,18 +1592,17 @@ fn draw_config(
         let layouts = config_toggle_layout(rows.len());
         for (idx, row) in rows.iter().enumerate() {
             let (label_rect, btn) = layouts[idx];
-            draw_text_centered_in_rect_with_scrim(buffer, label_rect, row.label, TEXT, 1, 52);
-
-            draw_button(
+            draw_text_centered_wrapped_in_rect_with_scrim(
                 buffer,
-                btn,
-                if btn.contains(mouse.x, mouse.y) {
-                    BTN_HOVER
-                } else {
-                    BTN
-                },
-                BORDER,
+                label_rect,
+                row.label,
+                TEXT,
+                1,
+                48,
+                if label_rect.h <= 18 { 1 } else { 2 },
             );
+
+            draw_button_secondary_clean(buffer, btn, btn.contains(mouse.x, mouse.y));
             let label = match row.value {
                 None => t(SplashTextKey::ToggleDefault),
                 Some(true) => t(SplashTextKey::ToggleEnabled),
@@ -1639,28 +1613,14 @@ fn draw_config(
         }
     }
 
-    draw_button(
+    draw_button_secondary_clean(
         buffer,
         cancel_button,
-        if cancel_button.contains(mouse.x, mouse.y) {
-            BTN_HOVER
-        } else {
-            BTN
-        },
-        BORDER,
+        cancel_button.contains(mouse.x, mouse.y),
     );
     draw_button_label_centered(buffer, cancel_button, t(SplashTextKey::ActionBack), TEXT, 1);
 
-    draw_button(
-        buffer,
-        save_button,
-        if save_button.contains(mouse.x, mouse.y) {
-            BTN_HOVER
-        } else {
-            BTN
-        },
-        ACCENT,
-    );
+    draw_button_primary_clean(buffer, save_button, save_button.contains(mouse.x, mouse.y));
     draw_button_label_centered(buffer, save_button, t(SplashTextKey::ActionSave), TEXT, 1);
 }
 
@@ -1762,18 +1722,7 @@ fn draw_progress(
     progress: &ProgressViewState,
     _mouse: &MouseSnapshot,
 ) {
-    draw_splash_background(buffer, progress.hero_background.as_deref());
-    fill_rect_alpha(
-        buffer,
-        Rect {
-            x: 34,
-            y: 40,
-            w: WIN_W as i32 - 68,
-            h: 136,
-        },
-        0x000000,
-        86,
-    );
+    draw_splash_background_without_center_scrim(buffer, progress.hero_background.as_deref());
     stroke_rect(
         buffer,
         Rect {
@@ -1790,40 +1739,59 @@ fn draw_progress(
     } else {
         progress.game_name.trim()
     };
-    draw_title_centered_fit(buffer, WIN_W as i32 / 2, 58, game_name, TEXT);
+    draw_title_centered_fit_with_scrim(buffer, WIN_W as i32 / 2, 52, game_name, TEXT, 78);
 
-    let mut info_lines = progress.recent_messages.iter().cloned().collect::<Vec<_>>();
-    if info_lines.is_empty() {
-        info_lines.push(progress.status.clone());
+    let current_status = if progress.status.trim().is_empty() {
+        t(SplashTextKey::StatusPreparingExecution).to_string()
+    } else {
+        progress.status.clone()
+    };
+    draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 116, &current_status, TEXT, 2, 76);
+
+    let mut history_lines = progress.recent_messages.iter().cloned().collect::<Vec<_>>();
+    history_lines.retain(|line| line.trim() != current_status.trim());
+    if history_lines.len() > 2 {
+        history_lines = history_lines[history_lines.len().saturating_sub(2)..].to_vec();
     }
-    if info_lines.len() > 3 {
-        info_lines = info_lines[info_lines.len().saturating_sub(3)..].to_vec();
+    let mut history_y = 154;
+    for line in history_lines {
+        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, history_y, &line, MUTED, 1, 36);
+        history_y += 22;
     }
-    draw_centered_info_lines(buffer, &info_lines, 138, ACCENT);
 
     let uptime = format!("{}s", progress.started_at.elapsed().as_secs());
-    draw_text_centered(
+    draw_text_centered_with_scrim(
         buffer,
         WIN_W as i32 / 2,
         WIN_H as i32 - 24,
         &uptime,
         MUTED,
         1,
+        28,
     );
 
     if let Some(err) = &progress.child_failed_to_spawn {
-        draw_text_centered(
+        draw_text_centered_with_scrim(
             buffer,
             WIN_W as i32 / 2,
             WIN_H as i32 - 66,
             t(SplashTextKey::SpawnFailed),
             BAD,
             1,
+            56,
         );
         let mut lines = wrap_text_lines(err, WIN_W as i32 - 56, 1);
         lines.truncate(1);
         if let Some(line) = lines.first() {
-            draw_text_centered(buffer, WIN_W as i32 / 2, WIN_H as i32 - 48, line, MUTED, 1);
+            draw_text_centered_with_scrim(
+                buffer,
+                WIN_W as i32 / 2,
+                WIN_H as i32 - 48,
+                line,
+                MUTED,
+                1,
+                34,
+            );
         }
     }
 }
@@ -1837,18 +1805,7 @@ fn draw_feedback(
     right: Rect,
     mouse: &MouseSnapshot,
 ) {
-    draw_splash_background(buffer, outcome.hero_background.as_deref());
-    fill_rect_alpha(
-        buffer,
-        Rect {
-            x: 22,
-            y: 18,
-            w: WIN_W as i32 - 44,
-            h: WIN_H as i32 - 36,
-        },
-        0x000000,
-        92,
-    );
+    draw_splash_background_without_center_scrim(buffer, outcome.hero_background.as_deref());
     stroke_rect(
         buffer,
         Rect {
@@ -1864,7 +1821,7 @@ fn draw_feedback(
     } else {
         outcome.game_name.trim()
     };
-    draw_title_centered_fit(buffer, WIN_W as i32 / 2, 34, game_name, TEXT);
+    draw_title_centered_fit_with_scrim(buffer, WIN_W as i32 / 2, 38, game_name, TEXT, 78);
     let prompt = if question == 1 {
         t(SplashTextKey::PromptWorked)
     } else {
@@ -1873,51 +1830,35 @@ fn draw_feedback(
     let prompt_lines = wrap_text_lines(prompt, WIN_W as i32 - 70, 2);
     let prompt_y = if prompt_lines.len() > 2 { 96 } else { 108 };
     for (i, line) in prompt_lines.iter().take(3).enumerate() {
-        draw_text_centered(
+        draw_text_centered_with_scrim(
             buffer,
             WIN_W as i32 / 2,
             prompt_y + (i as i32 * 28),
             line,
             TEXT,
             2,
+            62,
         );
     }
 
     let left_label = t(SplashTextKey::AnswerYes);
     let right_label = t(SplashTextKey::AnswerNo);
 
-    draw_button(
-        buffer,
-        left,
-        if left.contains(mouse.x, mouse.y) {
-            BTN_HOVER
-        } else {
-            BTN
-        },
-        BORDER,
-    );
+    draw_button_secondary_clean(buffer, left, left.contains(mouse.x, mouse.y));
     draw_button_label_centered(buffer, left, left_label, TEXT, 1);
 
-    draw_button(
-        buffer,
-        right,
-        if right.contains(mouse.x, mouse.y) {
-            BTN_HOVER
-        } else {
-            BTN
-        },
-        BORDER,
-    );
+    draw_button_primary_clean(buffer, right, right.contains(mouse.x, mouse.y));
     draw_button_label_centered(buffer, right, right_label, TEXT, 1);
 
     if question == 2 {
-        draw_text_centered(
+        draw_text_centered_with_scrim(
             buffer,
             WIN_W as i32 / 2,
             212,
             t(SplashTextKey::FeedbackPlaceholder),
             MUTED,
             1,
+            34,
         );
     }
 }
@@ -2006,6 +1947,68 @@ fn draw_button(buffer: &mut [u32], rect: Rect, fill: u32, border: u32) {
     stroke_rect(buffer, rect, border);
 }
 
+fn stroke_rect_alpha(buffer: &mut [u32], rect: Rect, color: u32, alpha: u8) {
+    if alpha == 0 {
+        return;
+    }
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: rect.x,
+            y: rect.y,
+            w: rect.w,
+            h: 1,
+        },
+        color,
+        alpha,
+    );
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: rect.x,
+            y: rect.y + rect.h - 1,
+            w: rect.w,
+            h: 1,
+        },
+        color,
+        alpha,
+    );
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: rect.x,
+            y: rect.y,
+            w: 1,
+            h: rect.h,
+        },
+        color,
+        alpha,
+    );
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: rect.x + rect.w - 1,
+            y: rect.y,
+            w: 1,
+            h: rect.h,
+        },
+        color,
+        alpha,
+    );
+}
+
+fn draw_button_secondary_clean(buffer: &mut [u32], rect: Rect, hovered: bool) {
+    draw_soft_scrim_rect(buffer, rect, 0x000000, if hovered { 74 } else { 54 }, 8);
+    fill_rect_alpha(buffer, rect, 0x000000, if hovered { 118 } else { 88 });
+    stroke_rect_alpha(buffer, rect, 0xffffff, if hovered { 42 } else { 20 });
+}
+
+fn draw_button_primary_clean(buffer: &mut [u32], rect: Rect, hovered: bool) {
+    draw_soft_scrim_rect(buffer, rect, 0x000000, if hovered { 82 } else { 60 }, 9);
+    fill_rect_alpha(buffer, rect, 0xffffff, if hovered { 56 } else { 40 });
+    stroke_rect_alpha(buffer, rect, 0xffffff, if hovered { 78 } else { 52 });
+}
+
 fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
     if count == 0 {
         return Vec::new();
@@ -2036,7 +2039,7 @@ fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
     let footer_top = WIN_H as i32 - 62;
     let available_h = (footer_top - header_bottom).max(48);
     let row_h = (available_h / rows).clamp(
-        if cols >= 4 { 36 } else { 40 },
+        if cols >= 4 { 38 } else { 40 },
         if cols >= 3 { 46 } else { 52 },
     );
     let content_h = rows * row_h;
@@ -2053,7 +2056,7 @@ fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
             x,
             y,
             w: col_w,
-            h: if cols >= 4 { 14 } else { 16 },
+            h: if cols >= 4 { 18 } else { 16 },
         };
         let btn_w = match cols {
             4 => (col_w - 24).clamp(100, 170),
@@ -2064,7 +2067,7 @@ fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
         let button_h = if cols >= 4 { 22 } else { 24 };
         let button = Rect {
             x: x + ((col_w - btn_w) / 2),
-            y: y + if cols >= 4 { 16 } else { 18 },
+            y: y + if cols >= 4 { 18 } else { 18 },
             w: btn_w,
             h: button_h,
         };
@@ -2104,39 +2107,18 @@ fn draw_text_centered_with_scrim(
     draw_text(buffer, x, y, text, color, scale);
 }
 
-fn draw_text_centered_in_rect_with_scrim(
-    buffer: &mut [u32],
-    rect: Rect,
-    text: &str,
-    color: u32,
-    scale: i32,
-    scrim_alpha: u8,
-) {
-    let metrics = measure_text_metrics(text, scale);
-    let x = (rect.x + ((rect.w - metrics.width) / 2)).max(rect.x + 2);
-    let y = rect.y + ((rect.h - metrics.height) / 2) - metrics.min_y;
-    draw_text_soft_scrim(buffer, x, y, &metrics, scrim_alpha);
-    draw_text(buffer, x, y, text, color, scale);
-}
-
-fn draw_text_centered(
+fn draw_title_centered_fit_with_scrim(
     buffer: &mut [u32],
     center_x: i32,
     y: i32,
     text: &str,
     color: u32,
-    scale: i32,
+    scrim_alpha: u8,
 ) {
-    let width = measure_text_width(text, scale);
-    let x = (center_x - (width / 2)).max(18);
-    draw_text(buffer, x, y, text, color, scale);
-}
-
-fn draw_title_centered_fit(buffer: &mut [u32], center_x: i32, y: i32, text: &str, color: u32) {
     let max_w = WIN_W as i32 - 40;
     for scale in [3, 2, 1] {
         if measure_text_width(text, scale) <= max_w {
-            draw_text_centered(buffer, center_x, y, text, color, scale);
+            draw_text_centered_with_scrim(buffer, center_x, y, text, color, scale, scrim_alpha);
             return;
         }
     }
@@ -2144,28 +2126,15 @@ fn draw_title_centered_fit(buffer: &mut [u32], center_x: i32, y: i32, text: &str
     while line.len() > 3 && measure_text_width(&format!("{line}..."), 1) > max_w {
         line.pop();
     }
-    draw_text_centered(buffer, center_x, y, &format!("{line}..."), color, 1);
-}
-
-fn draw_centered_info_lines(buffer: &mut [u32], lines: &[String], center_y: i32, color: u32) {
-    let mut wrapped = Vec::new();
-    for line in lines.iter().filter(|s| !s.trim().is_empty()) {
-        let mut parts = wrap_text_lines(line, WIN_W as i32 - 60, 1);
-        wrapped.append(&mut parts);
-    }
-    if wrapped.is_empty() {
-        return;
-    }
-    if wrapped.len() > 3 {
-        wrapped = wrapped[wrapped.len() - 3..].to_vec();
-    }
-    let line_h = 22;
-    let total_h = (wrapped.len() as i32 * line_h) - 4;
-    let mut y = center_y - (total_h / 2);
-    for line in wrapped {
-        draw_text_centered(buffer, WIN_W as i32 / 2, y, &line, color, 1);
-        y += line_h;
-    }
+    draw_text_centered_with_scrim(
+        buffer,
+        center_x,
+        y,
+        &format!("{line}..."),
+        color,
+        1,
+        scrim_alpha,
+    );
 }
 
 fn draw_text_soft_scrim(buffer: &mut [u32], x: i32, y: i32, metrics: &TextMetrics, alpha: u8) {
@@ -2173,13 +2142,21 @@ fn draw_text_soft_scrim(buffer: &mut [u32], x: i32, y: i32, metrics: &TextMetric
         return;
     }
     let top = y + metrics.min_y;
+    let pad_x = if metrics.height >= 22 { 12 } else { 8 };
+    let pad_y = if metrics.height >= 22 { 5 } else { 4 };
     let base = Rect {
-        x: x - 8,
-        y: top - 4,
-        w: metrics.width + 16,
-        h: metrics.height + 8,
+        x: x - pad_x,
+        y: top - pad_y,
+        w: metrics.width + (pad_x * 2),
+        h: metrics.height + (pad_y * 2),
     };
-    draw_soft_scrim_rect(buffer, base, 0x000000, alpha, 6);
+    draw_soft_scrim_rect(
+        buffer,
+        base,
+        0x000000,
+        alpha,
+        if metrics.height >= 22 { 10 } else { 7 },
+    );
 }
 
 fn draw_soft_scrim_rect(buffer: &mut [u32], rect: Rect, color: u32, core_alpha: u8, fade_px: i32) {
@@ -2199,6 +2176,58 @@ fn draw_soft_scrim_rect(buffer: &mut [u32], rect: Rect, color: u32, core_alpha: 
         fill_rect_alpha(buffer, ring, color, alpha);
     }
     fill_rect_alpha(buffer, rect, color, core_alpha);
+}
+
+fn draw_text_centered_wrapped_in_rect_with_scrim(
+    buffer: &mut [u32],
+    rect: Rect,
+    text: &str,
+    color: u32,
+    scale: i32,
+    scrim_alpha: u8,
+    max_lines: usize,
+) {
+    let max_lines = max_lines.max(1);
+    let mut lines = wrap_text_lines(text, (rect.w - 8).max(24), scale);
+    if lines.is_empty() {
+        return;
+    }
+    if lines.len() > max_lines {
+        lines.truncate(max_lines);
+    }
+    if let Some(last) = lines.last_mut() {
+        let was_truncated = wrap_text_lines(text, (rect.w - 8).max(24), scale).len() > max_lines;
+        if was_truncated {
+            *last = truncate_with_ellipsis(last, (rect.w - 8).max(24), scale);
+        }
+    }
+
+    let line_h = (measure_text_metrics("Ag", scale).height + 4).clamp(12, 20);
+    let total_h = line_h * lines.len() as i32;
+    let mut y = rect.y + ((rect.h - total_h).max(0) / 2);
+    for line in lines {
+        draw_text_centered_with_scrim(
+            buffer,
+            rect.x + (rect.w / 2),
+            y - measure_text_metrics("Ag", scale).min_y,
+            &line,
+            color,
+            scale,
+            scrim_alpha,
+        );
+        y += line_h;
+    }
+}
+
+fn truncate_with_ellipsis(text: &str, max_width: i32, scale: i32) -> String {
+    if measure_text_width(text, scale) <= max_width {
+        return text.to_string();
+    }
+    let mut out = text.to_string();
+    while out.len() > 1 && measure_text_width(&format!("{out}..."), scale) > max_width {
+        out.pop();
+    }
+    format!("{out}...")
 }
 
 fn wrap_text_lines(text: &str, max_width: i32, scale: i32) -> Vec<String> {
@@ -2445,36 +2474,45 @@ fn text_px_size(scale: i32) -> f32 {
     }
 }
 
+fn start_system_font_preload() {
+    SYSTEM_FONT_PRELOAD_STARTED.call_once(|| {
+        thread::spawn(|| {
+            let _ = SYSTEM_FONT.set(load_system_font());
+        });
+    });
+}
+
 fn system_font() -> Option<&'static Font> {
-    SYSTEM_FONT
-        .get_or_init(|| {
-            let mut db = Database::new();
-            db.load_system_fonts();
-            let families = [
-                Family::Name("Noto Sans"),
-                Family::Name("Cantarell"),
-                Family::Name("DejaVu Sans"),
-                Family::Name("Liberation Sans"),
-                Family::SansSerif,
-            ];
-            let query = Query {
-                families: &families,
-                weight: Weight::NORMAL,
-                style: Style::Normal,
-                ..Query::default()
-            };
-            let id = db.query(&query)?;
-            let face = db.face(id)?;
+    start_system_font_preload();
+    SYSTEM_FONT.get().and_then(|font| font.as_ref())
+}
 
-            let bytes = match &face.source {
-                Source::Binary(data) => data.as_ref().as_ref().to_vec(),
-                Source::File(path) => std::fs::read(path).ok()?,
-                Source::SharedFile(path, _) => std::fs::read(path).ok()?,
-            };
+fn load_system_font() -> Option<Font> {
+    let mut db = Database::new();
+    db.load_system_fonts();
+    let families = [
+        Family::Name("Noto Sans"),
+        Family::Name("Cantarell"),
+        Family::Name("DejaVu Sans"),
+        Family::Name("Liberation Sans"),
+        Family::SansSerif,
+    ];
+    let query = Query {
+        families: &families,
+        weight: Weight::NORMAL,
+        style: Style::Normal,
+        ..Query::default()
+    };
+    let id = db.query(&query)?;
+    let face = db.face(id)?;
 
-            Font::from_bytes(bytes, FontSettings::default()).ok()
-        })
-        .as_ref()
+    let bytes = match &face.source {
+        Source::Binary(data) => data.as_ref().as_ref().to_vec(),
+        Source::File(path) => std::fs::read(path).ok()?,
+        Source::SharedFile(path, _) => std::fs::read(path).ok()?,
+    };
+
+    Font::from_bytes(bytes, FontSettings::default()).ok()
 }
 
 fn blend_over(dst: u32, src: u32, alpha: u8) -> u32 {
