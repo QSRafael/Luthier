@@ -49,7 +49,7 @@ export function RuntimeTabSection(props: CreatorPageSectionProps) {
           <section class="stack">
             <SegmentedField<RuntimePreference>
               label={ct('creator_general_runtime_preference')}
-              help={ct('creator_macro_priority_among_auto_proton_and_wine')}
+              help="Selecione o runtime principal do jogo. Proton-GE é o padrão recomendado."
               value={config().runner.runtime_preference}
               options={runtimePreferenceOptions()}
               onChange={(value) =>
@@ -82,7 +82,7 @@ export function RuntimeTabSection(props: CreatorPageSectionProps) {
                   <Input
                     value={config().runner.proton_version}
                     placeholder={
-                      config().runner.runtime_preference === 'Wine' ? 'wine-ge-8-26' : 'GE-Proton9-10'
+                      config().runner.runtime_preference === 'Wine' ? 'wine-ge-8-26' : 'GE-Proton-latest'
                     }
                     onInput={(e) =>
                       patchConfig((prev) => ({
@@ -169,35 +169,21 @@ export function RuntimeTabSection(props: CreatorPageSectionProps) {
               </div>
             </Item>
 
-            <FeatureStateField
-              label="UMU"
-              help={ct('creator_controls_umu_run_usage_according_to_enforcement_policy')}
-              value={config().requirements.umu}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  requirements: {
-                    ...prev.requirements,
-                    umu: value
-                  }
-                }))
-              }
-            />
-
-            <FeatureStateField
-              label={ct('creator_steam_runtime')}
-              help={ct('creator_defines_whether_steam_runtime_is_mandatory_optional_or_b')}
-              value={config().requirements.steam_runtime}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  requirements: {
-                    ...prev.requirements,
-                    steam_runtime: value
-                  }
-                }))
-              }
-            />
+            <Item>
+              <ItemMain>
+                <ItemContent>
+                  <ItemTitle>UMU</ItemTitle>
+                  <ItemDescription>
+                    Obrigatório na configuração atual. O launcher usa `umu-run` como runtime padrão para Proton.
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions class="md:self-end">
+                  <div class="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm font-medium">
+                    Obrigatório
+                  </div>
+                </ItemActions>
+              </ItemMain>
+            </Item>
 
             <FeatureStateField
               label="Easy AntiCheat Runtime"

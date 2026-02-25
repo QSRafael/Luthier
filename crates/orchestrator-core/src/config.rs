@@ -188,6 +188,36 @@ pub struct GamescopeConfig {
     pub state: FeatureState,
     pub resolution: Option<String>,
     pub fsr: bool,
+    #[serde(default)]
+    pub game_width: String,
+    #[serde(default)]
+    pub game_height: String,
+    #[serde(default)]
+    pub output_width: String,
+    #[serde(default)]
+    pub output_height: String,
+    #[serde(default = "default_gamescope_upscale_method")]
+    pub upscale_method: String,
+    #[serde(default = "default_gamescope_window_type")]
+    pub window_type: String,
+    #[serde(default)]
+    pub enable_limiter: bool,
+    #[serde(default)]
+    pub fps_limiter: String,
+    #[serde(default)]
+    pub fps_limiter_no_focus: String,
+    #[serde(default)]
+    pub force_grab_cursor: bool,
+    #[serde(default)]
+    pub additional_options: String,
+}
+
+fn default_gamescope_upscale_method() -> String {
+    "fsr".to_string()
+}
+
+fn default_gamescope_window_type() -> String {
+    "fullscreen".to_string()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -125,11 +125,11 @@ export function defaultGameConfig(): GameConfig {
     relative_exe_path: './game.exe',
     launch_args: [],
     runner: {
-      proton_version: 'GE-Proton9-10',
+      proton_version: 'GE-Proton-latest',
       auto_update: false,
       esync: true,
       fsync: true,
-      runtime_preference: 'Auto'
+      runtime_preference: 'Proton'
     },
     environment: {
       gamemode: 'OptionalOn',
@@ -191,10 +191,10 @@ export function defaultGameConfig(): GameConfig {
     requirements: {
       runtime: {
         strict: false,
-        primary: 'ProtonNative',
-        fallback_order: ['ProtonUmu', 'Wine']
+        primary: 'ProtonUmu',
+        fallback_order: ['ProtonNative', 'Wine']
       },
-      umu: 'OptionalOn',
+      umu: 'MandatoryOn',
       winetricks: 'OptionalOff',
       gamescope: 'OptionalOff',
       gamemode: 'OptionalOn',

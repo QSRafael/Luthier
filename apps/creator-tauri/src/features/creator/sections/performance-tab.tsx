@@ -224,19 +224,44 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                             title={ct('creator_use_monitor_resolution')}
                             checked={gamescopeUsesMonitorResolution()}
                             onChange={(checked) => {
-                              if (!checked) return
-                              patchConfig((prev) => ({
-                                ...prev,
-                                environment: {
-                                  ...prev.environment,
-                                  gamescope: {
-                                    ...prev.environment.gamescope,
-                                    output_width: '',
-                                    output_height: '',
-                                    resolution: null
+                              patchConfig((prev) => {
+                                if (checked) {
+                                  return {
+                                    ...prev,
+                                    environment: {
+                                      ...prev.environment,
+                                      gamescope: {
+                                        ...prev.environment.gamescope,
+                                        output_width: '',
+                                        output_height: '',
+                                        resolution: null
+                                      }
+                                    }
                                   }
                                 }
-                              }))
+
+                                const fallbackWidth =
+                                  prev.environment.gamescope.output_width.trim() ||
+                                  prev.environment.gamescope.game_width.trim() ||
+                                  '1920'
+                                const fallbackHeight =
+                                  prev.environment.gamescope.output_height.trim() ||
+                                  prev.environment.gamescope.game_height.trim() ||
+                                  '1080'
+
+                                return {
+                                  ...prev,
+                                  environment: {
+                                    ...prev.environment,
+                                    gamescope: {
+                                      ...prev.environment.gamescope,
+                                      output_width: fallbackWidth,
+                                      output_height: fallbackHeight,
+                                      resolution: `${fallbackWidth}x${fallbackHeight}`
+                                    }
+                                  }
+                                }
+                              })
                             }}
                           />
                         </div>
@@ -391,21 +416,6 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                   compatibility: {
                     ...prev.compatibility,
                     auto_dxvk_nvapi: value
-                  }
-                }))
-              }
-            />
-
-            <FeatureStateField
-              label="Staging"
-              help={ct('creator_controls_mandatory_usage_of_wine_staging_runtime')}
-              value={config().compatibility.staging}
-              onChange={(value) =>
-                patchConfig((prev) => ({
-                  ...prev,
-                  compatibility: {
-                    ...prev.compatibility,
-                    staging: value
                   }
                 }))
               }

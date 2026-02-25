@@ -12,13 +12,14 @@ use orchestrator_core::{
 use crate::{
     instance_lock::acquire_instance_lock,
     launch::{
-        apply_registry_keys_if_present, build_launch_command, build_prefix_setup_execution_context,
-        dry_run_enabled, execute_script_if_present, validate_integrity,
+        apply_registry_keys_if_present, apply_winecfg_overrides_if_present, build_launch_command,
+        build_prefix_setup_execution_context, dry_run_enabled, execute_script_if_present,
+        validate_integrity,
     },
     logging::log_event,
     mounts::{apply_folder_mounts, MountStatus},
     overrides::{apply_runtime_overrides, load_runtime_overrides},
-    paths::resolve_game_root,
+    paths::{resolve_game_root, resolve_relative_path},
     payload::load_embedded_config_required,
 };
 
@@ -78,6 +79,33 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
 
     let game_root = resolve_game_root().context("failed to resolve game root")?;
     let dry_run = dry_run_enabled();
+
+    let game_exe_path = resolve_relative_path(&game_root, &config.relative_exe_path)
+        .with_context(|| format!("invalid relative_exe_path '{}'", config.relative_exe_path))?;
+    if !game_exe_path.exists() {
+        let output = serde_json::json!({
+            "integrity": {
+                "status": "BLOCKER",
+                "missing_files": [config.relative_exe_path.clone()],
+                "missing_executable": config.relative_exe_path,
+            },
+            "launch": {
+                "status": "aborted",
+                "reason": "game executable is missing"
+            }
+        });
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output)
+                .context("failed to serialize missing executable error")?
+        );
+
+        return Err(anyhow!(
+            "game executable '{}' is missing",
+            game_exe_path.display()
+        ));
+    }
 
     let missing_files =
         validate_integrity(&config, &game_root).context("invalid integrity path in payload")?;
@@ -224,6 +252,52 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
         }
     }
 
+    let winecfg_apply_result = apply_winecfg_overrides_if_present(
+        &config,
+        &report,
+        &prefix_setup.prefix_root_path,
+        dry_run,
+    )
+    .context("failed to apply winecfg overrides")?;
+
+    if let Some(result) = &winecfg_apply_result {
+        log_event(
+            trace_id,
+            LogLevel::Info,
+            "winecfg",
+            "GO-WC-030",
+            "winecfg_overrides_applied",
+            serde_json::json!({
+                "status": result.status,
+                "exit_code": result.exit_code,
+                "duration_ms": result.duration_ms,
+                "dry_run": dry_run,
+            }),
+        );
+
+        if matches!(result.status, StepStatus::Failed | StepStatus::TimedOut) {
+            let output = serde_json::json!({
+                "doctor": report,
+                "prefix_setup_plan": prefix_plan,
+                "prefix_setup_execution": setup_results,
+                "registry_apply": registry_apply_result,
+                "winecfg_apply": result,
+                "launch": {
+                    "status": "aborted",
+                    "reason": "winecfg override apply failed"
+                }
+            });
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .context("failed to serialize winecfg apply failure")?
+            );
+
+            return Err(anyhow!("winecfg override apply failed"));
+        }
+    }
+
     let mount_results = match apply_folder_mounts(
         &config,
         &game_root,
@@ -237,6 +311,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
                 "prefix_setup_plan": prefix_plan,
                 "prefix_setup_execution": setup_results,
                 "registry_apply": registry_apply_result,
+                "winecfg_apply": winecfg_apply_result,
                 "folder_mounts": {
                     "status": "failed",
                     "error": err.to_string(),
@@ -321,6 +396,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
                 "prefix_setup_plan": prefix_plan,
                 "prefix_setup_execution": setup_results,
                 "registry_apply": registry_apply_result,
+                "winecfg_apply": winecfg_apply_result,
                 "folder_mounts": mount_results,
                 "pre_launch": result,
                 "launch": {
@@ -338,6 +414,19 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
             return Err(anyhow!("pre-launch script failed"));
         }
     }
+
+    log_event(
+        trace_id,
+        LogLevel::Info,
+        "launcher",
+        "GO-LN-015",
+        "game_command_starting",
+        serde_json::json!({
+            "program": &launch_plan.program,
+            "args_count": launch_plan.args.len(),
+            "cwd": &launch_plan.cwd,
+        }),
+    );
 
     let game_result = execute_external_command(
         &ExternalCommand {
@@ -401,6 +490,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
         "prefix_setup_plan": prefix_plan,
         "prefix_setup_execution": setup_results,
         "registry_apply": registry_apply_result,
+        "winecfg_apply": winecfg_apply_result,
         "folder_mounts": mount_results,
         "launch_plan": launch_plan,
         "pre_launch": pre_script_result,

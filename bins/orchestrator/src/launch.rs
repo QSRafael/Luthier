@@ -9,10 +9,11 @@ use anyhow::{anyhow, Context};
 use orchestrator_core::{
     doctor::DoctorReport,
     prefix::{base_env_for_prefix, PrefixSetupPlan},
-    process::{execute_external_command, CommandExecutionResult, ExternalCommand},
+    process::{execute_external_command, CommandExecutionResult, ExternalCommand, StepStatus},
     FeatureState, GameConfig, RuntimeCandidate,
 };
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 
 use crate::{overrides::feature_enabled, paths::resolve_relative_path};
 
@@ -23,6 +24,8 @@ pub struct LaunchCommandPlan {
     pub cwd: String,
     pub runtime: String,
     pub env: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -76,10 +79,32 @@ pub fn build_launch_command(
 
     let gamescope_active = feature_enabled(config.environment.gamescope.state);
     let mangohud_active = feature_enabled(config.requirements.mangohud);
+    let mut plan_notes = Vec::new();
 
     if feature_enabled(config.requirements.gamemode) {
-        if let Some(path) = dependency_path(report, "gamemoderun") {
+        let force_gamemode_umu = gamemode_umu_force_enabled();
+        let auto_skip_gamemode_umu = matches!(selected_runtime, RuntimeCandidate::ProtonUmu)
+            && matches!(config.requirements.gamemode, FeatureState::OptionalOn)
+            && !force_gamemode_umu;
+
+        if auto_skip_gamemode_umu {
+            plan_notes.push(
+                "GameMode wrapper skipped automatically for ProtonUmu (UMU/pressure-vessel may fail to load libgamemode and spam stderr). Set GAME_ORCH_FORCE_GAMEMODE_UMU=1 to force gamemoderun.".to_string(),
+            );
+        } else if let Some(path) = dependency_path(report, "gamemoderun") {
             command_tokens = wrap_command(path, vec![], command_tokens);
+            if matches!(selected_runtime, RuntimeCandidate::ProtonUmu) && force_gamemode_umu {
+                plan_notes.push(
+                    "GameMode wrapper forced for ProtonUmu by GAME_ORCH_FORCE_GAMEMODE_UMU=1; compatibility depends on UMU/pressure-vessel runtime environment.".to_string(),
+                );
+            }
+        } else if matches!(
+            (selected_runtime, config.requirements.gamemode),
+            (RuntimeCandidate::ProtonUmu, FeatureState::OptionalOn)
+        ) {
+            plan_notes.push(
+                "GameMode is enabled in payload, but gamemoderun was not found; continuing without GameMode.".to_string(),
+            );
         }
     }
 
@@ -157,7 +182,14 @@ pub fn build_launch_command(
             }
 
             match gamescope.window_type.trim() {
-                "fullscreen" => gamescope_args.push("-f".to_string()),
+                "fullscreen" => {
+                    gamescope_args.push("-f".to_string());
+                    if host_wayland_session_detected() {
+                        plan_notes.push(
+                            "Gamescope fullscreen flag (-f) was applied. In nested Wayland sessions, compositors may still present the gamescope surface as a window.".to_string(),
+                        );
+                    }
+                }
                 "borderless" => gamescope_args.push("-b".to_string()),
                 _ => {}
             }
@@ -258,6 +290,7 @@ pub fn build_launch_command(
         cwd: game_root.to_string_lossy().into_owned(),
         runtime: format!("{:?}", selected_runtime),
         env: env_pairs,
+        notes: plan_notes,
     })
 }
 
@@ -369,6 +402,7 @@ pub fn build_winecfg_command(
         cwd: prefix_path.to_string_lossy().into_owned(),
         runtime: format!("{:?}", selected_runtime),
         env: env_pairs,
+        notes: Vec::new(),
     })
 }
 
@@ -468,6 +502,11 @@ pub fn apply_registry_keys_if_present(
     let effective_prefix_path =
         effective_prefix_path_for_runtime(prefix_root_path, selected_runtime);
 
+    let registry_content_hash = registry_keys_content_hash(&config.registry_keys);
+    if !dry_run && registry_import_cache_is_fresh(&effective_prefix_path, &registry_content_hash) {
+        return Ok(Some(cached_registry_import_result()));
+    }
+
     let reg_windows_path =
         write_registry_import_file(&config.registry_keys, &effective_prefix_path)?;
     let command_plan =
@@ -483,11 +522,58 @@ pub fn apply_registry_keys_if_present(
         mandatory: true,
     };
 
-    Ok(Some(execute_external_command(
-        &command,
-        &command_plan.env,
-        dry_run,
-    )))
+    let result = execute_external_command(&command, &command_plan.env, dry_run);
+
+    if !dry_run && matches!(result.status, StepStatus::Success) {
+        let _ = write_registry_import_cache_hash(&effective_prefix_path, &registry_content_hash);
+    }
+
+    Ok(Some(result))
+}
+
+pub fn apply_winecfg_overrides_if_present(
+    config: &GameConfig,
+    report: &DoctorReport,
+    prefix_root_path: &Path,
+    dry_run: bool,
+) -> anyhow::Result<Option<CommandExecutionResult>> {
+    let Some(raw) = render_winecfg_registry_overrides(&config.winecfg) else {
+        return Ok(None);
+    };
+
+    let selected_runtime = report
+        .runtime
+        .selected_runtime
+        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
+    let effective_prefix_path =
+        effective_prefix_path_for_runtime(prefix_root_path, selected_runtime);
+
+    let content_hash = sha256_hex(raw.as_bytes());
+    if !dry_run && winecfg_import_cache_is_fresh(&effective_prefix_path, &content_hash) {
+        return Ok(Some(cached_winecfg_apply_result()));
+    }
+
+    let reg_windows_path =
+        write_custom_reg_import_file("go_winecfg_apply", &raw, &effective_prefix_path)?;
+    let command_plan =
+        build_regedit_import_command(config, report, prefix_root_path, &reg_windows_path)
+            .context("failed to build winecfg registry import command")?;
+
+    let command = ExternalCommand {
+        name: "winecfg-registry-apply".to_string(),
+        program: command_plan.program,
+        args: command_plan.args,
+        timeout_secs: Some(120),
+        cwd: Some(command_plan.cwd),
+        mandatory: true,
+    };
+
+    let result = execute_external_command(&command, &command_plan.env, dry_run);
+    if !dry_run && matches!(result.status, StepStatus::Success) {
+        let _ = write_winecfg_import_cache_hash(&effective_prefix_path, &content_hash);
+    }
+
+    Ok(Some(result))
 }
 
 pub fn execute_script_if_present(
@@ -636,6 +722,31 @@ fn non_empty_trimmed(raw: &str) -> Option<&str> {
 fn split_shell_like_args(raw: &str) -> Vec<String> {
     // Matches current wrapper arg parsing behavior. Quoted args are not preserved yet.
     raw.split_whitespace().map(ToString::to_string).collect()
+}
+
+fn gamemode_umu_force_enabled() -> bool {
+    truthy_env_flag("GAME_ORCH_FORCE_GAMEMODE_UMU")
+}
+
+fn host_wayland_session_detected() -> bool {
+    truthy_env_flag("WAYLAND_DISPLAY")
+        || std::env::var("XDG_SESSION_TYPE")
+            .map(|value| value.eq_ignore_ascii_case("wayland"))
+            .unwrap_or(false)
+}
+
+fn truthy_env_flag(name: &str) -> bool {
+    std::env::var(name)
+        .map(|value| {
+            let trimmed = value.trim();
+            !trimmed.is_empty()
+                && (trimmed == "1"
+                    || trimmed.eq_ignore_ascii_case("true")
+                    || trimmed.eq_ignore_ascii_case("yes")
+                    || trimmed.eq_ignore_ascii_case("on")
+                    || (!trimmed.contains('=') && name == "WAYLAND_DISPLAY"))
+        })
+        .unwrap_or(false)
 }
 
 fn gamescope_supports_modern_filter(gamescope_path: &str) -> bool {
@@ -867,6 +978,7 @@ fn apply_heroic_like_runtime_env_defaults(
         }
 
         apply_proton_feature_envs(env_pairs, config);
+        apply_proton_aux_runtime_envs(env_pairs, config, report);
     } else {
         apply_wine_feature_envs(env_pairs, config);
     }
@@ -937,6 +1049,24 @@ fn apply_wine_feature_envs(env_pairs: &mut Vec<(String, String)>, config: &GameC
     if feature_enabled(config.compatibility.auto_dxvk_nvapi) {
         upsert_env(env_pairs, "DXVK_ENABLE_NVAPI", "1");
         upsert_env(env_pairs, "DXVK_NVAPI_ALLOW_OTHER_DRIVERS", "1");
+    }
+}
+
+fn apply_proton_aux_runtime_envs(
+    env_pairs: &mut Vec<(String, String)>,
+    config: &GameConfig,
+    report: &DoctorReport,
+) {
+    if feature_enabled(config.compatibility.easy_anti_cheat_runtime) {
+        if let Some(path) = dependency_path(report, "eac-runtime") {
+            upsert_env(env_pairs, "PROTON_EAC_RUNTIME", path);
+        }
+    }
+
+    if feature_enabled(config.compatibility.battleye_runtime) {
+        if let Some(path) = dependency_path(report, "battleye-runtime") {
+            upsert_env(env_pairs, "PROTON_BATTLEYE_RUNTIME", path);
+        }
     }
 }
 
@@ -1044,6 +1174,7 @@ fn build_regedit_import_command(
         cwd: prefix_root_path.to_string_lossy().into_owned(),
         runtime: format!("{:?}", selected_runtime),
         env: std::mem::take(&mut env_pairs),
+        notes: Vec::new(),
     })
 }
 
@@ -1067,6 +1198,334 @@ fn write_registry_import_file(
     fs::write(&file_path, utf16).context("failed to write temporary .reg import file")?;
 
     Ok(format!(r"C:\windows\temp\{file_name}"))
+}
+
+fn write_custom_reg_import_file(
+    prefix: &str,
+    raw: &str,
+    effective_prefix_path: &Path,
+) -> anyhow::Result<String> {
+    let temp_dir = effective_prefix_path.join("drive_c/windows/temp");
+    fs::create_dir_all(&temp_dir)
+        .context("failed to create Windows temp directory inside prefix")?;
+
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let file_name = format!("{prefix}_{nonce}.reg");
+    let file_path = temp_dir.join(&file_name);
+
+    let utf16 = encode_utf16le_with_bom(raw);
+    fs::write(&file_path, utf16).context("failed to write temporary .reg import file")?;
+
+    Ok(format!(r"C:\windows\temp\{file_name}"))
+}
+
+fn registry_keys_content_hash(registry_keys: &[orchestrator_core::RegistryKey]) -> String {
+    let raw = render_registry_file(registry_keys);
+    sha256_hex(raw.as_bytes())
+}
+
+fn registry_import_cache_marker_path(cache_scope_path: &Path) -> PathBuf {
+    cache_scope_path.join(".game_orch_registry.sha256")
+}
+
+fn registry_import_cache_is_fresh(cache_scope_path: &Path, expected_hash: &str) -> bool {
+    let path = registry_import_cache_marker_path(cache_scope_path);
+    let Ok(saved) = fs::read_to_string(path) else {
+        return false;
+    };
+    saved.trim() == expected_hash
+}
+
+fn write_registry_import_cache_hash(cache_scope_path: &Path, hash: &str) -> anyhow::Result<()> {
+    let path = registry_import_cache_marker_path(cache_scope_path);
+    fs::create_dir_all(cache_scope_path).with_context(|| {
+        format!(
+            "failed to create registry cache directory '{}'",
+            cache_scope_path.display()
+        )
+    })?;
+    fs::write(&path, format!("{hash}\n"))
+        .with_context(|| format!("failed to write registry cache marker '{}'", path.display()))
+}
+
+fn cached_registry_import_result() -> CommandExecutionResult {
+    CommandExecutionResult {
+        name: "registry-import".to_string(),
+        program: "regedit".to_string(),
+        args: Vec::new(),
+        mandatory: true,
+        status: StepStatus::Skipped,
+        exit_code: None,
+        duration_ms: 0,
+        error: Some("registry keys unchanged; skipped (cached)".to_string()),
+    }
+}
+
+fn winecfg_import_cache_marker_path(cache_scope_path: &Path) -> PathBuf {
+    cache_scope_path.join(".game_orch_winecfg.sha256")
+}
+
+fn winecfg_import_cache_is_fresh(cache_scope_path: &Path, expected_hash: &str) -> bool {
+    let path = winecfg_import_cache_marker_path(cache_scope_path);
+    let Ok(saved) = fs::read_to_string(path) else {
+        return false;
+    };
+    saved.trim() == expected_hash
+}
+
+fn write_winecfg_import_cache_hash(cache_scope_path: &Path, hash: &str) -> anyhow::Result<()> {
+    let path = winecfg_import_cache_marker_path(cache_scope_path);
+    fs::create_dir_all(cache_scope_path).with_context(|| {
+        format!(
+            "failed to create winecfg cache directory '{}'",
+            cache_scope_path.display()
+        )
+    })?;
+    fs::write(&path, format!("{hash}\n"))
+        .with_context(|| format!("failed to write winecfg cache marker '{}'", path.display()))
+}
+
+fn cached_winecfg_apply_result() -> CommandExecutionResult {
+    CommandExecutionResult {
+        name: "winecfg-registry-apply".to_string(),
+        program: "regedit".to_string(),
+        args: Vec::new(),
+        mandatory: true,
+        status: StepStatus::Skipped,
+        exit_code: None,
+        duration_ms: 0,
+        error: Some("winecfg overrides unchanged; skipped (cached)".to_string()),
+    }
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+#[derive(Debug, Clone)]
+enum RegValueKind {
+    String(String),
+    Dword(u32),
+    Delete,
+}
+
+#[derive(Debug, Clone)]
+struct RegMutation {
+    name: String,
+    kind: RegValueKind,
+}
+
+fn render_winecfg_registry_overrides(winecfg: &orchestrator_core::WinecfgConfig) -> Option<String> {
+    use std::collections::BTreeMap;
+
+    let mut sections: BTreeMap<String, Vec<RegMutation>> = BTreeMap::new();
+
+    let mut push_mutation = |path: &str, name: &str, kind: RegValueKind| {
+        sections
+            .entry(path.to_string())
+            .or_default()
+            .push(RegMutation {
+                name: name.to_string(),
+                kind,
+            });
+    };
+
+    if let Some(version) = winecfg
+        .windows_version
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    {
+        push_mutation(
+            r"HKEY_CURRENT_USER\Software\Wine",
+            "Version",
+            RegValueKind::String(version.to_string()),
+        );
+    } else {
+        push_mutation(
+            r"HKEY_CURRENT_USER\Software\Wine",
+            "Version",
+            RegValueKind::Delete,
+        );
+    }
+
+    apply_winecfg_policy_toggle(
+        &mut push_mutation,
+        r"HKEY_CURRENT_USER\Software\Wine\X11 Driver",
+        "GrabFullscreen",
+        &winecfg.auto_capture_mouse,
+    );
+    apply_winecfg_policy_toggle(
+        &mut push_mutation,
+        r"HKEY_CURRENT_USER\Software\Wine\X11 Driver",
+        "Decorated",
+        &winecfg.window_decorations,
+    );
+    apply_winecfg_policy_toggle(
+        &mut push_mutation,
+        r"HKEY_CURRENT_USER\Software\Wine\X11 Driver",
+        "Managed",
+        &winecfg.window_manager_control,
+    );
+
+    apply_winecfg_virtual_desktop(&mut push_mutation, &winecfg.virtual_desktop);
+    apply_winecfg_screen_dpi(&mut push_mutation, winecfg.screen_dpi);
+    apply_winecfg_dll_overrides(&mut push_mutation, &winecfg.dll_overrides);
+
+    if sections.is_empty() {
+        return None;
+    }
+
+    Some(render_custom_registry_file(&sections))
+}
+
+fn apply_winecfg_policy_toggle<F>(
+    push_mutation: &mut F,
+    path: &str,
+    name: &str,
+    policy: &orchestrator_core::WinecfgFeaturePolicy,
+) where
+    F: FnMut(&str, &str, RegValueKind),
+{
+    if policy.use_wine_default {
+        push_mutation(path, name, RegValueKind::Delete);
+        return;
+    }
+
+    let value = if policy.state.is_enabled() { "Y" } else { "N" };
+    push_mutation(path, name, RegValueKind::String(value.to_string()));
+}
+
+fn apply_winecfg_virtual_desktop<F>(
+    push_mutation: &mut F,
+    virtual_desktop: &orchestrator_core::VirtualDesktopConfig,
+) where
+    F: FnMut(&str, &str, RegValueKind),
+{
+    let explorer_key = r"HKEY_CURRENT_USER\Software\Wine\Explorer";
+    let desktops_key = r"HKEY_CURRENT_USER\Software\Wine\Explorer\Desktops";
+
+    if virtual_desktop.state.use_wine_default || !virtual_desktop.state.state.is_enabled() {
+        push_mutation(explorer_key, "Desktop", RegValueKind::Delete);
+        push_mutation(desktops_key, "Default", RegValueKind::Delete);
+        return;
+    }
+
+    let Some(resolution) = virtual_desktop
+        .resolution
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    else {
+        return;
+    };
+
+    push_mutation(
+        explorer_key,
+        "Desktop",
+        RegValueKind::String("Default".to_string()),
+    );
+    push_mutation(
+        desktops_key,
+        "Default",
+        RegValueKind::String(resolution.to_string()),
+    );
+}
+
+fn apply_winecfg_screen_dpi<F>(push_mutation: &mut F, dpi: Option<u16>)
+where
+    F: FnMut(&str, &str, RegValueKind),
+{
+    let key = r"HKEY_CURRENT_USER\Control Panel\Desktop";
+    if let Some(value) = dpi {
+        push_mutation(key, "LogPixels", RegValueKind::Dword(u32::from(value)));
+    } else {
+        push_mutation(key, "LogPixels", RegValueKind::Delete);
+    }
+}
+
+fn apply_winecfg_dll_overrides<F>(
+    push_mutation: &mut F,
+    dll_overrides: &[orchestrator_core::DllOverrideRule],
+) where
+    F: FnMut(&str, &str, RegValueKind),
+{
+    let key = r"HKEY_CURRENT_USER\Software\Wine\DllOverrides";
+    let mut normalized = dll_overrides
+        .iter()
+        .filter_map(|rule| {
+            let dll = rule
+                .dll
+                .trim()
+                .trim_end_matches(".dll")
+                .trim()
+                .to_ascii_lowercase();
+            let mode = rule.mode.trim();
+            if dll.is_empty() || mode.is_empty() {
+                return None;
+            }
+            Some((dll, mode.to_string()))
+        })
+        .collect::<Vec<_>>();
+
+    normalized.sort_by(|a, b| a.0.cmp(&b.0));
+    normalized.dedup_by(|a, b| a.0 == b.0);
+
+    for (dll, mode) in normalized {
+        push_mutation(key, &dll, RegValueKind::String(mode));
+    }
+}
+
+fn render_custom_registry_file(
+    sections: &std::collections::BTreeMap<String, Vec<RegMutation>>,
+) -> String {
+    let mut out = String::from("Windows Registry Editor Version 5.00\r\n\r\n");
+
+    let mut first_section = true;
+    for (path, mutations) in sections {
+        if mutations.is_empty() {
+            continue;
+        }
+        if !first_section {
+            out.push_str("\r\n");
+        }
+        first_section = false;
+
+        out.push('[');
+        out.push_str(path);
+        out.push_str("]\r\n");
+
+        let mut sorted = mutations.clone();
+        sorted.sort_by(|a, b| a.name.cmp(&b.name));
+
+        for mutation in sorted {
+            out.push_str(&render_custom_registry_line(&mutation));
+            out.push_str("\r\n");
+        }
+    }
+
+    out
+}
+
+fn render_custom_registry_line(mutation: &RegMutation) -> String {
+    let name = if mutation.name == "@" {
+        "@".to_string()
+    } else {
+        format!("\"{}\"", escape_reg_string(&mutation.name))
+    };
+
+    let rendered = match &mutation.kind {
+        RegValueKind::String(value) => format!("\"{}\"", escape_reg_string(value)),
+        RegValueKind::Dword(value) => format!("dword:{value:08x}"),
+        RegValueKind::Delete => "-".to_string(),
+    };
+
+    format!("{name}={rendered}")
 }
 
 fn render_registry_file(registry_keys: &[orchestrator_core::RegistryKey]) -> String {

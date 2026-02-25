@@ -107,9 +107,10 @@ export function useCreatorController() {
     RUNTIME_CANDIDATES.map((value) => ({ value, label: value }))
   )
 
-  const runtimePreferenceOptions = createMemo<SelectOption<RuntimePreference>[]>(() =>
-    RUNTIME_PREFERENCES.map((value) => ({ value, label: value }))
-  )
+  const runtimePreferenceOptions = createMemo<SelectOption<RuntimePreference>[]>(() => [
+    { value: 'Proton', label: 'Proton-GE' },
+    { value: 'Wine', label: 'Wine' }
+  ])
 
   const audioDriverOptions = createMemo<SelectOption<AudioDriverOption>[]>(() => [
     {
@@ -245,6 +246,50 @@ export function useCreatorController() {
 
   createEffect(() => {
     localStorage.setItem('creator.locale', locale())
+  })
+
+  // Runtime UX simplification: default to Proton-GE and enforce UMU in the authoring UI.
+  createEffect(() => {
+    const current = config()
+    let next = current
+    let changed = false
+
+    if (current.runner.runtime_preference === 'Auto') {
+      next = {
+        ...next,
+        runner: {
+          ...next.runner,
+          runtime_preference: 'Proton'
+        }
+      }
+      changed = true
+    }
+
+    if (!current.runner.proton_version.trim()) {
+      next = {
+        ...next,
+        runner: {
+          ...next.runner,
+          proton_version: 'GE-Proton-latest'
+        }
+      }
+      changed = true
+    }
+
+    if (current.requirements.umu !== 'MandatoryOn') {
+      next = {
+        ...next,
+        requirements: {
+          ...next.requirements,
+          umu: 'MandatoryOn'
+        }
+      }
+      changed = true
+    }
+
+    if (changed) {
+      setConfig(next)
+    }
   })
 
   createEffect(() => {

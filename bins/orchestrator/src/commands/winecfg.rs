@@ -11,8 +11,8 @@ use orchestrator_core::{
 
 use crate::{
     launch::{
-        apply_registry_keys_if_present, build_prefix_setup_execution_context,
-        build_winecfg_command, dry_run_enabled,
+        apply_registry_keys_if_present, apply_winecfg_overrides_if_present,
+        build_prefix_setup_execution_context, build_winecfg_command, dry_run_enabled,
     },
     logging::log_event,
     paths::resolve_game_root,
@@ -78,6 +78,40 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
         apply_registry_keys_if_present(&config, &report, &prefix_setup.prefix_root_path, dry_run)
             .context("failed to apply registry keys")?;
 
+    let winecfg_apply_result = apply_winecfg_overrides_if_present(
+        &config,
+        &report,
+        &prefix_setup.prefix_root_path,
+        dry_run,
+    )
+    .context("failed to apply winecfg overrides")?;
+
+    if let Some(result) = &winecfg_apply_result {
+        if matches!(
+            result.status,
+            orchestrator_core::process::StepStatus::Failed
+                | orchestrator_core::process::StepStatus::TimedOut
+        ) {
+            let output = serde_json::json!({
+                "doctor": report,
+                "prefix_setup_plan": prefix_plan,
+                "prefix_setup_execution": setup_results,
+                "registry_apply": registry_apply_result,
+                "winecfg_apply": result,
+                "winecfg": {
+                    "status": "aborted",
+                    "reason": "winecfg override apply failed"
+                }
+            });
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .context("failed to serialize winecfg apply failure output")?
+            );
+            return Err(anyhow!("winecfg override apply failed"));
+        }
+    }
+
     let command_plan = build_winecfg_command(&config, &report, &prefix_setup.prefix_root_path)
         .context("failed to build winecfg command")?;
 
@@ -113,6 +147,7 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
         "prefix_setup_plan": prefix_plan,
         "prefix_setup_execution": setup_results,
         "registry_apply": registry_apply_result,
+        "winecfg_apply": winecfg_apply_result,
         "winecfg_command": command_plan,
         "winecfg_result": result,
     });
