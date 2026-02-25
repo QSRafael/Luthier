@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
-use std::sync::{Arc, Once, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -41,8 +41,8 @@ const BTN_HOVER: u32 = 0x181818;
 const SEPARATOR: u32 = 0x1f1f1f;
 
 static SYSTEM_FONT: OnceLock<Option<Font>> = OnceLock::new();
-static SYSTEM_FONT_PRELOAD_STARTED: Once = Once::new();
 static SPLASH_LOCALE: OnceLock<SplashLocale> = OnceLock::new();
+const EMBEDDED_SPLASH_FONT_BYTES: &[u8] = include_bytes!("../assets/fonts/NotoSans-Regular.ttf");
 
 #[derive(Debug, Clone, Copy)]
 struct SplashWindowScale {
@@ -1746,18 +1746,19 @@ fn draw_progress(
     } else {
         progress.status.clone()
     };
-    draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 116, &current_status, TEXT, 2, 76);
 
     let mut history_lines = progress.recent_messages.iter().cloned().collect::<Vec<_>>();
     history_lines.retain(|line| line.trim() != current_status.trim());
     if history_lines.len() > 2 {
         history_lines = history_lines[history_lines.len().saturating_sub(2)..].to_vec();
     }
-    let mut history_y = 154;
+    let mut history_y = 122;
     for line in history_lines {
-        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, history_y, &line, MUTED, 1, 36);
+        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, history_y, &line, MUTED, 1, 30);
         history_y += 22;
     }
+
+    draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 176, &current_status, TEXT, 1, 54);
 
     let uptime = format!("{}s", progress.started_at.elapsed().as_secs());
     draw_text_centered_with_scrim(
@@ -2474,17 +2475,14 @@ fn text_px_size(scale: i32) -> f32 {
     }
 }
 
-fn start_system_font_preload() {
-    SYSTEM_FONT_PRELOAD_STARTED.call_once(|| {
-        thread::spawn(|| {
-            let _ = SYSTEM_FONT.set(load_system_font());
-        });
-    });
+fn system_font() -> Option<&'static Font> {
+    SYSTEM_FONT
+        .get_or_init(|| load_embedded_splash_font().or_else(load_system_font))
+        .as_ref()
 }
 
-fn system_font() -> Option<&'static Font> {
-    start_system_font_preload();
-    SYSTEM_FONT.get().and_then(|font| font.as_ref())
+fn load_embedded_splash_font() -> Option<Font> {
+    Font::from_bytes(EMBEDDED_SPLASH_FONT_BYTES, FontSettings::default()).ok()
 }
 
 fn load_system_font() -> Option<Font> {
