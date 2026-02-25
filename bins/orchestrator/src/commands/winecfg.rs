@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context};
 use orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
     observability::LogLevel,
-    prefix::{base_env_for_prefix, build_prefix_setup_plan},
+    prefix::build_prefix_setup_plan,
     process::{
         execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
         ExternalCommand,
@@ -10,7 +10,7 @@ use orchestrator_core::{
 };
 
 use crate::{
-    launch::{build_winecfg_command, dry_run_enabled, effective_prefix_path_for_runtime},
+    launch::{build_prefix_setup_execution_context, build_winecfg_command, dry_run_enabled},
     logging::log_event,
     paths::resolve_game_root,
     payload::load_embedded_config_required,
@@ -49,14 +49,10 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
     }
 
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
-    let selected_runtime = report
-        .runtime
-        .selected_runtime
-        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
-    let prefix_root_path = std::path::PathBuf::from(&prefix_plan.prefix_path);
-    let effective_prefix_path = effective_prefix_path_for_runtime(&prefix_root_path, selected_runtime);
-    let prefix_env = base_env_for_prefix(&effective_prefix_path);
-    let setup_results = execute_prefix_setup_plan(&prefix_plan, &prefix_env, dry_run);
+    let prefix_setup =
+        build_prefix_setup_execution_context(&prefix_plan, &report)
+            .context("failed to build runtime-aware prefix setup context")?;
+    let setup_results = execute_prefix_setup_plan(&prefix_setup.plan, &prefix_setup.env, dry_run);
 
     if has_mandatory_failures(&setup_results) {
         let output = serde_json::json!({
@@ -76,7 +72,7 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
         return Err(anyhow!("mandatory prefix setup step failed"));
     }
 
-    let command_plan = build_winecfg_command(&config, &report, &prefix_root_path)
+    let command_plan = build_winecfg_command(&config, &report, &prefix_setup.prefix_root_path)
         .context("failed to build winecfg command")?;
 
     log_event(

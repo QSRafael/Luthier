@@ -6,7 +6,7 @@ use std::{
 use anyhow::{anyhow, Context};
 use orchestrator_core::{
     doctor::DoctorReport,
-    prefix::base_env_for_prefix,
+    prefix::{base_env_for_prefix, PrefixSetupPlan},
     process::{execute_external_command, CommandExecutionResult, ExternalCommand},
     FeatureState, GameConfig, RuntimeCandidate,
 };
@@ -21,6 +21,14 @@ pub struct LaunchCommandPlan {
     pub cwd: String,
     pub runtime: String,
     pub env: Vec<(String, String)>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PrefixSetupExecutionContext {
+    pub plan: PrefixSetupPlan,
+    pub env: Vec<(String, String)>,
+    pub prefix_root_path: PathBuf,
+    pub effective_prefix_path: PathBuf,
 }
 
 pub fn build_launch_command(
@@ -153,7 +161,9 @@ pub fn build_launch_command(
 
     if matches!(selected_runtime, RuntimeCandidate::ProtonUmu) {
         if let Some(proton_path) = &report.runtime.proton {
-            upsert_env(&mut env_pairs, "PROTONPATH", proton_path);
+            if let Some(proton_root) = proton_root_from_script(proton_path) {
+                upsert_env(&mut env_pairs, "PROTONPATH", proton_root);
+            }
         }
     }
 
@@ -247,7 +257,9 @@ pub fn build_winecfg_command(
 
     if matches!(selected_runtime, RuntimeCandidate::ProtonUmu) {
         if let Some(proton_path) = &report.runtime.proton {
-            upsert_env(&mut env_pairs, "PROTONPATH", proton_path);
+            if let Some(proton_root) = proton_root_from_script(proton_path) {
+                upsert_env(&mut env_pairs, "PROTONPATH", proton_root);
+            }
         }
     }
 
@@ -270,6 +282,67 @@ pub fn build_winecfg_command(
         cwd: prefix_path.to_string_lossy().into_owned(),
         runtime: format!("{:?}", selected_runtime),
         env: env_pairs,
+    })
+}
+
+pub fn build_prefix_setup_execution_context(
+    plan: &PrefixSetupPlan,
+    report: &DoctorReport,
+) -> anyhow::Result<PrefixSetupExecutionContext> {
+    let runtime = report
+        .runtime
+        .selected_runtime
+        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
+
+    let prefix_root_path = PathBuf::from(&plan.prefix_path);
+    let effective_prefix_path = effective_prefix_path_for_runtime(&prefix_root_path, runtime);
+    let mut env = base_env_for_prefix(&effective_prefix_path);
+
+    // Avoid wine gecko/mono popup dialogs during automated prefix bootstrap.
+    upsert_env(&mut env, "WINEDLLOVERRIDES", "mscoree,mshtml=d");
+
+    if matches!(runtime, RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu) {
+        upsert_env(
+            &mut env,
+            "STEAM_COMPAT_DATA_PATH",
+            prefix_root_path.to_string_lossy().into_owned(),
+        );
+
+        if let Some(proton_path) = &report.runtime.proton {
+            if let Some(steam_client_path) = derive_steam_client_install_path(proton_path) {
+                upsert_env(&mut env, "STEAM_COMPAT_CLIENT_INSTALL_PATH", steam_client_path);
+            }
+
+            if let Some(proton_bin_dir) = proton_bin_dir_from_script(proton_path) {
+                prepend_path_env(&mut env, &proton_bin_dir);
+
+                for (name, file) in [
+                    ("WINE", "wine"),
+                    ("WINE64", "wine64"),
+                    ("WINESERVER", "wineserver"),
+                ] {
+                    let candidate = proton_bin_dir.join(file);
+                    if candidate.is_file() {
+                        upsert_env(&mut env, name, candidate.to_string_lossy().into_owned());
+                    }
+                }
+            }
+
+            if matches!(runtime, RuntimeCandidate::ProtonUmu) {
+                if let Some(proton_root) = proton_root_from_script(proton_path) {
+                    upsert_env(&mut env, "PROTONPATH", proton_root);
+                }
+            }
+        }
+    }
+
+    let adapted_plan = adapt_prefix_setup_plan_for_runtime(plan, report, runtime)?;
+
+    Ok(PrefixSetupExecutionContext {
+        plan: adapted_plan,
+        env,
+        prefix_root_path,
+        effective_prefix_path,
     })
 }
 
@@ -417,6 +490,23 @@ fn upsert_env(
     env_pairs.push((key, value));
 }
 
+fn prepend_path_env(env_pairs: &mut Vec<(String, String)>, prefix: &Path) {
+    let prefix = prefix.to_string_lossy().into_owned();
+    let existing = env_pairs
+        .iter()
+        .find(|(k, _)| k == "PATH")
+        .map(|(_, v)| v.clone())
+        .or_else(|| std::env::var("PATH").ok())
+        .unwrap_or_default();
+
+    let value = if existing.is_empty() {
+        prefix
+    } else {
+        format!("{prefix}:{existing}")
+    };
+    upsert_env(env_pairs, "PATH", value);
+}
+
 fn is_protected_env_key(key: &str) -> bool {
     matches!(
         key,
@@ -443,4 +533,70 @@ fn derive_steam_client_install_path(proton_binary_path: &str) -> Option<String> 
 
     let steam_root = steamapps_dir.parent()?;
     Some(steam_root.to_string_lossy().into_owned())
+}
+
+fn proton_root_from_script(proton_binary_path: &str) -> Option<String> {
+    let proton_path = Path::new(proton_binary_path);
+    let proton_dir = proton_path.parent()?;
+    Some(proton_dir.to_string_lossy().into_owned())
+}
+
+fn proton_bin_dir_from_script(proton_binary_path: &str) -> Option<PathBuf> {
+    let proton_path = Path::new(proton_binary_path);
+    let proton_dir = proton_path.parent()?;
+
+    for dist in ["files", "dist"] {
+        let bin_dir = proton_dir.join(dist).join("bin");
+        if bin_dir.is_dir() {
+            return Some(bin_dir);
+        }
+    }
+
+    None
+}
+
+fn adapt_prefix_setup_plan_for_runtime(
+    plan: &PrefixSetupPlan,
+    report: &DoctorReport,
+    runtime: RuntimeCandidate,
+) -> anyhow::Result<PrefixSetupPlan> {
+    let mut out = plan.clone();
+
+    if !matches!(runtime, RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu) {
+        return Ok(out);
+    }
+
+    let proton = report
+        .runtime
+        .proton
+        .clone()
+        .ok_or_else(|| anyhow!("selected Proton runtime but proton path is missing"))?;
+
+    for cmd in &mut out.commands {
+        if cmd.program != "wineboot" {
+            continue;
+        }
+
+        match runtime {
+            RuntimeCandidate::ProtonNative => {
+                let mut args = Vec::with_capacity(1 + cmd.args.len());
+                args.push("run".to_string());
+                args.push("wineboot".to_string());
+                args.extend(cmd.args.clone());
+                cmd.program = proton.clone();
+                cmd.args = args;
+            }
+            RuntimeCandidate::ProtonUmu => {
+                cmd.program = report
+                    .runtime
+                    .umu_run
+                    .clone()
+                    .ok_or_else(|| anyhow!("selected ProtonUmu runtime but umu-run path is missing"))?;
+                cmd.args = vec!["createprefix".to_string()];
+            }
+            RuntimeCandidate::Wine => {}
+        }
+    }
+
+    Ok(out)
 }
