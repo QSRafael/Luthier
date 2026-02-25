@@ -1523,3 +1523,23 @@ Sintoma que foi corrigido:
 Validacao do checkpoint:
 - `/home/rafael/.cargo/bin/cargo build -p orchestrator`
 - `/home/rafael/.cargo/bin/cargo test -p orchestrator-core process:: -- --nocapture`
+
+### 2026-02-24 - Checkpoint 48
+Escopo implementado:
+- Correcao da invocacao de Proton Native/UMU no launch/winecfg:
+  - `ProtonNative` agora usa `proton run <exe>` (antes chamava o script do Proton sem o verbo `run`);
+  - env do launch/winecfg para runtimes Proton agora inclui `STEAM_COMPAT_DATA_PATH` e, quando derivavel, `STEAM_COMPAT_CLIENT_INSTALL_PATH`;
+  - `WINEPREFIX` efetivo para Proton passa a apontar para `<prefix_root>/pfx`.
+- Alinhamento do setup inicial do prefixo e mounts com o prefixo efetivo do runtime:
+  - `play.rs` e `winecfg.rs` usam `.../pfx` como prefixo efetivo para setup/mounts quando runtime selecionado eh Proton.
+
+Sintoma que motivou a correcao:
+- `Proton: No compat data path?`
+- launch plan mostrava args sem `run` e env sem `STEAM_COMPAT_DATA_PATH`.
+
+Observacao:
+- O popup de Wine Mono no primeiro `wineboot` continua possivel em prefixo novo (comportamento esperado do Wine; nao eh erro de versao do Proton).
+
+Validacao do checkpoint:
+- `/home/rafael/.cargo/bin/cargo build -p orchestrator`
+- `/home/rafael/.cargo/bin/cargo test -p orchestrator -- --nocapture`

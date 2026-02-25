@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use anyhow::{anyhow, Context};
 use orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
@@ -12,7 +10,7 @@ use orchestrator_core::{
 };
 
 use crate::{
-    launch::{build_winecfg_command, dry_run_enabled},
+    launch::{build_winecfg_command, dry_run_enabled, effective_prefix_path_for_runtime},
     logging::log_event,
     paths::resolve_game_root,
     payload::load_embedded_config_required,
@@ -51,7 +49,13 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
     }
 
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
-    let prefix_env = base_env_for_prefix(Path::new(&prefix_plan.prefix_path));
+    let selected_runtime = report
+        .runtime
+        .selected_runtime
+        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
+    let prefix_root_path = std::path::PathBuf::from(&prefix_plan.prefix_path);
+    let effective_prefix_path = effective_prefix_path_for_runtime(&prefix_root_path, selected_runtime);
+    let prefix_env = base_env_for_prefix(&effective_prefix_path);
     let setup_results = execute_prefix_setup_plan(&prefix_plan, &prefix_env, dry_run);
 
     if has_mandatory_failures(&setup_results) {
@@ -72,8 +76,7 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
         return Err(anyhow!("mandatory prefix setup step failed"));
     }
 
-    let prefix_path = std::path::PathBuf::from(&prefix_plan.prefix_path);
-    let command_plan = build_winecfg_command(&config, &report, &prefix_path)
+    let command_plan = build_winecfg_command(&config, &report, &prefix_root_path)
         .context("failed to build winecfg command")?;
 
     log_event(

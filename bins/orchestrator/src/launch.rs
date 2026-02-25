@@ -55,7 +55,10 @@ pub fn build_launch_command(
         .context("invalid relative_exe_path in payload")?;
     let game_exe_str = game_exe.to_string_lossy().into_owned();
 
-    let mut runtime_args = vec![game_exe_str];
+    let mut runtime_args = match selected_runtime {
+        RuntimeCandidate::ProtonNative => vec!["run".to_string(), game_exe_str],
+        _ => vec![game_exe_str],
+    };
     runtime_args.extend(config.launch_args.clone());
 
     let mut command_tokens = vec![runtime_program.clone()];
@@ -124,7 +127,29 @@ pub fn build_launch_command(
     let (program, args) = split_program_and_args(command_tokens)
         .ok_or_else(|| anyhow!("failed to build launch command"))?;
 
-    let mut env_pairs = base_env_for_prefix(prefix_path);
+    let effective_prefix_path = effective_prefix_path_for_runtime(prefix_path, selected_runtime);
+    let mut env_pairs = base_env_for_prefix(&effective_prefix_path);
+
+    if matches!(
+        selected_runtime,
+        RuntimeCandidate::ProtonUmu | RuntimeCandidate::ProtonNative
+    ) {
+        upsert_env(
+            &mut env_pairs,
+            "STEAM_COMPAT_DATA_PATH",
+            prefix_path.to_string_lossy().into_owned(),
+        );
+
+        if let Some(proton_path) = &report.runtime.proton {
+            if let Some(steam_client_path) = derive_steam_client_install_path(proton_path) {
+                upsert_env(
+                    &mut env_pairs,
+                    "STEAM_COMPAT_CLIENT_INSTALL_PATH",
+                    steam_client_path,
+                );
+            }
+        }
+    }
 
     if matches!(selected_runtime, RuntimeCandidate::ProtonUmu) {
         if let Some(proton_path) = &report.runtime.proton {
@@ -197,7 +222,29 @@ pub fn build_winecfg_command(
     let (program, args) = split_program_and_args(std::mem::take(&mut command_tokens))
         .ok_or_else(|| anyhow!("failed to build winecfg command"))?;
 
-    let mut env_pairs = base_env_for_prefix(prefix_path);
+    let effective_prefix_path = effective_prefix_path_for_runtime(prefix_path, selected_runtime);
+    let mut env_pairs = base_env_for_prefix(&effective_prefix_path);
+    if matches!(
+        selected_runtime,
+        RuntimeCandidate::ProtonUmu | RuntimeCandidate::ProtonNative
+    ) {
+        upsert_env(
+            &mut env_pairs,
+            "STEAM_COMPAT_DATA_PATH",
+            prefix_path.to_string_lossy().into_owned(),
+        );
+
+        if let Some(proton_path) = &report.runtime.proton {
+            if let Some(steam_client_path) = derive_steam_client_install_path(proton_path) {
+                upsert_env(
+                    &mut env_pairs,
+                    "STEAM_COMPAT_CLIENT_INSTALL_PATH",
+                    steam_client_path,
+                );
+            }
+        }
+    }
+
     if matches!(selected_runtime, RuntimeCandidate::ProtonUmu) {
         if let Some(proton_path) = &report.runtime.proton {
             upsert_env(&mut env_pairs, "PROTONPATH", proton_path);
@@ -371,5 +418,29 @@ fn upsert_env(
 }
 
 fn is_protected_env_key(key: &str) -> bool {
-    matches!(key, "WINEPREFIX" | "PROTON_VERB")
+    matches!(
+        key,
+        "WINEPREFIX" | "PROTON_VERB" | "STEAM_COMPAT_DATA_PATH" | "STEAM_COMPAT_CLIENT_INSTALL_PATH"
+    )
+}
+
+pub fn effective_prefix_path_for_runtime(prefix_root: &Path, runtime: RuntimeCandidate) -> PathBuf {
+    match runtime {
+        RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu => prefix_root.join("pfx"),
+        RuntimeCandidate::Wine => prefix_root.to_path_buf(),
+    }
+}
+
+fn derive_steam_client_install_path(proton_binary_path: &str) -> Option<String> {
+    let proton_path = Path::new(proton_binary_path);
+    let proton_dir = proton_path.parent()?;
+    let common_dir = proton_dir.parent()?;
+    let steamapps_dir = common_dir.parent()?;
+    let steamapps_name = steamapps_dir.file_name()?.to_string_lossy().to_ascii_lowercase();
+    if steamapps_name != "steamapps" {
+        return None;
+    }
+
+    let steam_root = steamapps_dir.parent()?;
+    Some(steam_root.to_string_lossy().into_owned())
 }
