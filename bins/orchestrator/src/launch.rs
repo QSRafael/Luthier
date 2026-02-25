@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::Command,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -108,24 +109,83 @@ pub fn build_launch_command(
     if gamescope_active {
         if let Some(path) = dependency_path(report, "gamescope") {
             let mut gamescope_args = Vec::new();
+            let gamescope = &config.environment.gamescope;
+            let supports_modern_filter = gamescope_supports_modern_filter(&path);
 
-            if let Some(resolution) = &config.environment.gamescope.resolution {
-                if let Some((w, h)) = parse_resolution(resolution) {
-                    gamescope_args.push("-w".to_string());
-                    gamescope_args.push(w.to_string());
-                    gamescope_args.push("-h".to_string());
-                    gamescope_args.push(h.to_string());
+            let game_width = parse_u32_maybe_empty(&gamescope.game_width);
+            let game_height = parse_u32_maybe_empty(&gamescope.game_height);
+            if let Some(width) = game_width {
+                gamescope_args.push("-w".to_string());
+                gamescope_args.push(width.to_string());
+            }
+            if let Some(height) = game_height {
+                gamescope_args.push("-h".to_string());
+                gamescope_args.push(height.to_string());
+            }
+
+            let mut output_width = parse_u32_maybe_empty(&gamescope.output_width);
+            let mut output_height = parse_u32_maybe_empty(&gamescope.output_height);
+            if output_width.is_none() || output_height.is_none() {
+                if let Some(resolution) = &gamescope.resolution {
+                    if let Some((w, h)) = parse_resolution(resolution) {
+                        output_width.get_or_insert(w);
+                        output_height.get_or_insert(h);
+                    }
+                }
+            }
+            if let Some(width) = output_width {
+                gamescope_args.push("-W".to_string());
+                gamescope_args.push(width.to_string());
+            }
+            if let Some(height) = output_height {
+                gamescope_args.push("-H".to_string());
+                gamescope_args.push(height.to_string());
+            }
+
+            let upscaling_configured = game_width.is_some()
+                || game_height.is_some()
+                || output_width.is_some()
+                || output_height.is_some()
+                || gamescope.fsr;
+            if upscaling_configured {
+                let method = if gamescope.fsr && gamescope.upscale_method.trim().is_empty() {
+                    "fsr"
+                } else {
+                    gamescope.upscale_method.trim()
+                };
+                apply_gamescope_upscale_flags(
+                    &mut gamescope_args,
+                    method,
+                    supports_modern_filter,
+                );
+            }
+
+            match gamescope.window_type.trim() {
+                "fullscreen" => gamescope_args.push("-f".to_string()),
+                "borderless" => gamescope_args.push("-b".to_string()),
+                _ => {}
+            }
+
+            if gamescope.enable_limiter {
+                if let Some(value) = non_empty_trimmed(&gamescope.fps_limiter) {
+                    gamescope_args.push("-r".to_string());
+                    gamescope_args.push(value.to_string());
+                }
+                if let Some(value) = non_empty_trimmed(&gamescope.fps_limiter_no_focus) {
+                    gamescope_args.push("-o".to_string());
+                    gamescope_args.push(value.to_string());
                 }
             }
 
-            if config.environment.gamescope.fsr {
-                gamescope_args.push("-F".to_string());
-                gamescope_args.push("fsr".to_string());
+            if gamescope.force_grab_cursor {
+                gamescope_args.push("--force-grab-cursor".to_string());
             }
 
             if mangohud_active {
                 gamescope_args.push("--mangoapp".to_string());
             }
+
+            gamescope_args.extend(split_shell_like_args(&gamescope.additional_options));
 
             gamescope_args.push("--".to_string());
             gamescope_args.extend(command_tokens);
@@ -553,10 +613,77 @@ fn split_program_and_args(tokens: Vec<String>) -> Option<(String, Vec<String>)> 
 }
 
 fn parse_resolution(raw: &str) -> Option<(u32, u32)> {
-    let (w, h) = raw.split_once('x')?;
-    let width = w.parse::<u32>().ok()?;
-    let height = h.parse::<u32>().ok()?;
+    let cleaned = raw.trim().replace('X', "x");
+    let (w, h) = cleaned.split_once('x')?;
+    let width = w.trim().parse::<u32>().ok()?;
+    let height = h.trim().parse::<u32>().ok()?;
     Some((width, height))
+}
+
+fn parse_u32_maybe_empty(raw: &str) -> Option<u32> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    trimmed.parse::<u32>().ok()
+}
+
+fn non_empty_trimmed(raw: &str) -> Option<&str> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+fn split_shell_like_args(raw: &str) -> Vec<String> {
+    // Matches current wrapper arg parsing behavior. Quoted args are not preserved yet.
+    raw.split_whitespace().map(ToString::to_string).collect()
+}
+
+fn gamescope_supports_modern_filter(gamescope_path: &str) -> bool {
+    let Ok(output) = Command::new(gamescope_path).arg("--help").output() else {
+        return false;
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    stdout.contains("-F, --filter") || stderr.contains("-F, --filter")
+}
+
+fn apply_gamescope_upscale_flags(
+    gamescope_args: &mut Vec<String>,
+    raw_method: &str,
+    supports_modern_filter: bool,
+) {
+    let method = raw_method.trim().to_ascii_lowercase();
+    if method.is_empty() {
+        return;
+    }
+
+    if supports_modern_filter {
+        match method.as_str() {
+            "fsr" | "nis" => {
+                gamescope_args.push("-F".to_string());
+                gamescope_args.push(method);
+            }
+            "integer" | "stretch" => {
+                gamescope_args.push("-S".to_string());
+                gamescope_args.push(method);
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    match method.as_str() {
+        "fsr" => gamescope_args.push("-U".to_string()),
+        "nis" => gamescope_args.push("-Y".to_string()),
+        "integer" => gamescope_args.push("-i".to_string()),
+        "stretch" => {}
+        _ => {}
+    }
 }
 
 fn upsert_env(
@@ -750,8 +877,13 @@ fn apply_heroic_like_runtime_env_defaults(
 
     if matches!(runtime, RuntimeCandidate::ProtonUmu) {
         let game_id = std::env::var("GAMEID").unwrap_or_else(|_| "umu-0".to_string());
-        let umu_runtime_update =
-            std::env::var("UMU_RUNTIME_UPDATE").unwrap_or_else(|_| "0".to_string());
+        let umu_runtime_update = std::env::var("UMU_RUNTIME_UPDATE").unwrap_or_else(|_| {
+            if config.runner.auto_update {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            }
+        });
         upsert_env(env_pairs, "GAMEID", game_id);
         upsert_env(env_pairs, "UMU_RUNTIME_UPDATE", umu_runtime_update);
     }
