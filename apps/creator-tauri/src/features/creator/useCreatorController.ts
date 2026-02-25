@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
+import { createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js'
 
 import { invokeCommand, pickFile, pickFolder } from '../../api/tauri'
 import type { SelectOption } from '../../components/form/FormControls'
@@ -15,6 +15,7 @@ import {
   isLikelyAbsolutePath,
   joinCommaList,
   ORCHESTRATOR_BASE_PATH,
+  prefixHashKey,
   relativeFromRoot,
   relativePathBetween,
   removeAt,
@@ -43,6 +44,12 @@ type WinetricksAvailableOutput = {
   components: string[]
 }
 
+type ExtractExecutableIconOutput = {
+  data_url: string
+  width: number
+  height: number
+}
+
 type StatusTone = 'info' | 'success' | 'error'
 
 export function useCreatorController() {
@@ -65,6 +72,8 @@ export function useCreatorController() {
   const [winetricksSearch, setWinetricksSearch] = createSignal('')
   const [winetricksLoaded, setWinetricksLoaded] = createSignal(false)
   const [winetricksCatalogError, setWinetricksCatalogError] = createSignal(false)
+  const [hashingExePath, setHashingExePath] = createSignal('')
+  const [lastHashedExePath, setLastHashedExePath] = createSignal('')
 
   const [config, setConfig] = createSignal<GameConfig>(defaultGameConfig())
 
@@ -140,7 +149,7 @@ export function useCreatorController() {
   ])
 
   const prefixPathPreview = createMemo(() => {
-    const hash = config().exe_hash.trim() || '<exe_hash>'
+    const hash = prefixHashKey(config().exe_hash.trim() || '<exe_hash>')
     return `~/.local/share/GameOrchestrator/prefixes/${hash}/`
   })
 
@@ -345,26 +354,36 @@ export function useCreatorController() {
     }
   })
 
-  createEffect(() => {
-    if (activeTab() !== 'prefix' || winetricksLoaded() || winetricksLoading()) {
-      return
-    }
-
-    // Defer loading so the Prefix tab can render first and show the spinner
+  onMount(() => {
+    if (winetricksLoaded() || winetricksLoading()) return
     const timer = window.setTimeout(() => {
-      void loadWinetricksCatalog()
-    }, 120)
-
+      if (!winetricksLoaded() && !winetricksLoading()) {
+        void loadWinetricksCatalog()
+      }
+    }, 250)
     onCleanup(() => window.clearTimeout(timer))
   })
 
-  const runHash = async () => {
-    if (!exePath().trim()) {
+  createEffect(() => {
+    const currentPath = exePath().trim()
+    if (!currentPath) return
+    if (!isLikelyAbsolutePath(currentPath)) return
+    if (!hasWindowsLauncherExtension(currentPath)) return
+    if (currentPath === hashingExePath() || currentPath === lastHashedExePath()) return
+
+    const timer = window.setTimeout(() => {
+      void hashExecutablePath(currentPath)
+    }, 200)
+    onCleanup(() => window.clearTimeout(timer))
+  })
+
+  async function hashExecutablePath(absoluteExePath: string) {
+    if (!absoluteExePath.trim()) {
       setStatusMessage(ct('creator_select_an_executable_before_hashing'))
       return
     }
 
-    if (!isLikelyAbsolutePath(exePath())) {
+    if (!isLikelyAbsolutePath(absoluteExePath)) {
       setStatusMessage(
         ct('creator_hashing_requires_an_absolute_path_in_browser_lan_mode_us')
       )
@@ -372,15 +391,27 @@ export function useCreatorController() {
     }
 
     try {
+      setHashingExePath(absoluteExePath)
+      setLastHashedExePath(absoluteExePath)
       setStatusMessage(t('msgHashStart'))
       const result = await invokeCommand<{ sha256_hex: string }>('cmd_hash_executable', {
-        executable_path: exePath()
+        executable_path: absoluteExePath
       })
-      patchConfig((prev) => ({ ...prev, exe_hash: result.sha256_hex }))
+      if (exePath().trim() === absoluteExePath) {
+        patchConfig((prev) => ({ ...prev, exe_hash: result.sha256_hex }))
+      }
       setStatusMessage(t('msgHashOk'))
     } catch (error) {
       setStatusMessage(`${t('msgHashFail')} ${String(error)}`)
+    } finally {
+      if (hashingExePath() === absoluteExePath) {
+        setHashingExePath('')
+      }
     }
+  }
+
+  const runHash = async () => {
+    await hashExecutablePath(exePath().trim())
   }
 
   const runTest = async () => {
@@ -405,7 +436,8 @@ export function useCreatorController() {
         output_path: outputPath(),
         config_json: configPreview(),
         backup_existing: true,
-        make_executable: true
+        make_executable: true,
+        icon_png_data_url: iconPreviewPath().trim() || null
       })
       setResultJson(JSON.stringify(result, null, 2))
       setStatusMessage(t('msgCreateOk'))
@@ -415,6 +447,7 @@ export function useCreatorController() {
   }
 
   const loadWinetricksCatalog = async () => {
+    if (winetricksLoading()) return
     try {
       setWinetricksLoading(true)
       const result = await invokeCommand<WinetricksAvailableOutput>('cmd_winetricks_available')
@@ -458,6 +491,9 @@ export function useCreatorController() {
     }
 
     setExePath(selected)
+    setLastHashedExePath('')
+    setIconPreviewPath('')
+    patchConfig((prev) => ({ ...prev, exe_hash: '' }))
     const detectedRoot = dirname(selected)
     setGameRootManualOverride(false)
     setGameRoot(detectedRoot)
@@ -562,12 +598,34 @@ export function useCreatorController() {
     return relative
   }
 
-  const applyIconExtractionPlaceholder = () => {
-    setStatusMessage(
-      ct('creator_icon_extraction_will_be_wired_to_backend_in_the_next_fun')
-    )
-    if (!iconPreviewPath()) {
-      setIconPreviewPath('')
+  const extractExecutableIcon = async () => {
+    const currentExe = exePath().trim()
+    if (!currentExe) {
+      setStatusMessage(ct('creator_select_an_executable_before_extracting_icon'))
+      return
+    }
+
+    if (!isLikelyAbsolutePath(currentExe)) {
+      setStatusMessage(
+        ct('creator_icon_extraction_requires_an_absolute_path_in_browser_lan_m')
+      )
+      return
+    }
+
+    try {
+      setStatusMessage(ct('creator_extracting_icon_from_executable'))
+      const result = await invokeCommand<ExtractExecutableIconOutput>('cmd_extract_executable_icon', {
+        executable_path: currentExe
+      })
+      setIconPreviewPath(result.data_url)
+      setStatusMessage(
+        ctf('creator_executable_icon_extracted_size', {
+          width: result.width,
+          height: result.height
+        })
+      )
+    } catch (error) {
+      setStatusMessage(ctf('creator_failed_to_extract_executable_icon_error', { error: String(error) }))
     }
   }
 
@@ -800,7 +858,7 @@ export function useCreatorController() {
     pickRegistryFile,
     pickMountFolder,
     pickMountSourceRelative,
-    applyIconExtractionPlaceholder,
+    extractExecutableIcon,
     setGamescopeState,
     setGamemodeState,
     setMangohudState,

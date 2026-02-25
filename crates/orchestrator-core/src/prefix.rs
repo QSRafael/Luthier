@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use crate::config::{FeatureState, GameConfig};
 use crate::error::OrchestratorError;
 
+const PREFIX_HASH_KEY_LEN: usize = 12;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PrefixSetupPlan {
     pub prefix_path: String,
@@ -25,9 +27,17 @@ pub struct PlannedCommand {
 
 pub fn prefix_path_for_hash(exe_hash: &str) -> Result<PathBuf, OrchestratorError> {
     let home = env::var_os("HOME").ok_or(OrchestratorError::MissingHomeDir)?;
-    Ok(PathBuf::from(home)
-        .join(".local/share/GameOrchestrator/prefixes")
-        .join(exe_hash))
+    let prefixes_dir = PathBuf::from(home).join(".local/share/GameOrchestrator/prefixes");
+    let short_key = prefix_hash_key(exe_hash);
+    let short_path = prefixes_dir.join(&short_key);
+    let legacy_path = prefixes_dir.join(exe_hash.trim());
+
+    // Backward compatibility: keep using an existing full-hash prefix if present.
+    if legacy_path.exists() && !short_path.exists() {
+        return Ok(legacy_path);
+    }
+
+    Ok(short_path)
 }
 
 pub fn build_prefix_setup_plan(config: &GameConfig) -> Result<PrefixSetupPlan, OrchestratorError> {
@@ -100,6 +110,21 @@ fn path_to_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+fn prefix_hash_key(raw_hash: &str) -> String {
+    let trimmed = raw_hash.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    let is_hex = trimmed.bytes().all(|byte| byte.is_ascii_hexdigit());
+
+    if is_hex && trimmed.len() > PREFIX_HASH_KEY_LEN {
+        trimmed[..PREFIX_HASH_KEY_LEN].to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -141,6 +166,18 @@ mod tests {
         let env = base_env_for_prefix(Path::new("/tmp/prefix"));
         assert!(env.iter().any(|(k, _)| k == "WINEPREFIX"));
         assert!(env.iter().any(|(k, v)| k == "PROTON_VERB" && v == "run"));
+    }
+
+    #[test]
+    fn truncates_hex_hash_for_prefix_key() {
+        let key =
+            prefix_hash_key("d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9");
+        assert_eq!(key, "d21d0173c302");
+    }
+
+    #[test]
+    fn keeps_non_hex_placeholder_prefix_key() {
+        assert_eq!(prefix_hash_key("<exe_hash>"), "<exe_hash>");
     }
 
     fn sample_config() -> GameConfig {

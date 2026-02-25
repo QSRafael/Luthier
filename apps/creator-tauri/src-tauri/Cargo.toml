@@ -11,8 +11,11 @@ tauri-commands = ["dep:tauri"]
 custom-protocol = ["tauri/custom-protocol"]
 
 [dependencies]
+base64 = "0.22"
 creator-core = { path = "../../../crates/creator-core" }
+image = { version = "0.25", default-features = false, features = ["ico", "png"] }
 orchestrator-core = { path = "../../../crates/orchestrator-core" }
+pelite = "0.10"
 serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "1", optional = true, default-features = false, features = [ "dialog-open", "wry"] }

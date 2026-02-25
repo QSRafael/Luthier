@@ -3,9 +3,10 @@ fn main() {
     use std::path::PathBuf;
 
     use creator_tauri_backend::{
-        create_executable_with_base_hints, hash_executable, import_registry_file,
-        list_child_directories, test_configuration, winetricks_available, CreateExecutableInput,
-        CreateExecutableOutput, HashExeInput, HashExeOutput, ImportRegistryFileInput,
+        create_executable_with_base_hints, extract_executable_icon, hash_executable,
+        import_registry_file, list_child_directories, test_configuration, winetricks_available,
+        CreateExecutableInput, CreateExecutableOutput, ExtractExecutableIconInput,
+        ExtractExecutableIconOutput, HashExeInput, HashExeOutput, ImportRegistryFileInput,
         ImportRegistryFileOutput, ListChildDirectoriesInput, ListChildDirectoriesOutput,
         TestConfigurationInput, TestConfigurationOutput, WinetricksAvailableOutput,
     };
@@ -33,6 +34,13 @@ fn main() {
     #[tauri::command]
     fn cmd_hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
         hash_executable(input)
+    }
+
+    #[tauri::command]
+    fn cmd_extract_executable_icon(
+        input: ExtractExecutableIconInput,
+    ) -> Result<ExtractExecutableIconOutput, String> {
+        extract_executable_icon(input)
     }
 
     #[tauri::command]
@@ -65,6 +73,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             cmd_create_executable,
             cmd_hash_executable,
+            cmd_extract_executable_icon,
             cmd_test_configuration,
             cmd_winetricks_available,
             cmd_import_registry_file,

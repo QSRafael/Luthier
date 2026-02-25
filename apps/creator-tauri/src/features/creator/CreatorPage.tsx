@@ -83,7 +83,6 @@ export default function CreatorPage() {
     joinCommaList,
     replaceAt,
     removeAt,
-    runHash,
     runTest,
     runCreate,
     loadWinetricksCatalog,
@@ -92,7 +91,7 @@ export default function CreatorPage() {
     pickIntegrityFileRelative,
     pickRegistryFile,
     pickMountFolder,
-    applyIconExtractionPlaceholder,
+    extractExecutableIcon,
     setGamescopeState,
     setGamemodeState,
     setMangohudState,
@@ -136,6 +135,7 @@ export default function CreatorPage() {
     executable: '',
     args: ''
   })
+  const [launchScriptsAccordionOpen, setLaunchScriptsAccordionOpen] = createSignal(false)
 
   const [extraDependencyDialogOpen, setExtraDependencyDialogOpen] = createSignal(false)
   const [extraDependencyDraft, setExtraDependencyDraft] = createSignal({
@@ -576,6 +576,8 @@ export default function CreatorPage() {
     setWrapperDialogOpen,
     wrapperDraft,
     setWrapperDraft,
+    launchScriptsAccordionOpen,
+    setLaunchScriptsAccordionOpen,
     extraDependencyDialogOpen,
     setExtraDependencyDialogOpen,
     extraDependencyDraft,

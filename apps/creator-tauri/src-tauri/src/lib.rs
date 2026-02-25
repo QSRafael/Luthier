@@ -1,14 +1,20 @@
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use base64::{engine::general_purpose, Engine as _};
 use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
+use image::{DynamicImage, GenericImageView, ImageFormat};
 use orchestrator_core::{
     doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig, RegistryKey,
 };
+use pelite::pe32::Pe as _;
+use pelite::pe64::Pe as _;
+use pelite::{pe32, pe64};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -18,6 +24,8 @@ pub struct CreateExecutableInput {
     pub config_json: String,
     pub backup_existing: bool,
     pub make_executable: bool,
+    #[serde(default)]
+    pub icon_png_data_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -26,6 +34,7 @@ pub struct CreateExecutableOutput {
     pub config_size_bytes: usize,
     pub config_sha256_hex: String,
     pub resolved_base_binary_path: String,
+    pub icon_sidecar_path: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -36,6 +45,18 @@ pub struct HashExeInput {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HashExeOutput {
     pub sha256_hex: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ExtractExecutableIconInput {
+    pub executable_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ExtractExecutableIconOutput {
+    pub data_url: String,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -97,6 +118,7 @@ pub fn create_executable_with_base_hints(
             "output_path": input.output_path,
             "backup_existing": input.backup_existing,
             "make_executable": input.make_executable,
+            "has_icon_png_data_url": input.icon_png_data_url.as_ref().is_some_and(|value| !value.trim().is_empty()),
             "hints_count": base_binary_hints.len(),
         }),
     );
@@ -138,6 +160,13 @@ pub fn create_executable_with_base_hints(
         message
     })?;
 
+    let icon_sidecar_path = match input.icon_png_data_url.as_deref() {
+        Some(data_url) if !data_url.trim().is_empty() => {
+            Some(write_icon_sidecar_png(&request.output_path, data_url)?)
+        }
+        _ => None,
+    };
+
     log_backend_event(
         "INFO",
         "GO-CR-020",
@@ -147,6 +176,7 @@ pub fn create_executable_with_base_hints(
             "config_size_bytes": result.config_size_bytes,
             "config_sha256_hex": result.config_sha256_hex,
             "resolved_base_binary_path": resolved_base_binary_path,
+            "icon_sidecar_path": icon_sidecar_path,
         }),
     );
 
@@ -155,6 +185,7 @@ pub fn create_executable_with_base_hints(
         config_size_bytes: result.config_size_bytes,
         config_sha256_hex: result.config_sha256_hex,
         resolved_base_binary_path: request.base_binary_path.to_string_lossy().into_owned(),
+        icon_sidecar_path,
     })
 }
 
@@ -175,6 +206,43 @@ pub fn hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
     );
 
     Ok(HashExeOutput { sha256_hex: hash })
+}
+
+pub fn extract_executable_icon(
+    input: ExtractExecutableIconInput,
+) -> Result<ExtractExecutableIconOutput, String> {
+    let path = PathBuf::from(&input.executable_path);
+    log_backend_event(
+        "INFO",
+        "GO-CR-111",
+        "extract_executable_icon_requested",
+        serde_json::json!({ "path": path }),
+    );
+
+    let bytes = fs::read(&path).map_err(|err| format!("failed to read executable: {err}"))?;
+    let (png_bytes, width, height) = extract_best_exe_icon_png(&bytes)?;
+    let data_url = format!(
+        "data:image/png;base64,{}",
+        general_purpose::STANDARD.encode(&png_bytes)
+    );
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-112",
+        "extract_executable_icon_completed",
+        serde_json::json!({
+            "path": path,
+            "width": width,
+            "height": height,
+            "png_size_bytes": png_bytes.len(),
+        }),
+    );
+
+    Ok(ExtractExecutableIconOutput {
+        data_url,
+        width,
+        height,
+    })
 }
 
 pub fn test_configuration(
@@ -227,6 +295,158 @@ pub fn test_configuration(
     );
 
     Ok(out)
+}
+
+fn extract_best_exe_icon_png(exe_bytes: &[u8]) -> Result<(Vec<u8>, u32, u32), String> {
+    let icons = read_all_pe_icon_groups(exe_bytes)?;
+    if icons.is_empty() {
+        return Err("no icon resources found in executable".to_string());
+    }
+
+    let mut best_image: Option<DynamicImage> = None;
+    let mut best_area = 0u64;
+
+    for icon_bytes in icons {
+        let decoded = match image::load_from_memory_with_format(&icon_bytes, ImageFormat::Ico) {
+            Ok(image) => image,
+            Err(_) => continue,
+        };
+
+        let (width, height) = decoded.dimensions();
+        let area = u64::from(width) * u64::from(height);
+        if area > best_area {
+            best_area = area;
+            best_image = Some(decoded);
+        }
+    }
+
+    let Some(mut image) = best_image else {
+        return Err("failed to decode icon resources to image".to_string());
+    };
+
+    // Keep the preview sidecar reasonably small while preserving detail.
+    if image.width() > 256 || image.height() > 256 {
+        image = image.thumbnail(256, 256);
+    }
+
+    let (width, height) = image.dimensions();
+    let mut png_bytes = Vec::new();
+    let mut cursor = Cursor::new(&mut png_bytes);
+    image
+        .write_to(&mut cursor, ImageFormat::Png)
+        .map_err(|err| format!("failed to encode PNG icon: {err}"))?;
+
+    Ok((png_bytes, width, height))
+}
+
+trait PeResourcesProvider {
+    fn get_resources(&self) -> Result<pelite::resources::Resources<'_>, pelite::Error>;
+}
+
+impl PeResourcesProvider for pe32::PeFile<'_> {
+    fn get_resources(&self) -> Result<pelite::resources::Resources<'_>, pelite::Error> {
+        self.resources()
+    }
+}
+
+impl PeResourcesProvider for pe64::PeFile<'_> {
+    fn get_resources(&self) -> Result<pelite::resources::Resources<'_>, pelite::Error> {
+        self.resources()
+    }
+}
+
+fn read_all_pe_icon_groups(exe_bytes: &[u8]) -> Result<Vec<Vec<u8>>, String> {
+    with_pe_resources(exe_bytes, |pe| {
+        let resources = pe
+            .get_resources()
+            .map_err(|err| format!("no PE resources found: {err}"))?;
+
+        let mut out = Vec::<Vec<u8>>::new();
+        for entry in resources.icons().flatten() {
+            let (_name, group) = entry;
+            let mut bytes = Vec::new();
+            if group.write(&mut bytes).is_ok() && !bytes.is_empty() {
+                out.push(bytes);
+            }
+        }
+        Ok(out)
+    })
+}
+
+fn with_pe_resources<T, F>(exe_bytes: &[u8], f: F) -> Result<T, String>
+where
+    F: FnOnce(&dyn PeResourcesProvider) -> Result<T, String>,
+{
+    if pe_is_64(exe_bytes)? {
+        let pe = pe64::PeFile::from_bytes(exe_bytes)
+            .map_err(|err| format!("failed to parse PE64 executable: {err}"))?;
+        f(&pe)
+    } else {
+        let pe = pe32::PeFile::from_bytes(exe_bytes)
+            .map_err(|err| format!("failed to parse PE32 executable: {err}"))?;
+        f(&pe)
+    }
+}
+
+fn pe_is_64(bin: &[u8]) -> Result<bool, String> {
+    let mut file = Cursor::new(bin);
+
+    file.seek(SeekFrom::Start(0x3C))
+        .map_err(|err| format!("failed to seek DOS header: {err}"))?;
+    let mut e_lfanew_bytes = [0u8; 4];
+    file.read_exact(&mut e_lfanew_bytes)
+        .map_err(|err| format!("failed to read e_lfanew: {err}"))?;
+    let e_lfanew = u32::from_le_bytes(e_lfanew_bytes);
+
+    file.seek(SeekFrom::Start(u64::from(e_lfanew)))
+        .map_err(|err| format!("failed to seek PE header: {err}"))?;
+    let mut signature = [0u8; 4];
+    file.read_exact(&mut signature)
+        .map_err(|err| format!("failed to read PE signature: {err}"))?;
+    if &signature != b"PE\0\0" {
+        return Err("invalid PE signature".to_string());
+    }
+
+    file.seek(SeekFrom::Current(20))
+        .map_err(|err| format!("failed to seek optional header: {err}"))?;
+    let mut magic = [0u8; 2];
+    file.read_exact(&mut magic)
+        .map_err(|err| format!("failed to read optional header magic: {err}"))?;
+    let magic = u16::from_le_bytes(magic);
+
+    match magic {
+        0x10b => Ok(false),
+        0x20b => Ok(true),
+        _ => Err(format!("unknown PE optional header magic: {magic:#x}")),
+    }
+}
+
+fn write_icon_sidecar_png(output_path: &Path, data_url: &str) -> Result<String, String> {
+    let png_bytes = decode_png_data_url(data_url)?;
+    let icon_path = output_path.with_extension("png");
+
+    if let Some(parent) = icon_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("failed to create icon sidecar directory: {err}"))?;
+    }
+
+    fs::write(&icon_path, png_bytes)
+        .map_err(|err| format!("failed to write icon sidecar PNG: {err}"))?;
+
+    Ok(icon_path.to_string_lossy().into_owned())
+}
+
+fn decode_png_data_url(data_url: &str) -> Result<Vec<u8>, String> {
+    let trimmed = data_url.trim();
+    let payload = trimmed
+        .strip_prefix("data:image/png;base64,")
+        .ok_or_else(|| {
+            "unsupported icon data URL (expected data:image/png;base64,...)".to_string()
+        })?;
+
+    general_purpose::STANDARD
+        .decode(payload)
+        .map_err(|err| format!("failed to decode icon PNG data URL: {err}"))
 }
 
 pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
@@ -871,6 +1091,7 @@ mod tests {
             config_json: "{ invalid json }".to_string(),
             backup_existing: true,
             make_executable: true,
+            icon_png_data_url: None,
         };
 
         let err = create_executable(input).expect_err("invalid json must fail");

@@ -48,17 +48,15 @@ export function GameTabSection(props: CreatorPageSectionProps) {
     setStatusMessage,
     config,
     patchConfig,
-    t,
     ct,
     ctf,
     prefixPathPreview,
     removeAt,
-    runHash,
     pickExecutable,
     pickGameRootOverride,
     pickIntegrityFileRelative,
     pickMountFolder,
-    applyIconExtractionPlaceholder,
+    extractExecutableIcon,
     gameRootChooserOpen,
     setGameRootChooserOpen,
     mountSourceBrowserOpen,
@@ -69,7 +67,6 @@ export function GameTabSection(props: CreatorPageSectionProps) {
     setMountDialogOpen,
     mountDraft,
     setMountDraft,
-    canCalculateHash,
     canChooseGameRoot,
     canPickIntegrityFromGameRoot,
     canAddMount,
@@ -101,6 +98,13 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                   {ct('creator_select_file')}
                 </Button>
               </div>
+            </FieldShell>
+
+            <FieldShell
+              label={ct('creator_sha_256_hash')}
+              help={ct('creator_main_identifier_for_profile_and_per_game_prefix')}
+            >
+              <Input value={config().exe_hash} readOnly class="readonly" />
             </FieldShell>
 
             <FieldShell
@@ -240,22 +244,6 @@ export function GameTabSection(props: CreatorPageSectionProps) {
             </Dialog>
 
             <FieldShell
-              label={ct('creator_sha_256_hash')}
-              help={ct('creator_main_identifier_for_profile_and_per_game_prefix')}
-            >
-              <div class="picker-row">
-                <Input
-                  value={config().exe_hash}
-                  readOnly
-                  class="readonly"
-                />
-                <Button type="button" variant="outline" onClick={runHash} disabled={!canCalculateHash()}>
-                  {t('hashButton')}
-                </Button>
-              </div>
-            </FieldShell>
-
-            <FieldShell
               label={ct('creator_final_prefix_path')}
               help={ct('creator_automatically_calculated_from_executable_hash')}
             >
@@ -289,7 +277,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                     <img src={iconPreviewPath()} alt="icon preview" />
                   </Show>
                 </div>
-                <Button type="button" variant="outline" onClick={applyIconExtractionPlaceholder}>
+                <Button type="button" variant="outline" onClick={extractExecutableIcon}>
                   {ct('creator_extract_icon')}
                 </Button>
               </div>

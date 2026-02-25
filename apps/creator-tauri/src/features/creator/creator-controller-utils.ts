@@ -8,6 +8,7 @@ export const DLL_MODES = ['builtin', 'native', 'builtin,native', 'native,builtin
 export const AUDIO_DRIVERS = ['__none__', 'pipewire', 'pulseaudio', 'alsa'] as const
 export const UPSCALE_METHODS = ['fsr', 'nis', 'integer', 'stretch'] as const
 export const WINDOW_TYPES = ['fullscreen', 'borderless', 'windowed'] as const
+export const PREFIX_HASH_KEY_LENGTH = 12
 
 export type AudioDriverOption = (typeof AUDIO_DRIVERS)[number]
 export type UpscaleMethod = (typeof UPSCALE_METHODS)[number]
@@ -118,4 +119,15 @@ export function isLikelyAbsolutePath(path: string): boolean {
 export function hasWindowsLauncherExtension(path: string): boolean {
   const lower = basename(path).toLowerCase()
   return ['.exe', '.bat', '.cmd', '.com'].some((ext) => lower.endsWith(ext))
+}
+
+export function prefixHashKey(rawHash: string): string {
+  const trimmed = rawHash.trim()
+  if (!trimmed) return trimmed
+
+  // Keep placeholders/custom tokens intact; truncate only real hex hashes.
+  if (!/^[0-9a-fA-F]+$/.test(trimmed)) return trimmed
+  if (trimmed.length <= PREFIX_HASH_KEY_LENGTH) return trimmed
+
+  return trimmed.slice(0, PREFIX_HASH_KEY_LENGTH)
 }

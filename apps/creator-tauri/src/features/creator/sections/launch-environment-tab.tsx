@@ -46,6 +46,8 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
     setWrapperDialogOpen,
     wrapperDraft,
     setWrapperDraft,
+    launchScriptsAccordionOpen,
+    setLaunchScriptsAccordionOpen,
   } = props.view
 
   return (
@@ -230,60 +232,69 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
               </AlertDescription>
             </Alert>
 
-            <FieldShell
-              label={ct('creator_pre_launch_script_bash')}
-              help={ct('creator_executed_before_starting_the_game')}
-              controlClass="hidden"
-              footer={
-                <Textarea
-                  rows={8}
-                  value={config().scripts.pre_launch}
-                  placeholder="#!/usr/bin/env bash\necho Preparando..."
-                  onInput={(e) =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      scripts: { ...prev.scripts, pre_launch: e.currentTarget.value }
-                    }))
-                  }
-                />
-              }
+            <AccordionSection
+              open={launchScriptsAccordionOpen()}
+              onToggle={() => setLaunchScriptsAccordionOpen((prev: boolean) => !prev)}
+              title={ct('creator_label_scripts')}
+              description={ct('creator_local_scripts_mvp')}
             >
-              <span />
-            </FieldShell>
-
-            <FieldShell
-              label={ct('creator_post_launch_script_bash')}
-              help={ct('creator_executed_after_the_game_exits')}
-              controlClass="hidden"
-              footer={
-                <Textarea
-                  rows={8}
-                  value={config().scripts.post_launch}
-                  placeholder="#!/usr/bin/env bash\necho Finalizado..."
-                  onInput={(e) =>
-                    patchConfig((prev) => ({
-                      ...prev,
-                      scripts: { ...prev.scripts, post_launch: e.currentTarget.value }
-                    }))
+              <div class="grid gap-3">
+                <FieldShell
+                  label={ct('creator_pre_launch_script_bash')}
+                  help={ct('creator_executed_before_starting_the_game')}
+                  controlClass="hidden"
+                  footer={
+                    <Textarea
+                      rows={8}
+                      value={config().scripts.pre_launch}
+                      placeholder="#!/usr/bin/env bash\necho Preparando..."
+                      onInput={(e) =>
+                        patchConfig((prev) => ({
+                          ...prev,
+                          scripts: { ...prev.scripts, pre_launch: e.currentTarget.value }
+                        }))
+                      }
+                    />
                   }
-                />
-              }
-            >
-              <span />
-            </FieldShell>
+                >
+                  <span />
+                </FieldShell>
 
-            <Alert variant="warning">
-              <IconAlertCircle />
-              <AlertTitle>{ct('creator_local_scripts_mvp')}</AlertTitle>
-              <AlertDescription>
-                <span class="block">
-                  {ct('creator_scripts_accept_bash_only_and_local_execution_in_the_mvp')}
-                </span>
-                <span class="mt-1 block">
-                  {ct('creator_scripts_are_not_sent_to_the_community_api_use_trusted_co')}
-                </span>
-              </AlertDescription>
-            </Alert>
+                <FieldShell
+                  label={ct('creator_post_launch_script_bash')}
+                  help={ct('creator_executed_after_the_game_exits')}
+                  controlClass="hidden"
+                  footer={
+                    <Textarea
+                      rows={8}
+                      value={config().scripts.post_launch}
+                      placeholder="#!/usr/bin/env bash\necho Finalizado..."
+                      onInput={(e) =>
+                        patchConfig((prev) => ({
+                          ...prev,
+                          scripts: { ...prev.scripts, post_launch: e.currentTarget.value }
+                        }))
+                      }
+                    />
+                  }
+                >
+                  <span />
+                </FieldShell>
+
+                <Alert variant="warning">
+                  <IconAlertCircle />
+                  <AlertTitle>{ct('creator_local_scripts_mvp')}</AlertTitle>
+                  <AlertDescription>
+                    <span class="block">
+                      {ct('creator_scripts_accept_bash_only_and_local_execution_in_the_mvp')}
+                    </span>
+                    <span class="mt-1 block">
+                      {ct('creator_scripts_are_not_sent_to_the_community_api_use_trusted_co')}
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              </div>
+            </AccordionSection>
           </section>
   )
 }
