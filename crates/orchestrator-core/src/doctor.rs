@@ -541,6 +541,11 @@ fn known_proton_roots() -> Vec<PathBuf> {
 
     if let Some(home) = env::var_os("HOME") {
         let home = PathBuf::from(home);
+        // Heroic (native package)
+        out.push(home.join(".config/heroic/tools/proton"));
+        // Heroic (Flatpak)
+        out.push(home.join(".var/app/com.heroicgameslauncher.hgl/config/heroic/tools/proton"));
+
         out.push(home.join(".local/share/Steam/compatibilitytools.d"));
         out.push(home.join(".steam/root/compatibilitytools.d"));
         out.push(home.join(".steam/steam/compatibilitytools.d"));
@@ -580,6 +585,25 @@ fn proton_path_matches_requested_version(proton_path: &Path, requested_version: 
 
     if proton_path_string.contains(&requested_lower) {
         return true;
+    }
+
+    // Heroic commonly exposes "GE-Proton-latest" as a symlink. Match against the canonical
+    // target path too so a request like "GE-Proton10-32" resolves correctly.
+    if let Ok(canonical) = proton_path.canonicalize() {
+        let canonical_string = canonical.to_string_lossy().to_ascii_lowercase();
+        if canonical_string == requested_lower || canonical_string.contains(&requested_lower) {
+            return true;
+        }
+
+        let canonical_parent = canonical
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        if canonical_parent == requested_lower || canonical_parent.contains(&requested_lower) {
+            return true;
+        }
     }
 
     let parent_name = proton_path
