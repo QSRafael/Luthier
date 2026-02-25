@@ -34,7 +34,6 @@ const BG: u32 = 0x000000;
 const BORDER: u32 = 0x2a2a2a;
 const TEXT: u32 = 0xffffff;
 const MUTED: u32 = 0xbdbdbd;
-const ACCENT: u32 = 0xffffff;
 const BAD: u32 = 0xffffff;
 const BTN: u32 = 0x101010;
 const BTN_HOVER: u32 = 0x181818;
@@ -74,8 +73,6 @@ enum SplashTextKey {
     StatusLaunchingGame,
     StatusLaunchFailed,
     StatusGameClosed,
-    HintUseGear,
-    HintReady,
     ActionContinue,
     ActionExit,
     ActionBack,
@@ -91,7 +88,6 @@ enum SplashTextKey {
     MissingDepsHint,
     DepOk,
     DepNotOk,
-    PrelaunchStartHint,
     CountdownContinuing,
     CountdownContinuingNow,
     PromptWorked,
@@ -147,8 +143,6 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             SplashTextKey::StatusLaunchingGame => "Iniciando jogo...",
             SplashTextKey::StatusLaunchFailed => "Falha ao iniciar o jogo",
             SplashTextKey::StatusGameClosed => "Jogo encerrado",
-            SplashTextKey::HintUseGear => "Use a engrenagem para ajustar opcoes",
-            SplashTextKey::HintReady => "Pronto para continuar",
             SplashTextKey::ActionContinue => "Continuar",
             SplashTextKey::ActionExit => "Sair",
             SplashTextKey::ActionBack => "Voltar",
@@ -166,7 +160,6 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             }
             SplashTextKey::DepOk => "ok",
             SplashTextKey::DepNotOk => "nao ok",
-            SplashTextKey::PrelaunchStartHint => "Preparar e iniciar o jogo",
             SplashTextKey::CountdownContinuing => "Continuando em {n}...",
             SplashTextKey::CountdownContinuingNow => "Continuando...",
             SplashTextKey::PromptWorked => "Funcionou como deveria?",
@@ -197,8 +190,6 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             SplashTextKey::StatusLaunchingGame => "Starting game...",
             SplashTextKey::StatusLaunchFailed => "Failed to start the game",
             SplashTextKey::StatusGameClosed => "Game closed",
-            SplashTextKey::HintUseGear => "Use the gear icon to adjust options",
-            SplashTextKey::HintReady => "Ready to continue",
             SplashTextKey::ActionContinue => "Continue",
             SplashTextKey::ActionExit => "Exit",
             SplashTextKey::ActionBack => "Back",
@@ -214,7 +205,6 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             SplashTextKey::MissingDepsHint => "Install missing dependencies before continuing",
             SplashTextKey::DepOk => "ok",
             SplashTextKey::DepNotOk => "not ok",
-            SplashTextKey::PrelaunchStartHint => "Prepare and start the game",
             SplashTextKey::CountdownContinuing => "Continuing in {n}...",
             SplashTextKey::CountdownContinuingNow => "Continuing...",
             SplashTextKey::PromptWorked => "Did it work as expected?",
@@ -1490,25 +1480,7 @@ fn draw_prelaunch(
     } else {
         t(SplashTextKey::CountdownContinuingNow).to_string()
     };
-    let second_line = if gear_visible {
-        t(SplashTextKey::HintUseGear)
-    } else {
-        t(SplashTextKey::HintReady)
-    };
-    let info_lines = vec![
-        t(SplashTextKey::PrelaunchStartHint).to_string(),
-        second_line.to_string(),
-        countdown,
-    ];
-    if let Some(line) = info_lines.first() {
-        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 108, line, TEXT, 1, 52);
-    }
-    if let Some(line) = info_lines.get(1) {
-        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 134, line, MUTED, 1, 42);
-    }
-    if let Some(line) = info_lines.get(2) {
-        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 160, line, ACCENT, 2, 62);
-    }
+    draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 146, &countdown, TEXT, 1, 56);
 
     if gear_visible {
         draw_button_secondary_clean(buffer, gear_button, gear_button.contains(mouse.x, mouse.y));
@@ -1747,18 +1719,7 @@ fn draw_progress(
         progress.status.clone()
     };
 
-    let mut history_lines = progress.recent_messages.iter().cloned().collect::<Vec<_>>();
-    history_lines.retain(|line| line.trim() != current_status.trim());
-    if history_lines.len() > 2 {
-        history_lines = history_lines[history_lines.len().saturating_sub(2)..].to_vec();
-    }
-    let mut history_y = 122;
-    for line in history_lines {
-        draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, history_y, &line, MUTED, 1, 30);
-        history_y += 22;
-    }
-
-    draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 176, &current_status, TEXT, 1, 54);
+    draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 192, &current_status, TEXT, 1, 54);
 
     let uptime = format!("{}s", progress.started_at.elapsed().as_secs());
     draw_text_centered_with_scrim(
