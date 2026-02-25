@@ -132,7 +132,7 @@ export function defaultGameConfig(): GameConfig {
       runtime_preference: 'Proton'
     },
     environment: {
-      gamemode: 'OptionalOn',
+      gamemode: 'OptionalOff',
       gamescope: {
         state: 'OptionalOff',
         resolution: null,
@@ -197,7 +197,7 @@ export function defaultGameConfig(): GameConfig {
       umu: 'MandatoryOn',
       winetricks: 'OptionalOff',
       gamescope: 'OptionalOff',
-      gamemode: 'OptionalOn',
+      gamemode: 'OptionalOff',
       mangohud: 'OptionalOff',
       steam_runtime: 'OptionalOff'
     },

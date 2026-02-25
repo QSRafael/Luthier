@@ -69,7 +69,6 @@ enum SplashTextKey {
     StatusLaunchingGame,
     StatusLaunchFailed,
     StatusGameClosed,
-    StatusExecutionFinished,
     HintUseGear,
     HintReady,
     ActionContinue,
@@ -143,7 +142,6 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             SplashTextKey::StatusLaunchingGame => "Iniciando jogo...",
             SplashTextKey::StatusLaunchFailed => "Falha ao iniciar o jogo",
             SplashTextKey::StatusGameClosed => "Jogo encerrado",
-            SplashTextKey::StatusExecutionFinished => "Execucao finalizada",
             SplashTextKey::HintUseGear => "Use a engrenagem para ajustar opcoes",
             SplashTextKey::HintReady => "Pronto para continuar",
             SplashTextKey::ActionContinue => "Continuar",
@@ -194,7 +192,6 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             SplashTextKey::StatusLaunchingGame => "Starting game...",
             SplashTextKey::StatusLaunchFailed => "Failed to start the game",
             SplashTextKey::StatusGameClosed => "Game closed",
-            SplashTextKey::StatusExecutionFinished => "Execution finished",
             SplashTextKey::HintUseGear => "Use the gear icon to adjust options",
             SplashTextKey::HintReady => "Ready to continue",
             SplashTextKey::ActionContinue => "Continue",
@@ -313,7 +310,6 @@ enum FeedbackDecision {
 #[derive(Debug)]
 struct ChildRunOutcome {
     game_name: String,
-    exit_code: Option<i32>,
 }
 
 #[derive(Debug)]
@@ -866,7 +862,6 @@ fn show_runtime_progress_window(
 
     Ok(ChildRunOutcome {
         game_name: game_name.to_string(),
-        exit_code: progress.exit_code,
     })
 }
 
@@ -1588,20 +1583,13 @@ fn draw_feedback(
         outcome.game_name.trim()
     };
     draw_title_centered_fit(buffer, WIN_W as i32 / 2, 34, game_name, TEXT);
-    let state_line = if outcome.exit_code == Some(0) {
-        t(SplashTextKey::StatusGameClosed)
-    } else {
-        t(SplashTextKey::StatusExecutionFinished)
-    };
-    draw_text_centered(buffer, WIN_W as i32 / 2, 58, state_line, MUTED, 1);
-
     let prompt = if question == 1 {
         t(SplashTextKey::PromptWorked)
     } else {
         t(SplashTextKey::PromptShare)
     };
     let prompt_lines = wrap_text_lines(prompt, WIN_W as i32 - 70, 2);
-    let prompt_y = if prompt_lines.len() > 2 { 104 } else { 116 };
+    let prompt_y = if prompt_lines.len() > 2 { 96 } else { 108 };
     for (i, line) in prompt_lines.iter().take(3).enumerate() {
         draw_text_centered(
             buffer,

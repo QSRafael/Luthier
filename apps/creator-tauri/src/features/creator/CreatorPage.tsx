@@ -748,7 +748,7 @@ export default function CreatorPage() {
       </div>
 
       <Toaster
-        position="bottom-right"
+        position="bottom-center"
         theme={theme()}
         richColors
         closeButton

@@ -44,7 +44,7 @@ function FeatureToggleCard(props: FeatureToggleCardProps) {
       role="button"
       tabIndex={0}
       class={cn(
-        'flex min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2.5 transition-colors',
+        'grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors',
         props.disabled
           ? 'cursor-not-allowed border-border/50 bg-muted/20 opacity-65'
           : props.checked
@@ -60,7 +60,7 @@ function FeatureToggleCard(props: FeatureToggleCardProps) {
       }}
     >
       <div class="min-w-0">
-        <p class="text-sm font-medium leading-tight">{props.title}</p>
+        <p class="break-words text-sm font-medium leading-tight">{props.title}</p>
       </div>
       <Switch
         checked={props.checked}
@@ -121,7 +121,7 @@ export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
     <FieldShell
       label={props.label}
       help={props.help}
-      controlClass="grid gap-2 md:grid-cols-2 lg:grid-cols-3"
+      controlClass="grid gap-2 md:grid-cols-2"
       footer={props.footer}
     >
       <>

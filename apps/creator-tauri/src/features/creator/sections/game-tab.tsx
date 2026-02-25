@@ -92,19 +92,21 @@ export function GameTabSection(props: CreatorPageSectionProps) {
               label={ct('creator_main_executable_exe')}
               help={ct('creator_use_picker_to_select_the_real_game_executable')}
             >
-              <div class="picker-row">
-                <Input value={exePath()} placeholder="/home/user/Games/MyGame/game.exe" onInput={(e) => setExePath(e.currentTarget.value)} />
-                <Button type="button" variant="outline" onClick={pickExecutable}>
-                  {ct('creator_select_file')}
-                </Button>
-              </div>
-            </FieldShell>
+              <div class="grid gap-2">
+                <div class="picker-row">
+                  <Input value={exePath()} placeholder="/home/user/Games/MyGame/game.exe" onInput={(e) => setExePath(e.currentTarget.value)} />
+                  <Button type="button" variant="outline" onClick={pickExecutable}>
+                    {ct('creator_select_file')}
+                  </Button>
+                </div>
 
-            <FieldShell
-              label={ct('creator_sha_256_hash')}
-              help={ct('creator_main_identifier_for_profile_and_per_game_prefix')}
-            >
-              <Input value={config().exe_hash} readOnly class="readonly" />
+                <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
+                  <span class="font-medium text-muted-foreground">{ct('creator_sha_256_hash')}:</span>{' '}
+                  <span class="break-all font-mono text-foreground">
+                    {config().exe_hash.trim() || '—'}
+                  </span>
+                </div>
+              </div>
             </FieldShell>
 
             <FieldShell
