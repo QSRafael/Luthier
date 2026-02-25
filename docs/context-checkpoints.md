@@ -1509,3 +1509,17 @@ Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 - `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
 - `creator-cli create ...` + `orchestrator-generated --show-config`
+
+### 2026-02-24 - Checkpoint 47
+Escopo implementado:
+- Correcao de bug no fluxo real do orquestrador (`--play` / `--winecfg`) durante setup inicial do prefixo:
+  - antes de executar o plano de setup (`wineboot`, `winetricks`), o executor agora garante a criacao do diretorio do prefixo (`~/.local/share/GameOrchestrator/prefixes/<exe_hash>`).
+- A correcao foi aplicada no `orchestrator-core` (`process.rs`), de forma generica para todos os comandos que reutilizam `execute_prefix_setup_plan`, evitando duplicar logica em `play.rs` e `winecfg.rs`.
+
+Sintoma que foi corrigido:
+- `wine: chdir to .../prefixes/<hash> : Arquivo ou diretório inexistente`
+- Falha do passo obrigatorio `wineboot-init` com abort do launch.
+
+Validacao do checkpoint:
+- `/home/rafael/.cargo/bin/cargo build -p orchestrator`
+- `/home/rafael/.cargo/bin/cargo test -p orchestrator-core process:: -- --nocapture`

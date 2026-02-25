@@ -1,3 +1,4 @@
+use std::fs;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -41,6 +42,10 @@ pub fn execute_prefix_setup_plan(
     env_pairs: &[(String, String)],
     dry_run: bool,
 ) -> Vec<CommandExecutionResult> {
+    if let Some(result) = ensure_prefix_directory(plan, dry_run) {
+        return vec![result];
+    }
+
     let mut results = Vec::new();
     let mut stop = false;
 
@@ -68,6 +73,31 @@ pub fn execute_prefix_setup_plan(
     }
 
     results
+}
+
+fn ensure_prefix_directory(
+    plan: &PrefixSetupPlan,
+    dry_run: bool,
+) -> Option<CommandExecutionResult> {
+    if dry_run || !plan.needs_init {
+        return None;
+    }
+
+    let start = Instant::now();
+    if let Err(err) = fs::create_dir_all(&plan.prefix_path) {
+        return Some(CommandExecutionResult {
+            name: "prefix-dir-create".to_string(),
+            program: "mkdir".to_string(),
+            args: vec!["-p".to_string(), plan.prefix_path.clone()],
+            mandatory: true,
+            status: StepStatus::Failed,
+            exit_code: None,
+            duration_ms: start.elapsed().as_millis(),
+            error: Some(format!("failed to create prefix directory: {err}")),
+        });
+    }
+
+    None
 }
 
 pub fn has_mandatory_failures(results: &[CommandExecutionResult]) -> bool {
