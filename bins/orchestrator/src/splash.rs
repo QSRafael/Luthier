@@ -1,4 +1,6 @@
 use std::collections::VecDeque;
+#[cfg(target_os = "linux")]
+use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
@@ -10,7 +12,7 @@ use anyhow::{anyhow, Context};
 use font8x8::{UnicodeFonts, BASIC_FONTS};
 use fontdb::{Database, Family, Query, Source, Style, Weight};
 use fontdue::{Font, FontSettings};
-use minifb::{Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
+use minifb::{Icon, Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use orchestrator_core::GameConfig;
 use serde_json::Value;
@@ -1121,8 +1123,97 @@ fn create_window(title: &str) -> anyhow::Result<Window> {
     // Some X11 WMs only honor position after the window is mapped once.
     window.update();
     let _ = try_center_window(&mut window, scale.factor);
+    let _ = try_set_window_icon_from_sidecar(&mut window);
     let _ = window.set_target_fps(FPS as usize);
     Ok(window)
+}
+
+fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<()> {
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = window;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let exe = std::env::current_exe().context("failed to resolve current executable")?;
+        let icon_path = exe.with_extension("png");
+        if !icon_path.exists() {
+            return Ok(());
+        }
+
+        let raw = std::fs::read(&icon_path)
+            .with_context(|| format!("failed to read splash icon sidecar at {}", icon_path.display()))?;
+        let icon_buffer = decode_png_icon_to_x11_buffer(&raw)
+            .with_context(|| format!("failed to decode splash icon sidecar {}", icon_path.display()))?;
+
+        if let Ok(icon) = Icon::try_from(icon_buffer.as_slice()) {
+            // X11 copies the property payload immediately; on Wayland this is a no-op in minifb.
+            window.set_icon(icon);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn decode_png_icon_to_x11_buffer(png_bytes: &[u8]) -> anyhow::Result<Vec<u64>> {
+    use png::{ColorType, Decoder, Transformations};
+
+    let mut decoder = Decoder::new(std::io::Cursor::new(png_bytes));
+    decoder.set_transformations(
+        Transformations::EXPAND | Transformations::STRIP_16 | Transformations::ALPHA,
+    );
+    let mut reader = decoder.read_info().context("png read_info failed")?;
+    let mut buf = vec![0u8; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut buf).context("png next_frame failed")?;
+    let bytes = &buf[..info.buffer_size()];
+    let width = info.width as usize;
+    let height = info.height as usize;
+
+    if width == 0 || height == 0 {
+        return Err(anyhow!("png icon has invalid size"));
+    }
+
+    let mut out = Vec::with_capacity(2 + (width * height));
+    out.push(width as u64);
+    out.push(height as u64);
+
+    match info.color_type {
+        ColorType::Rgba => {
+            for px in bytes.chunks_exact(4) {
+                let r = px[0] as u32;
+                let g = px[1] as u32;
+                let b = px[2] as u32;
+                let a = px[3] as u32;
+                out.push(((a << 24) | (r << 16) | (g << 8) | b) as u64);
+            }
+        }
+        ColorType::Rgb => {
+            for px in bytes.chunks_exact(3) {
+                let r = px[0] as u32;
+                let g = px[1] as u32;
+                let b = px[2] as u32;
+                out.push(((0xffu32 << 24) | (r << 16) | (g << 8) | b) as u64);
+            }
+        }
+        ColorType::Grayscale => {
+            for gray in bytes.iter().copied() {
+                let c = gray as u32;
+                out.push(((0xffu32 << 24) | (c << 16) | (c << 8) | c) as u64);
+            }
+        }
+        ColorType::GrayscaleAlpha => {
+            for px in bytes.chunks_exact(2) {
+                let c = px[0] as u32;
+                let a = px[1] as u32;
+                out.push(((a << 24) | (c << 16) | (c << 8) | c) as u64);
+            }
+        }
+        ColorType::Indexed => return Err(anyhow!("indexed png icon not expanded")),
+    }
+
+    Ok(out)
 }
 
 fn try_center_window(window: &mut Window, scale_factor: i32) -> anyhow::Result<()> {
