@@ -8,6 +8,9 @@ pub struct Cli {
     pub play: bool,
 
     #[arg(long)]
+    pub splash: bool,
+
+    #[arg(long)]
     pub config: bool,
 
     #[arg(long)]

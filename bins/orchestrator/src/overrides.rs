@@ -11,6 +11,15 @@ pub struct RuntimeOverrides {
     pub mangohud: Option<bool>,
     pub gamescope: Option<bool>,
     pub gamemode: Option<bool>,
+    pub umu: Option<bool>,
+    pub winetricks: Option<bool>,
+    pub steam_runtime: Option<bool>,
+    pub prime_offload: Option<bool>,
+    pub wine_wayland: Option<bool>,
+    pub hdr: Option<bool>,
+    pub auto_dxvk_nvapi: Option<bool>,
+    pub easy_anti_cheat_runtime: Option<bool>,
+    pub battleye_runtime: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -117,10 +126,39 @@ pub fn save_runtime_overrides(
 }
 
 pub fn apply_runtime_overrides(config: &mut GameConfig, overrides: &RuntimeOverrides) {
+    apply_optional_override(&mut config.environment.gamemode, overrides.gamemode);
+    apply_optional_override(&mut config.environment.mangohud, overrides.mangohud);
     apply_optional_override(&mut config.requirements.mangohud, overrides.mangohud);
     apply_optional_override(&mut config.requirements.gamemode, overrides.gamemode);
     apply_optional_override(&mut config.environment.gamescope.state, overrides.gamescope);
     apply_optional_override(&mut config.requirements.gamescope, overrides.gamescope);
+    apply_optional_override(&mut config.requirements.umu, overrides.umu);
+    apply_optional_override(&mut config.requirements.winetricks, overrides.winetricks);
+    apply_optional_override(
+        &mut config.requirements.steam_runtime,
+        overrides.steam_runtime,
+    );
+    apply_optional_override(
+        &mut config.environment.prime_offload,
+        overrides.prime_offload,
+    );
+    apply_optional_override(
+        &mut config.compatibility.wine_wayland,
+        overrides.wine_wayland,
+    );
+    apply_optional_override(&mut config.compatibility.hdr, overrides.hdr);
+    apply_optional_override(
+        &mut config.compatibility.auto_dxvk_nvapi,
+        overrides.auto_dxvk_nvapi,
+    );
+    apply_optional_override(
+        &mut config.compatibility.easy_anti_cheat_runtime,
+        overrides.easy_anti_cheat_runtime,
+    );
+    apply_optional_override(
+        &mut config.compatibility.battleye_runtime,
+        overrides.battleye_runtime,
+    );
 }
 
 fn feature_default_enabled(state: FeatureState) -> bool {

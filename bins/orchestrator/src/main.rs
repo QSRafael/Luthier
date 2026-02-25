@@ -7,6 +7,7 @@ mod mounts;
 mod overrides;
 mod paths;
 mod payload;
+mod splash;
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
@@ -17,6 +18,8 @@ use crate::commands::{
     run_config_command, run_doctor_command, run_play, run_show_embedded_config, run_winecfg_command,
 };
 use crate::logging::log_event;
+use crate::payload::try_load_embedded_config;
+use crate::splash::{run_splash_flow, SplashLaunchMode};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -31,6 +34,12 @@ async fn main() -> anyhow::Result<()> {
         ));
     }
 
+    if cli.splash && !cli.play {
+        return Err(anyhow!(
+            "--splash requires --play (or execute the generated launcher without arguments)"
+        ));
+    }
+
     log_event(
         &trace_id,
         LogLevel::Info,
@@ -39,6 +48,7 @@ async fn main() -> anyhow::Result<()> {
         "orchestrator_started",
         serde_json::json!({
             "play": cli.play,
+            "splash": cli.splash,
             "config": cli.config,
             "doctor": cli.doctor,
             "winecfg": cli.winecfg,
@@ -58,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if cli.doctor {
-        run_doctor_command(&trace_id).context("doctor command failed")?;
+        run_doctor_command(&trace_id, cli.verbose).context("doctor command failed")?;
         return Ok(());
     }
 
@@ -73,10 +83,26 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if cli.play {
+        if cli.splash {
+            run_splash_flow(
+                SplashLaunchMode::ExplicitPlayWithSplash,
+                cli.lang.as_deref(),
+            )
+            .context("splash play flow failed")?;
+            return Ok(());
+        }
         run_play(&trace_id).context("play flow failed")?;
         return Ok(());
     }
 
-    println!("Nada para executar. Use --show-config, --doctor, --winecfg, --config ou --play.");
+    if try_load_embedded_config()?.is_some() {
+        run_splash_flow(SplashLaunchMode::ImplicitDoubleClick, cli.lang.as_deref())
+            .context("implicit splash flow failed")?;
+        return Ok(());
+    }
+
+    println!(
+        "Nada para executar. Use --show-config, --doctor, --winecfg, --config, --play ou --play --splash."
+    );
     Ok(())
 }
