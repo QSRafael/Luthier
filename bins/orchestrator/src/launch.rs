@@ -138,6 +138,12 @@ pub fn build_launch_command(
 
     let effective_prefix_path = effective_prefix_path_for_runtime(prefix_path, selected_runtime);
     let mut env_pairs = base_env_for_prefix(&effective_prefix_path);
+    if matches!(
+        selected_runtime,
+        RuntimeCandidate::ProtonUmu | RuntimeCandidate::ProtonNative
+    ) {
+        remove_env(&mut env_pairs, "PROTON_VERB");
+    }
 
     if matches!(
         selected_runtime,
@@ -248,6 +254,12 @@ pub fn build_winecfg_command(
         selected_runtime,
         RuntimeCandidate::ProtonUmu | RuntimeCandidate::ProtonNative
     ) {
+        remove_env(&mut env_pairs, "PROTON_VERB");
+    }
+    if matches!(
+        selected_runtime,
+        RuntimeCandidate::ProtonUmu | RuntimeCandidate::ProtonNative
+    ) {
         upsert_env(
             &mut env_pairs,
             "STEAM_COMPAT_DATA_PATH",
@@ -317,6 +329,12 @@ pub fn build_prefix_setup_execution_context(
     let prefix_root_path = PathBuf::from(&plan.prefix_path);
     let effective_prefix_path = effective_prefix_path_for_runtime(&prefix_root_path, runtime);
     let mut env = base_env_for_prefix(&effective_prefix_path);
+    if matches!(
+        runtime,
+        RuntimeCandidate::ProtonUmu | RuntimeCandidate::ProtonNative
+    ) {
+        remove_env(&mut env, "PROTON_VERB");
+    }
 
     // Avoid wine gecko/mono popup dialogs during automated prefix bootstrap.
     upsert_env(&mut env, "WINEDLLOVERRIDES", "mscoree,mshtml=d");
@@ -557,6 +575,10 @@ fn upsert_env(
     }
 
     env_pairs.push((key, value));
+}
+
+fn remove_env(env_pairs: &mut Vec<(String, String)>, key: &str) {
+    env_pairs.retain(|(existing_key, _)| existing_key != key);
 }
 
 fn prepend_path_env(env_pairs: &mut Vec<(String, String)>, prefix: &Path) {
