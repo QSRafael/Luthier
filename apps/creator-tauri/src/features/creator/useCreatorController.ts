@@ -50,6 +50,20 @@ type ExtractExecutableIconOutput = {
   height: number
 }
 
+type SearchHeroImageOutput = {
+  source: string
+  image_url: string
+}
+
+type PrepareHeroImageOutput = {
+  source_url: string
+  data_url: string
+  width: number
+  height: number
+  original_width: number
+  original_height: number
+}
+
 type StatusTone = 'info' | 'success' | 'error'
 
 export function useCreatorController() {
@@ -63,6 +77,8 @@ export function useCreatorController() {
   const [exePath, setExePath] = createSignal('')
   const [registryImportPath, setRegistryImportPath] = createSignal('')
   const [iconPreviewPath, setIconPreviewPath] = createSignal('')
+  const [heroImageProcessing, setHeroImageProcessing] = createSignal(false)
+  const [heroImageAutoSearching, setHeroImageAutoSearching] = createSignal(false)
   const [statusMessage, setStatusMessage] = createSignal(translate(initialLocale, 'statusReady'))
   const [resultJson, setResultJson] = createSignal('')
 
@@ -74,6 +90,7 @@ export function useCreatorController() {
   const [winetricksCatalogError, setWinetricksCatalogError] = createSignal(false)
   const [hashingExePath, setHashingExePath] = createSignal('')
   const [lastHashedExePath, setLastHashedExePath] = createSignal('')
+  const [lastPreparedHeroImageUrl, setLastPreparedHeroImageUrl] = createSignal('')
 
   const [config, setConfig] = createSignal<GameConfig>(defaultGameConfig())
 
@@ -251,6 +268,16 @@ export function useCreatorController() {
 
   const patchConfig = (updater: (prev: GameConfig) => GameConfig) => {
     setConfig((prev) => updater(prev))
+  }
+
+  const setHeroImageUrl = (value: string) => {
+    patchConfig((prev) => ({
+      ...prev,
+      splash: {
+        ...prev.splash,
+        hero_image_url: value
+      }
+    }))
   }
 
   createEffect(() => {
@@ -629,6 +656,83 @@ export function useCreatorController() {
     }
   }
 
+  const prepareHeroImageFromUrl = async (rawUrl?: string) => {
+    const imageUrl = (rawUrl ?? config().splash.hero_image_url).trim()
+
+    if (!imageUrl) {
+      patchConfig((prev) => ({
+        ...prev,
+        splash: {
+          ...prev.splash,
+          hero_image_data_url: ''
+        }
+      }))
+      setLastPreparedHeroImageUrl('')
+      return
+    }
+
+    if (imageUrl === lastPreparedHeroImageUrl() && config().splash.hero_image_data_url.trim()) {
+      return
+    }
+
+    try {
+      setHeroImageProcessing(true)
+      setStatusMessage(ct('creator_processing_hero_image'))
+      const result = await invokeCommand<PrepareHeroImageOutput>('cmd_prepare_hero_image', {
+        image_url: imageUrl
+      })
+      patchConfig((prev) => ({
+        ...prev,
+        splash: {
+          ...prev.splash,
+          hero_image_url: result.source_url,
+          hero_image_data_url: result.data_url
+        }
+      }))
+      setLastPreparedHeroImageUrl(result.source_url)
+      setStatusMessage(
+        ctf('creator_hero_image_ready_size', {
+          width: result.width,
+          height: result.height
+        })
+      )
+    } catch (error) {
+      patchConfig((prev) => ({
+        ...prev,
+        splash: {
+          ...prev.splash,
+          hero_image_data_url: ''
+        }
+      }))
+      setStatusMessage(ctf('creator_failed_to_prepare_hero_image_error', { error: String(error) }))
+    } finally {
+      setHeroImageProcessing(false)
+    }
+  }
+
+  const searchHeroImageAutomatically = async () => {
+    const gameName = config().game_name.trim()
+    if (!gameName) {
+      setStatusMessage(ct('creator_type_game_name_before_searching_hero_image'))
+      return
+    }
+
+    try {
+      setHeroImageAutoSearching(true)
+      setStatusMessage(ct('creator_searching_hero_image'))
+      const search = await invokeCommand<SearchHeroImageOutput>('cmd_search_hero_image', {
+        game_name: gameName
+      })
+      setHeroImageUrl(search.image_url)
+      setStatusMessage(ct('creator_hero_image_found_processing_preview'))
+      await prepareHeroImageFromUrl(search.image_url)
+    } catch (error) {
+      setStatusMessage(ctf('creator_failed_to_search_hero_image_error', { error: String(error) }))
+    } finally {
+      setHeroImageAutoSearching(false)
+    }
+  }
+
   const setGamescopeState = (state: FeatureState) => {
     patchConfig((prev) => ({
       ...prev,
@@ -810,6 +914,8 @@ export function useCreatorController() {
     setRegistryImportPath,
     iconPreviewPath,
     setIconPreviewPath,
+    heroImageProcessing,
+    heroImageAutoSearching,
     statusMessage,
     setStatusMessage,
     resultJson,
@@ -823,6 +929,7 @@ export function useCreatorController() {
     winetricksCatalogError,
     config,
     patchConfig,
+    setHeroImageUrl,
     configPreview,
     t,
     ct,
@@ -859,6 +966,8 @@ export function useCreatorController() {
     pickMountFolder,
     pickMountSourceRelative,
     extractExecutableIcon,
+    prepareHeroImageFromUrl,
+    searchHeroImageAutomatically,
     setGamescopeState,
     setGamemodeState,
     setMangohudState,

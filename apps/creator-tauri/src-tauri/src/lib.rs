@@ -8,14 +8,19 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::{engine::general_purpose, Engine as _};
 use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
-use image::{DynamicImage, GenericImageView, ImageFormat};
+use image::{imageops::FilterType, DynamicImage, GenericImageView, ImageFormat};
 use orchestrator_core::{
     doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig, RegistryKey,
 };
 use pelite::pe32::Pe as _;
 use pelite::pe64::Pe as _;
 use pelite::{pe32, pe64};
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
+
+const HERO_SPLASH_TARGET_WIDTH: u32 = 960;
+const HERO_SPLASH_TARGET_HEIGHT: u32 = 310;
+const HERO_SEARCH_ENDPOINT: &str = "https://steamgrid.usebottles.com/api/search/";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateExecutableInput {
@@ -57,6 +62,32 @@ pub struct ExtractExecutableIconOutput {
     pub data_url: String,
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchHeroImageInput {
+    pub game_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchHeroImageOutput {
+    pub source: String,
+    pub image_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PrepareHeroImageInput {
+    pub image_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PrepareHeroImageOutput {
+    pub source_url: String,
+    pub data_url: String,
+    pub width: u32,
+    pub height: u32,
+    pub original_width: u32,
+    pub original_height: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -242,6 +273,124 @@ pub fn extract_executable_icon(
         data_url,
         width,
         height,
+    })
+}
+
+pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageOutput, String> {
+    let game_name = input.game_name.trim();
+    if game_name.is_empty() {
+        return Err("game name is empty".to_string());
+    }
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-121",
+        "search_hero_image_requested",
+        serde_json::json!({ "game_name": game_name }),
+    );
+
+    let encoded_title = urlencoding::encode(game_name);
+    let url = format!("{HERO_SEARCH_ENDPOINT}{encoded_title}");
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(4))
+        .build()
+        .map_err(|err| format!("failed to build HTTP client: {err}"))?;
+
+    let response = client
+        .get(&url)
+        .header(
+            reqwest::header::USER_AGENT,
+            "game-orchestrator-creator/0.1 hero-search",
+        )
+        .send()
+        .map_err(|err| format!("failed to query hero image search endpoint: {err}"))?;
+
+    let status = response.status();
+    let body = response
+        .text()
+        .map_err(|err| format!("failed to read hero search response: {err}"))?;
+
+    if !status.is_success() {
+        return Err(format!("hero image search failed with HTTP {status}"));
+    }
+
+    let image_url = parse_hero_search_response_url(&body)
+        .ok_or_else(|| "hero image search returned an unsupported response".to_string())?;
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-122",
+        "search_hero_image_completed",
+        serde_json::json!({
+            "game_name": game_name,
+            "image_url": image_url,
+        }),
+    );
+
+    Ok(SearchHeroImageOutput {
+        source: "steamgrid-usebottles".to_string(),
+        image_url,
+    })
+}
+
+pub fn prepare_hero_image(input: PrepareHeroImageInput) -> Result<PrepareHeroImageOutput, String> {
+    let image_url = input.image_url.trim();
+    if image_url.is_empty() {
+        return Err("hero image URL is empty".to_string());
+    }
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-123",
+        "prepare_hero_image_requested",
+        serde_json::json!({ "image_url": image_url }),
+    );
+
+    let source_bytes = fetch_remote_bytes(image_url)?;
+    let decoded = image::load_from_memory(&source_bytes)
+        .map_err(|err| format!("failed to decode hero image: {err}"))?;
+    let (original_width, original_height) = decoded.dimensions();
+    let processed = crop_to_ratio_and_resize(
+        decoded,
+        96,
+        31,
+        HERO_SPLASH_TARGET_WIDTH,
+        HERO_SPLASH_TARGET_HEIGHT,
+    )?;
+
+    let (width, height) = processed.dimensions();
+    let mut out_bytes = Vec::new();
+    let mut cursor = Cursor::new(&mut out_bytes);
+    processed
+        .write_to(&mut cursor, ImageFormat::WebP)
+        .map_err(|err| format!("failed to encode hero image as WebP: {err}"))?;
+
+    let data_url = format!(
+        "data:image/webp;base64,{}",
+        general_purpose::STANDARD.encode(&out_bytes)
+    );
+
+    log_backend_event(
+        "INFO",
+        "GO-CR-124",
+        "prepare_hero_image_completed",
+        serde_json::json!({
+            "image_url": image_url,
+            "original_width": original_width,
+            "original_height": original_height,
+            "width": width,
+            "height": height,
+            "webp_size_bytes": out_bytes.len(),
+        }),
+    );
+
+    Ok(PrepareHeroImageOutput {
+        source_url: image_url.to_string(),
+        data_url,
+        width,
+        height,
+        original_width,
+        original_height,
     })
 }
 
@@ -447,6 +596,85 @@ fn decode_png_data_url(data_url: &str) -> Result<Vec<u8>, String> {
     general_purpose::STANDARD
         .decode(payload)
         .map_err(|err| format!("failed to decode icon PNG data URL: {err}"))
+}
+
+fn parse_hero_search_response_url(body: &str) -> Option<String> {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Ok(url) = serde_json::from_str::<String>(trimmed) {
+        return validate_hero_http_url(&url).map(str::to_string);
+    }
+
+    validate_hero_http_url(trimmed).map(str::to_string)
+}
+
+fn validate_hero_http_url(raw: &str) -> Option<&str> {
+    let trimmed = raw.trim();
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        Some(trimmed)
+    } else {
+        None
+    }
+}
+
+fn fetch_remote_bytes(url: &str) -> Result<Vec<u8>, String> {
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(12))
+        .build()
+        .map_err(|err| format!("failed to build HTTP client: {err}"))?;
+
+    let response = client
+        .get(url)
+        .header(
+            reqwest::header::USER_AGENT,
+            "game-orchestrator-creator/0.1 hero-image-fetch",
+        )
+        .send()
+        .map_err(|err| format!("failed to download hero image: {err}"))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("failed to download hero image (HTTP {status})"));
+    }
+
+    response
+        .bytes()
+        .map(|b| b.to_vec())
+        .map_err(|err| format!("failed to read hero image bytes: {err}"))
+}
+
+fn crop_to_ratio_and_resize(
+    image: DynamicImage,
+    ratio_w: u32,
+    ratio_h: u32,
+    target_w: u32,
+    target_h: u32,
+) -> Result<DynamicImage, String> {
+    let (src_w, src_h) = image.dimensions();
+    if src_w == 0 || src_h == 0 {
+        return Err("hero image has invalid dimensions".to_string());
+    }
+
+    let lhs = u64::from(src_w) * u64::from(ratio_h);
+    let rhs = u64::from(src_h) * u64::from(ratio_w);
+
+    let (crop_x, crop_y, crop_w, crop_h) = if lhs > rhs {
+        let crop_w = ((u64::from(src_h) * u64::from(ratio_w)) / u64::from(ratio_h))
+            .clamp(1, u64::from(src_w)) as u32;
+        let crop_x = (src_w.saturating_sub(crop_w)) / 2;
+        (crop_x, 0, crop_w, src_h)
+    } else {
+        let crop_h = ((u64::from(src_w) * u64::from(ratio_h)) / u64::from(ratio_w))
+            .clamp(1, u64::from(src_h)) as u32;
+        let crop_y = (src_h.saturating_sub(crop_h)) / 2;
+        (0, crop_y, src_w, crop_h)
+    };
+
+    let cropped = image.crop_imm(crop_x, crop_y, crop_w, crop_h);
+    Ok(cropped.resize_exact(target_w, target_h, FilterType::Lanczos3))
 }
 
 pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {

@@ -4,11 +4,13 @@ fn main() {
 
     use creator_tauri_backend::{
         create_executable_with_base_hints, extract_executable_icon, hash_executable,
-        import_registry_file, list_child_directories, test_configuration, winetricks_available,
-        CreateExecutableInput, CreateExecutableOutput, ExtractExecutableIconInput,
-        ExtractExecutableIconOutput, HashExeInput, HashExeOutput, ImportRegistryFileInput,
-        ImportRegistryFileOutput, ListChildDirectoriesInput, ListChildDirectoriesOutput,
-        TestConfigurationInput, TestConfigurationOutput, WinetricksAvailableOutput,
+        import_registry_file, list_child_directories, prepare_hero_image, search_hero_image,
+        test_configuration, winetricks_available, CreateExecutableInput, CreateExecutableOutput,
+        ExtractExecutableIconInput, ExtractExecutableIconOutput, HashExeInput, HashExeOutput,
+        ImportRegistryFileInput, ImportRegistryFileOutput, ListChildDirectoriesInput,
+        ListChildDirectoriesOutput, PrepareHeroImageInput, PrepareHeroImageOutput,
+        SearchHeroImageInput, SearchHeroImageOutput, TestConfigurationInput,
+        TestConfigurationOutput, WinetricksAvailableOutput,
     };
     #[tauri::command]
     fn cmd_create_executable(
@@ -69,6 +71,18 @@ fn main() {
         list_child_directories(input)
     }
 
+    #[tauri::command]
+    fn cmd_search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageOutput, String> {
+        search_hero_image(input)
+    }
+
+    #[tauri::command]
+    fn cmd_prepare_hero_image(
+        input: PrepareHeroImageInput,
+    ) -> Result<PrepareHeroImageOutput, String> {
+        prepare_hero_image(input)
+    }
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             cmd_create_executable,
@@ -77,7 +91,9 @@ fn main() {
             cmd_test_configuration,
             cmd_winetricks_available,
             cmd_import_registry_file,
-            cmd_list_child_directories
+            cmd_list_child_directories,
+            cmd_search_hero_image,
+            cmd_prepare_hero_image
         ])
         .run(tauri::generate_context!())
         .expect("error while running creator tauri backend");

@@ -20,7 +20,17 @@ pub struct GameConfig {
     pub registry_keys: Vec<RegistryKey>,
     pub integrity_files: Vec<String>,
     pub folder_mounts: Vec<FolderMount>,
+    #[serde(default)]
+    pub splash: SplashConfig,
     pub scripts: ScriptsConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct SplashConfig {
+    #[serde(default)]
+    pub hero_image_url: String,
+    #[serde(default)]
+    pub hero_image_data_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

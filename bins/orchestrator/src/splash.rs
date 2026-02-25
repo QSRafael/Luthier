@@ -4,14 +4,16 @@ use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context};
+use base64::{engine::general_purpose, Engine as _};
 use font8x8::{UnicodeFonts, BASIC_FONTS};
 use fontdb::{Database, Family, Query, Source, Style, Weight};
 use fontdue::{Font, FontSettings};
+use image::imageops::FilterType;
 use minifb::{Icon, Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use orchestrator_core::GameConfig;
@@ -23,8 +25,8 @@ use crate::overrides::{
 };
 use crate::payload::load_embedded_config_required;
 
-const WIN_W: usize = 560;
-const WIN_H: usize = 320;
+const WIN_W: usize = 960;
+const WIN_H: usize = 310;
 const FPS: u64 = 60;
 const PRELAUNCH_AUTOSTART_SECS: u64 = 10;
 
@@ -287,12 +289,18 @@ struct ToggleRow {
 }
 
 #[derive(Debug, Clone)]
+struct HeroBackground {
+    pixels: Vec<u32>,
+}
+
+#[derive(Debug, Clone)]
 struct PrelaunchState {
     config: GameConfig,
     overrides: RuntimeOverrides,
     doctor: DoctorReport,
     countdown_started_at: Instant,
     configurable_rows: Vec<ToggleRow>,
+    hero_background: Option<Arc<HeroBackground>>,
 }
 
 enum PrelaunchDecision {
@@ -312,6 +320,7 @@ enum FeedbackDecision {
 #[derive(Debug)]
 struct ChildRunOutcome {
     game_name: String,
+    hero_background: Option<Arc<HeroBackground>>,
 }
 
 #[derive(Debug)]
@@ -329,6 +338,7 @@ enum ChildEvent {
 #[derive(Debug, Clone)]
 struct ProgressViewState {
     game_name: String,
+    hero_background: Option<Arc<HeroBackground>>,
     status: String,
     started_at: Instant,
     launching_started_at: Option<Instant>,
@@ -341,9 +351,10 @@ struct ProgressViewState {
 }
 
 impl ProgressViewState {
-    fn new(game_name: String) -> Self {
+    fn new(game_name: String, hero_background: Option<Arc<HeroBackground>>) -> Self {
         let mut s = Self {
             game_name,
+            hero_background,
             status: t(SplashTextKey::StatusPreparingExecution).to_string(),
             started_at: Instant::now(),
             launching_started_at: None,
@@ -418,13 +429,17 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
     let _ = SPLASH_LOCALE.set(resolve_splash_locale(lang_override));
     let mut config =
         load_embedded_config_required().context("embedded payload is required for splash mode")?;
+    let hero_background = decode_hero_background_from_config(&config)
+        .ok()
+        .flatten()
+        .map(Arc::new);
     let overrides =
         load_runtime_overrides(&config.exe_hash).unwrap_or_else(|_| RuntimeOverrides::default());
     apply_runtime_overrides(&mut config, &overrides);
 
     let doctor = run_doctor(Some(&config));
     if matches!(doctor.summary, CheckStatus::BLOCKER) {
-        show_doctor_block_window(&config, &doctor)?;
+        show_doctor_block_window(&config, &doctor, hero_background.as_ref())?;
         return Ok(());
     }
 
@@ -434,6 +449,7 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
         overrides,
         doctor,
         countdown_started_at: Instant::now(),
+        hero_background: hero_background.clone(),
     };
 
     match show_prelaunch_window(&mut prelaunch, mode)? {
@@ -443,8 +459,12 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
             window,
             buffer,
         } => {
-            let outcome =
-                show_runtime_progress_window(window, buffer, &prelaunch.config.game_name)?;
+            let outcome = show_runtime_progress_window(
+                window,
+                buffer,
+                &prelaunch.config.game_name,
+                prelaunch.hero_background.clone(),
+            )?;
             let _ = show_post_game_feedback_window(outcome);
             // Refresh/save not needed here; overrides are already persisted in config screen.
             let _ = overrides;
@@ -647,7 +667,11 @@ fn show_prelaunch_window(
                 config_open = false;
                 state.countdown_started_at = Instant::now();
                 if matches!(state.doctor.summary, CheckStatus::BLOCKER) {
-                    show_doctor_block_window(&state.config, &state.doctor)?;
+                    show_doctor_block_window(
+                        &state.config,
+                        &state.doctor,
+                        state.hero_background.as_ref(),
+                    )?;
                     return Ok(PrelaunchDecision::Exit);
                 }
             } else {
@@ -667,6 +691,7 @@ fn show_prelaunch_window(
                 save_button,
                 cancel_button,
                 &mouse,
+                state.hero_background.as_deref(),
             );
             window
                 .update_with_buffer(&buffer, WIN_W, WIN_H)
@@ -706,6 +731,7 @@ fn show_prelaunch_window(
             exit_button,
             mode,
             mouse,
+            state.hero_background.as_deref(),
         );
         window
             .update_with_buffer(&buffer, WIN_W, WIN_H)
@@ -738,7 +764,11 @@ fn cycle_override_for_key(overrides: &mut RuntimeOverrides, key: &str) {
     };
 }
 
-fn show_doctor_block_window(config: &GameConfig, report: &DoctorReport) -> anyhow::Result<()> {
+fn show_doctor_block_window(
+    config: &GameConfig,
+    report: &DoctorReport,
+    hero_background: Option<&Arc<HeroBackground>>,
+) -> anyhow::Result<()> {
     let mut window = create_window(t(SplashTextKey::WindowDependencies))?;
     let mut buffer = vec![0u32; WIN_W * WIN_H];
     let mut last_left_down = false;
@@ -763,7 +793,14 @@ fn show_doctor_block_window(config: &GameConfig, report: &DoctorReport) -> anyho
             return Ok(());
         }
 
-        draw_doctor_block(&mut buffer, &window, &items, exit_button, &mouse);
+        draw_doctor_block(
+            &mut buffer,
+            &window,
+            &items,
+            exit_button,
+            &mouse,
+            hero_background.map(Arc::as_ref),
+        );
         window
             .update_with_buffer(&buffer, WIN_W, WIN_H)
             .context("failed to present doctor blocker splash")?;
@@ -794,11 +831,12 @@ fn show_runtime_progress_window(
     mut window: Window,
     mut buffer: Vec<u32>,
     game_name: &str,
+    hero_background: Option<Arc<HeroBackground>>,
 ) -> anyhow::Result<ChildRunOutcome> {
     let (tx, rx) = mpsc::channel::<ChildEvent>();
     spawn_play_child(tx)?;
     let mut last_left_down = false;
-    let mut progress = ProgressViewState::new(game_name.to_string());
+    let mut progress = ProgressViewState::new(game_name.to_string(), hero_background.clone());
 
     loop {
         while let Ok(event) = rx.try_recv() {
@@ -864,6 +902,7 @@ fn show_runtime_progress_window(
 
     Ok(ChildRunOutcome {
         game_name: game_name.to_string(),
+        hero_background,
     })
 }
 
@@ -1099,6 +1138,40 @@ fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<Fe
     }
 }
 
+fn decode_hero_background_from_config(
+    config: &GameConfig,
+) -> anyhow::Result<Option<HeroBackground>> {
+    let raw = config.splash.hero_image_data_url.trim();
+    if raw.is_empty() {
+        return Ok(None);
+    }
+
+    let payload = raw
+        .split_once("base64,")
+        .map(|(_, payload)| payload.trim())
+        .ok_or_else(|| anyhow!("unsupported hero image data URL format"))?;
+    let bytes = general_purpose::STANDARD
+        .decode(payload)
+        .context("failed to decode embedded hero image data URL")?;
+
+    let decoded =
+        image::load_from_memory(&bytes).context("failed to decode embedded hero image")?;
+    let resized = decoded.resize_exact(WIN_W as u32, WIN_H as u32, FilterType::Triangle);
+    let rgba = resized.to_rgba8();
+
+    let mut pixels = Vec::with_capacity(WIN_W * WIN_H);
+    for px in rgba.chunks_exact(4) {
+        let r = px[0] as u32;
+        let g = px[1] as u32;
+        let b = px[2] as u32;
+        let a = px[3];
+        let src = (r << 16) | (g << 8) | b;
+        pixels.push(blend_over(BG, src, a));
+    }
+
+    Ok(Some(HeroBackground { pixels }))
+}
+
 fn create_window(title: &str) -> anyhow::Result<Window> {
     let screen = detect_screen_size().unwrap_or((1280, 720));
     let scale = choose_splash_window_scale(screen);
@@ -1143,10 +1216,18 @@ fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<()> {
             return Ok(());
         }
 
-        let raw = std::fs::read(&icon_path)
-            .with_context(|| format!("failed to read splash icon sidecar at {}", icon_path.display()))?;
-        let icon_buffer = decode_png_icon_to_x11_buffer(&raw)
-            .with_context(|| format!("failed to decode splash icon sidecar {}", icon_path.display()))?;
+        let raw = std::fs::read(&icon_path).with_context(|| {
+            format!(
+                "failed to read splash icon sidecar at {}",
+                icon_path.display()
+            )
+        })?;
+        let icon_buffer = decode_png_icon_to_x11_buffer(&raw).with_context(|| {
+            format!(
+                "failed to decode splash icon sidecar {}",
+                icon_path.display()
+            )
+        })?;
 
         if let Ok(icon) = Icon::try_from(icon_buffer.as_slice()) {
             // X11 copies the property payload immediately; on Wayland this is a no-op in minifb.
@@ -1166,7 +1247,9 @@ fn decode_png_icon_to_x11_buffer(png_bytes: &[u8]) -> anyhow::Result<Vec<u64>> {
     );
     let mut reader = decoder.read_info().context("png read_info failed")?;
     let mut buf = vec![0u8; reader.output_buffer_size()];
-    let info = reader.next_frame(&mut buf).context("png next_frame failed")?;
+    let info = reader
+        .next_frame(&mut buf)
+        .context("png next_frame failed")?;
     let bytes = &buf[..info.buffer_size()];
     let width = info.width as usize;
     let height = info.height as usize;
@@ -1227,15 +1310,10 @@ fn try_center_window(window: &mut Window, scale_factor: i32) -> anyhow::Result<(
 }
 
 fn choose_splash_window_scale(screen: (usize, usize)) -> SplashWindowScale {
-    // Best practice here: keep a stable logical canvas and scale it in integer steps based on
-    // monitor size bands. This preserves layout and avoids blurry/unstable text metrics.
-    let short_edge = screen.0.min(screen.1);
-    if short_edge >= 1800 {
-        SplashWindowScale {
-            minifb_scale: Scale::X4,
-            factor: 4,
-        }
-    } else if short_edge >= 1200 {
+    // Best practice here: keep a stable logical canvas (96:31) and scale in integer steps.
+    // This preserves layout/text metrics while making the splash proportional to the monitor.
+    let (sw, sh) = screen;
+    if sw >= 2200 && sh >= 900 {
         SplashWindowScale {
             minifb_scale: Scale::X2,
             factor: 2,
@@ -1304,6 +1382,41 @@ fn read_mouse(window: &Window, last_left_down: bool) -> MouseSnapshot {
     }
 }
 
+fn draw_splash_background(buffer: &mut [u32], hero_background: Option<&HeroBackground>) {
+    if let Some(hero) = hero_background {
+        if hero.pixels.len() == buffer.len() {
+            buffer.copy_from_slice(&hero.pixels);
+        } else {
+            clear(buffer, BG);
+        }
+        fill_rect_alpha(
+            buffer,
+            Rect {
+                x: 0,
+                y: 0,
+                w: WIN_W as i32,
+                h: WIN_H as i32,
+            },
+            0x000000,
+            156,
+        );
+        // Extra darkening behind central content for contrast on bright images.
+        fill_rect_alpha(
+            buffer,
+            Rect {
+                x: 0,
+                y: 42,
+                w: WIN_W as i32,
+                h: WIN_H as i32 - 84,
+            },
+            0x000000,
+            72,
+        );
+    } else {
+        clear(buffer, BG);
+    }
+}
+
 fn draw_prelaunch(
     buffer: &mut [u32],
     _window: &Window,
@@ -1315,8 +1428,20 @@ fn draw_prelaunch(
     exit_button: Rect,
     mode: SplashLaunchMode,
     mouse: MouseSnapshot,
+    hero_background: Option<&HeroBackground>,
 ) {
-    clear(buffer, BG);
+    draw_splash_background(buffer, hero_background);
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: 34,
+            y: 40,
+            w: WIN_W as i32 - 68,
+            h: 136,
+        },
+        0x000000,
+        86,
+    );
     stroke_rect(
         buffer,
         Rect {
@@ -1411,8 +1536,20 @@ fn draw_config(
     save_button: Rect,
     cancel_button: Rect,
     mouse: &MouseSnapshot,
+    hero_background: Option<&HeroBackground>,
 ) {
-    clear(buffer, BG);
+    draw_splash_background(buffer, hero_background);
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: 22,
+            y: 20,
+            w: WIN_W as i32 - 44,
+            h: WIN_H as i32 - 40,
+        },
+        0x000000,
+        96,
+    );
     stroke_rect(
         buffer,
         Rect {
@@ -1513,8 +1650,20 @@ fn draw_doctor_block(
     items: &[(String, bool)],
     exit_button: Rect,
     mouse: &MouseSnapshot,
+    hero_background: Option<&HeroBackground>,
 ) {
-    clear(buffer, BG);
+    draw_splash_background(buffer, hero_background);
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: 18,
+            y: 18,
+            w: WIN_W as i32 - 36,
+            h: WIN_H as i32 - 36,
+        },
+        0x000000,
+        104,
+    );
     stroke_rect(
         buffer,
         Rect {
@@ -1593,7 +1742,18 @@ fn draw_progress(
     progress: &ProgressViewState,
     _mouse: &MouseSnapshot,
 ) {
-    clear(buffer, BG);
+    draw_splash_background(buffer, progress.hero_background.as_deref());
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: 34,
+            y: 40,
+            w: WIN_W as i32 - 68,
+            h: 136,
+        },
+        0x000000,
+        86,
+    );
     stroke_rect(
         buffer,
         Rect {
@@ -1657,7 +1817,18 @@ fn draw_feedback(
     right: Rect,
     mouse: &MouseSnapshot,
 ) {
-    clear(buffer, BG);
+    draw_splash_background(buffer, outcome.hero_background.as_deref());
+    fill_rect_alpha(
+        buffer,
+        Rect {
+            x: 22,
+            y: 18,
+            w: WIN_W as i32 - 44,
+            h: WIN_H as i32 - 36,
+        },
+        0x000000,
+        92,
+    );
     stroke_rect(
         buffer,
         Rect {
@@ -1745,6 +1916,24 @@ fn fill_rect(buffer: &mut [u32], rect: Rect, color: u32) {
         let row = y * WIN_W;
         for x in x0..x1 {
             buffer[row + x] = color;
+        }
+    }
+}
+
+fn fill_rect_alpha(buffer: &mut [u32], rect: Rect, color: u32, alpha: u8) {
+    if alpha == 0 {
+        return;
+    }
+    let x0 = rect.x.max(0) as usize;
+    let y0 = rect.y.max(0) as usize;
+    let x1 = (rect.x + rect.w).min(WIN_W as i32).max(0) as usize;
+    let y1 = (rect.y + rect.h).min(WIN_H as i32).max(0) as usize;
+
+    for y in y0..y1 {
+        let row = y * WIN_W;
+        for x in x0..x1 {
+            let idx = row + x;
+            buffer[idx] = blend_over(buffer[idx], color, alpha);
         }
     }
 }

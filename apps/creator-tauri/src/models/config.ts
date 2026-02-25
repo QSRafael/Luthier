@@ -110,6 +110,10 @@ export type GameConfig = {
     target_windows_path: string
     create_source_if_missing: boolean
   }>
+  splash: {
+    hero_image_url: string
+    hero_image_data_url: string
+  }
   scripts: {
     pre_launch: string
     post_launch: string
@@ -204,6 +208,10 @@ export function defaultGameConfig(): GameConfig {
     registry_keys: [],
     integrity_files: [],
     folder_mounts: [],
+    splash: {
+      hero_image_url: '',
+      hero_image_data_url: ''
+    },
     scripts: {
       pre_launch: '',
       post_launch: ''

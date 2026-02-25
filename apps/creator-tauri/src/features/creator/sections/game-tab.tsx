@@ -57,6 +57,11 @@ export function GameTabSection(props: CreatorPageSectionProps) {
     pickIntegrityFileRelative,
     pickMountFolder,
     extractExecutableIcon,
+    heroImageProcessing,
+    heroImageAutoSearching,
+    setHeroImageUrl,
+    prepareHeroImageFromUrl,
+    searchHeroImageAutomatically,
     gameRootChooserOpen,
     setGameRootChooserOpen,
     mountSourceBrowserOpen,
@@ -87,6 +92,65 @@ export function GameTabSection(props: CreatorPageSectionProps) {
               value={config().game_name}
               onInput={(value) => patchConfig((prev) => ({ ...prev, game_name: value }))}
             />
+
+            <FieldShell
+              label={ct('creator_splash_hero_image')}
+              help={ct('creator_hero_image_used_as_splash_background_downloaded_and_emb')}
+              hint={ct('creator_hero_image_ratio_96_31_and_converted_to_webp')}
+              footer={
+                <div class="rounded-md border border-border/60 bg-muted/15 p-3">
+                  <Show
+                    when={config().splash.hero_image_data_url.trim()}
+                    fallback={
+                      <div class="flex min-h-[96px] items-center justify-center rounded-md border border-dashed border-border/60 bg-background/40 px-3 text-xs text-muted-foreground">
+                        {heroImageProcessing()
+                          ? ct('creator_processing_hero_image')
+                          : ct('creator_no_hero_image_selected')}
+                      </div>
+                    }
+                  >
+                    <div class="overflow-hidden rounded-md border border-border/60 bg-black">
+                      <img
+                        src={config().splash.hero_image_data_url}
+                        alt={ct('creator_splash_hero_image_preview')}
+                        class="block aspect-[96/31] w-full object-cover"
+                      />
+                    </div>
+                  </Show>
+                </div>
+              }
+            >
+              <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <Input
+                  value={config().splash.hero_image_url}
+                  placeholder="https://..."
+                  onInput={(e) => {
+                    setHeroImageUrl(e.currentTarget.value)
+                  }}
+                  onBlur={() => {
+                    void prepareHeroImageFromUrl()
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={searchHeroImageAutomatically}
+                  disabled={heroImageAutoSearching() || heroImageProcessing()}
+                >
+                  <Show
+                    when={heroImageAutoSearching() || heroImageProcessing()}
+                    fallback={ct('creator_search_automatically')}
+                  >
+                    <span class="inline-flex items-center gap-2">
+                      <Spinner class="size-3" />
+                      {heroImageAutoSearching()
+                        ? ct('creator_searching')
+                        : ct('creator_processing')}
+                    </span>
+                  </Show>
+                </Button>
+              </div>
+            </FieldShell>
 
             <FieldShell
               label={ct('creator_main_executable_exe')}
