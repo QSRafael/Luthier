@@ -723,6 +723,12 @@ fn search_hero_image_via_steamgriddb_public(
     game_name: &str,
     client: &Client,
 ) -> Result<Option<(String, String)>, String> {
+    if let Some(game_id) = search_steamgriddb_public_autocomplete_game_id(game_name, client)? {
+        if let Some(hero_url) = fetch_steamgriddb_public_game_header_hero(game_id, client)? {
+            return Ok(Some((hero_url, "steamgriddb-public-hero".to_string())));
+        }
+    }
+
     let search_url = format!("{STEAMGRIDDB_PUBLIC_API_BASE}/search/main/games");
     let search_response = client
         .post(&search_url)
@@ -787,6 +793,69 @@ fn search_hero_image_via_steamgriddb_public(
         .and_then(|v| v.as_array())
         .and_then(|assets| assets.iter().find_map(extract_steamgriddb_hero_url));
 
+    if let Some(hero_url) = fetch_steamgriddb_public_game_header_hero(game_id, client)? {
+        return Ok(Some((hero_url, "steamgriddb-public-hero-search".to_string())));
+    }
+
+    if let Some(hero_url) = fallback_first_asset_url {
+        return Ok(Some((hero_url, "steamgriddb-public-hero-search".to_string())));
+    }
+
+    Ok(None)
+}
+
+fn search_steamgriddb_public_autocomplete_game_id(
+    game_name: &str,
+    client: &Client,
+) -> Result<Option<u64>, String> {
+    let search_url = format!("{STEAMGRIDDB_PUBLIC_API_BASE}/search/autocomplete");
+    let response = client
+        .get(&search_url)
+        .header(reqwest::header::ACCEPT, "application/json, text/plain, */*")
+        .header(reqwest::header::REFERER, "https://www.steamgriddb.com/")
+        .header(
+            reqwest::header::USER_AGENT,
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+        )
+        .query(&[("term", game_name)])
+        .send()
+        .map_err(|err| format!("failed to query SteamGridDB public autocomplete: {err}"))?;
+
+    let status = response.status();
+    let json: serde_json::Value = response
+        .json()
+        .map_err(|err| format!("failed to decode SteamGridDB public autocomplete response: {err}"))?;
+
+    if !status.is_success() {
+        return Err(format!(
+            "SteamGridDB public autocomplete failed with HTTP {status}"
+        ));
+    }
+    if json
+        .get("success")
+        .and_then(|v| v.as_bool())
+        .is_some_and(|ok| !ok)
+    {
+        return Err("SteamGridDB public autocomplete returned success=false".to_string());
+    }
+
+    let games = json
+        .get("data")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "SteamGridDB public autocomplete returned no data list".to_string())?;
+
+    let game_id = games
+        .first()
+        .and_then(|game| game.get("id"))
+        .and_then(|v| v.as_u64());
+
+    Ok(game_id)
+}
+
+fn fetch_steamgriddb_public_game_header_hero(
+    game_id: u64,
+    client: &Client,
+) -> Result<Option<String>, String> {
     let game_url = format!("{STEAMGRIDDB_PUBLIC_API_BASE}/game/{game_id}");
     let game_response = client
         .get(&game_url)
@@ -807,27 +876,22 @@ fn search_hero_image_via_steamgriddb_public(
         .json()
         .map_err(|err| format!("failed to decode SteamGridDB public game response: {err}"))?;
 
-    if game_status.is_success()
-        && game_json
-            .get("success")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false)
+    if !game_status.is_success() {
+        return Ok(None);
+    }
+    if !game_json
+        .get("success")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
     {
-        if let Some(hero_url) = game_json
-            .get("data")
-            .and_then(|v| v.get("header"))
-            .and_then(|v| v.get("asset"))
-            .and_then(extract_steamgriddb_hero_url)
-        {
-            return Ok(Some((hero_url, "steamgriddb-public-hero".to_string())));
-        }
+        return Ok(None);
     }
 
-    if let Some(hero_url) = fallback_first_asset_url {
-        return Ok(Some((hero_url, "steamgriddb-public-hero-search".to_string())));
-    }
-
-    Ok(None)
+    Ok(game_json
+        .get("data")
+        .and_then(|v| v.get("header"))
+        .and_then(|v| v.get("asset"))
+        .and_then(extract_steamgriddb_hero_url))
 }
 
 fn read_steamgriddb_api_key() -> Option<String> {
