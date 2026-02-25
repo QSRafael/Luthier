@@ -22,6 +22,7 @@ const HERO_SPLASH_TARGET_WIDTH: u32 = 960;
 const HERO_SPLASH_TARGET_HEIGHT: u32 = 310;
 const HERO_SEARCH_ENDPOINT: &str = "https://steamgrid.usebottles.com/api/search/";
 const STEAMGRIDDB_API_BASE: &str = "https://www.steamgriddb.com/api/v2";
+const STEAMGRIDDB_PUBLIC_API_BASE: &str = "https://www.steamgriddb.com/api/public";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateExecutableInput {
@@ -296,6 +297,23 @@ pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageO
         .timeout(std::time::Duration::from_secs(4))
         .build()
         .map_err(|err| format!("failed to build HTTP client: {err}"))?;
+
+    if let Some((hero_url, source)) = search_hero_image_via_steamgriddb_public(game_name, &client)? {
+        log_backend_event(
+            "INFO",
+            "GO-CR-122",
+            "search_hero_image_completed",
+            serde_json::json!({
+                "game_name": game_name,
+                "image_url": hero_url,
+                "source": source,
+            }),
+        );
+        return Ok(SearchHeroImageOutput {
+            source,
+            image_url: hero_url,
+        });
+    }
 
     if let Some((hero_url, source)) = search_hero_image_via_steamgriddb_api(game_name, &client)? {
         log_backend_event(
@@ -699,6 +717,117 @@ fn search_hero_image_via_steamgriddb_api(
         .ok_or_else(|| "SteamGridDB heroes lookup returned no hero image".to_string())?;
 
     Ok(Some((hero_url, "steamgriddb-api-hero".to_string())))
+}
+
+fn search_hero_image_via_steamgriddb_public(
+    game_name: &str,
+    client: &Client,
+) -> Result<Option<(String, String)>, String> {
+    let search_url = format!("{STEAMGRIDDB_PUBLIC_API_BASE}/search/main/games");
+    let search_response = client
+        .post(&search_url)
+        .header(reqwest::header::ACCEPT, "application/json, text/plain, */*")
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .header(reqwest::header::ORIGIN, "https://www.steamgriddb.com")
+        .header(
+            reqwest::header::REFERER,
+            "https://www.steamgriddb.com/search/heroes",
+        )
+        .header(
+            reqwest::header::USER_AGENT,
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+        )
+        .json(&serde_json::json!({
+            "asset_type": "hero",
+            "term": game_name,
+            "offset": 0,
+            "filters": {
+                "styles": ["all"],
+                "dimensions": ["all"],
+                "type": ["all"],
+                "order": "score_desc"
+            }
+        }))
+        .send()
+        .map_err(|err| format!("failed to query SteamGridDB public hero search: {err}"))?;
+
+    let search_status = search_response.status();
+    let search_json: serde_json::Value = search_response
+        .json()
+        .map_err(|err| format!("failed to decode SteamGridDB public hero search response: {err}"))?;
+    if !search_status.is_success() {
+        return Err(format!(
+            "SteamGridDB public hero search failed with HTTP {search_status}"
+        ));
+    }
+    if search_json
+        .get("success")
+        .and_then(|v| v.as_bool())
+        .is_some_and(|ok| !ok)
+    {
+        return Err("SteamGridDB public hero search returned success=false".to_string());
+    }
+
+    let games = search_json
+        .get("data")
+        .and_then(|v| v.get("games"))
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "SteamGridDB public hero search returned no games list".to_string())?;
+    let first_game = games
+        .first()
+        .ok_or_else(|| "SteamGridDB public hero search returned no matching game".to_string())?;
+    let game_id = first_game
+        .get("game")
+        .and_then(|v| v.get("id"))
+        .and_then(|v| v.as_u64())
+        .ok_or_else(|| "SteamGridDB public hero search returned no game id".to_string())?;
+
+    let fallback_first_asset_url = first_game
+        .get("assets")
+        .and_then(|v| v.as_array())
+        .and_then(|assets| assets.iter().find_map(extract_steamgriddb_hero_url));
+
+    let game_url = format!("{STEAMGRIDDB_PUBLIC_API_BASE}/game/{game_id}");
+    let game_response = client
+        .get(&game_url)
+        .header(reqwest::header::ACCEPT, "application/json, text/plain, */*")
+        .header(
+            reqwest::header::REFERER,
+            format!("https://www.steamgriddb.com/game/{game_id}/heroes"),
+        )
+        .header(
+            reqwest::header::USER_AGENT,
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+        )
+        .send()
+        .map_err(|err| format!("failed to query SteamGridDB public game endpoint: {err}"))?;
+
+    let game_status = game_response.status();
+    let game_json: serde_json::Value = game_response
+        .json()
+        .map_err(|err| format!("failed to decode SteamGridDB public game response: {err}"))?;
+
+    if game_status.is_success()
+        && game_json
+            .get("success")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    {
+        if let Some(hero_url) = game_json
+            .get("data")
+            .and_then(|v| v.get("header"))
+            .and_then(|v| v.get("asset"))
+            .and_then(extract_steamgriddb_hero_url)
+        {
+            return Ok(Some((hero_url, "steamgriddb-public-hero".to_string())));
+        }
+    }
+
+    if let Some(hero_url) = fallback_first_asset_url {
+        return Ok(Some((hero_url, "steamgriddb-public-hero-search".to_string())));
+    }
+
+    Ok(None)
 }
 
 fn read_steamgriddb_api_key() -> Option<String> {
