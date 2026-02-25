@@ -2,7 +2,7 @@ import { For } from 'solid-js'
 import { IconAlertCircle } from '@tabler/icons-solidjs'
 
 import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/alert'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemMain, ItemTitle } from '../../../../components/ui/item'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMain, ItemTitle } from '../../../../components/ui/item'
 import { Select } from '../../../../components/ui/select'
 import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
@@ -18,6 +18,14 @@ export function WinecfgAudioAccordionSection(props: WinecfgAccordionSectionProps
                 description={ct('creator_additional_audio_settings_from_winecfg_runtime_defaults')}
               >
                 <div class="grid gap-3">
+                  <Alert variant="warning">
+                    <IconAlertCircle />
+                    <AlertTitle>{ct('creator_audio_change_only_if_needed')}</AlertTitle>
+                    <AlertDescription>
+                      {ct('creator_forcing_an_audio_backend_can_fix_compatibility_but_may_w')}
+                    </AlertDescription>
+                  </Alert>
+
                   <Item>
                     <ItemMain>
                       <ItemContent>
@@ -47,15 +55,6 @@ export function WinecfgAudioAccordionSection(props: WinecfgAccordionSectionProps
                       </ItemActions>
                     </ItemMain>
 
-                    <ItemFooter>
-                      <Alert variant="warning">
-                        <IconAlertCircle />
-                        <AlertTitle>{ct('creator_audio_change_only_if_needed')}</AlertTitle>
-                        <AlertDescription>
-                          {ct('creator_forcing_an_audio_backend_can_fix_compatibility_but_may_w')}
-                        </AlertDescription>
-                      </Alert>
-                    </ItemFooter>
                   </Item>
                 </div>
               </AccordionSection>

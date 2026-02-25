@@ -19,7 +19,7 @@ export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionPr
                 description={ct('creator_equivalent_to_the_graphics_tab_in_winecfg_everything_her')}
               >
                 <div class="grid gap-3">
-                  <Alert>
+                  <Alert variant="warning">
                     <IconAlertCircle />
                     <AlertTitle>{ct('creator_graphics_incremental_overrides')}</AlertTitle>
                     <AlertDescription>

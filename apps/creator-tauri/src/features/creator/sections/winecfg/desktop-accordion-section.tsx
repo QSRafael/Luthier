@@ -22,7 +22,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                 description={ct('creator_file_protocol_associations_and_wine_special_desktop_fold')}
               >
                 <div class="grid gap-3">
-                  <Alert>
+                  <Alert variant="warning">
                     <IconAlertCircle />
                     <AlertTitle>{ct('creator_integration_can_affect_user_system_behavior')}</AlertTitle>
                     <AlertDescription>

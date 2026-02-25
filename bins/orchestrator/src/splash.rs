@@ -466,13 +466,18 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
 
 fn build_toggle_rows(config: &GameConfig, overrides: &RuntimeOverrides) -> Vec<ToggleRow> {
     let mut rows = Vec::new();
-    push_optional_toggle_row(
-        &mut rows,
-        "gamescope",
-        "Gamescope",
+    if matches!(
         config.environment.gamescope.state,
-        overrides.gamescope,
-    );
+        orchestrator_core::FeatureState::OptionalOn
+    ) {
+        push_optional_toggle_row(
+            &mut rows,
+            "gamescope",
+            "Gamescope",
+            config.environment.gamescope.state,
+            overrides.gamescope,
+        );
+    }
     push_optional_toggle_row(
         &mut rows,
         "mangohud",
