@@ -1050,28 +1050,48 @@ fn adapt_prefix_setup_plan_for_runtime(
         .proton
         .clone()
         .ok_or_else(|| anyhow!("selected Proton runtime but proton path is missing"))?;
+    let umu_run =
+        if matches!(runtime, RuntimeCandidate::ProtonUmu) {
+            Some(
+                report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected ProtonUmu runtime but umu-run path is missing")
+                })?,
+            )
+        } else {
+            None
+        };
 
     for cmd in &mut out.commands {
-        if cmd.program != "wineboot" {
+        if cmd.program == "wineboot" {
+            match runtime {
+                RuntimeCandidate::ProtonNative => {
+                    let mut args = Vec::with_capacity(1 + cmd.args.len());
+                    args.push("run".to_string());
+                    args.push("wineboot".to_string());
+                    args.extend(cmd.args.clone());
+                    cmd.program = proton.clone();
+                    cmd.args = args;
+                }
+                RuntimeCandidate::ProtonUmu => {
+                    cmd.program = umu_run.clone().ok_or_else(|| {
+                        anyhow!("selected ProtonUmu runtime but umu-run path is missing")
+                    })?;
+                    cmd.args = vec!["createprefix".to_string()];
+                }
+                RuntimeCandidate::Wine => {}
+            }
             continue;
         }
 
-        match runtime {
-            RuntimeCandidate::ProtonNative => {
-                let mut args = Vec::with_capacity(1 + cmd.args.len());
-                args.push("run".to_string());
-                args.push("wineboot".to_string());
-                args.extend(cmd.args.clone());
-                cmd.program = proton.clone();
-                cmd.args = args;
-            }
-            RuntimeCandidate::ProtonUmu => {
-                cmd.program = report.runtime.umu_run.clone().ok_or_else(|| {
-                    anyhow!("selected ProtonUmu runtime but umu-run path is missing")
-                })?;
-                cmd.args = vec!["createprefix".to_string()];
-            }
-            RuntimeCandidate::Wine => {}
+        if cmd.program == "winetricks" && matches!(runtime, RuntimeCandidate::ProtonUmu) {
+            let mut args = cmd.args.clone();
+            // Heroic removes -q when routing winetricks through umu-run.
+            args.retain(|arg| arg != "-q");
+            args.insert(0, "winetricks".to_string());
+            cmd.program = umu_run
+                .clone()
+                .ok_or_else(|| anyhow!("selected ProtonUmu runtime but umu-run path is missing"))?;
+            cmd.args = args;
         }
     }
 
