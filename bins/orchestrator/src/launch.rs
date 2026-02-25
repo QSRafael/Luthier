@@ -153,11 +153,7 @@ pub fn build_launch_command(
                 } else {
                     gamescope.upscale_method.trim()
                 };
-                apply_gamescope_upscale_flags(
-                    &mut gamescope_args,
-                    method,
-                    supports_modern_filter,
-                );
+                apply_gamescope_upscale_flags(&mut gamescope_args, method, supports_modern_filter);
             }
 
             match gamescope.window_type.trim() {
