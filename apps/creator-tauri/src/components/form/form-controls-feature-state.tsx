@@ -121,7 +121,7 @@ export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
     <FieldShell
       label={props.label}
       help={props.help}
-      controlClass="grid gap-2 md:grid-cols-2"
+      controlClass="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]"
       footer={props.footer}
     >
       <>
