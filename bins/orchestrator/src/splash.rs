@@ -1210,6 +1210,10 @@ fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<()> {
 
     #[cfg(target_os = "linux")]
     {
+        if is_wayland_session_for_splash() {
+            return Ok(());
+        }
+
         let exe = std::env::current_exe().context("failed to resolve current executable")?;
         let icon_path = exe.with_extension("png");
         if !icon_path.exists() {
@@ -1230,11 +1234,25 @@ fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<()> {
         })?;
 
         if let Ok(icon) = Icon::try_from(icon_buffer.as_slice()) {
-            // X11 copies the property payload immediately; on Wayland this is a no-op in minifb.
-            window.set_icon(icon);
+            // minifb panics on Wayland if set_icon is called at runtime.
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                window.set_icon(icon);
+            }));
         }
         Ok(())
     }
+}
+
+#[cfg(target_os = "linux")]
+fn is_wayland_session_for_splash() -> bool {
+    if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+        return true;
+    }
+
+    std::env::var("XDG_SESSION_TYPE")
+        .ok()
+        .map(|value| value.eq_ignore_ascii_case("wayland"))
+        .unwrap_or(false)
 }
 
 #[cfg(target_os = "linux")]
