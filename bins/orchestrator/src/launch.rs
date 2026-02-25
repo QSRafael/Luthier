@@ -168,6 +168,15 @@ pub fn build_launch_command(
         }
     }
 
+    apply_heroic_like_runtime_env_defaults(
+        &mut env_pairs,
+        config,
+        report,
+        selected_runtime,
+        Some(game_root),
+        true,
+    );
+
     if config.environment.prime_offload.is_enabled() {
         upsert_env(&mut env_pairs, "__NV_PRIME_RENDER_OFFLOAD", "1");
         upsert_env(&mut env_pairs, "__GLX_VENDOR_LIBRARY_NAME", "nvidia");
@@ -264,6 +273,15 @@ pub fn build_winecfg_command(
         }
     }
 
+    apply_heroic_like_runtime_env_defaults(
+        &mut env_pairs,
+        config,
+        report,
+        selected_runtime,
+        None,
+        false,
+    );
+
     if config.environment.prime_offload.is_enabled() {
         upsert_env(&mut env_pairs, "__NV_PRIME_RENDER_OFFLOAD", "1");
         upsert_env(&mut env_pairs, "__GLX_VENDOR_LIBRARY_NAME", "nvidia");
@@ -287,6 +305,7 @@ pub fn build_winecfg_command(
 }
 
 pub fn build_prefix_setup_execution_context(
+    config: &GameConfig,
     plan: &PrefixSetupPlan,
     report: &DoctorReport,
 ) -> anyhow::Result<PrefixSetupExecutionContext> {
@@ -302,7 +321,10 @@ pub fn build_prefix_setup_execution_context(
     // Avoid wine gecko/mono popup dialogs during automated prefix bootstrap.
     upsert_env(&mut env, "WINEDLLOVERRIDES", "mscoree,mshtml=d");
 
-    if matches!(runtime, RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu) {
+    if matches!(
+        runtime,
+        RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu
+    ) {
         upsert_env(
             &mut env,
             "STEAM_COMPAT_DATA_PATH",
@@ -311,7 +333,11 @@ pub fn build_prefix_setup_execution_context(
 
         if let Some(proton_path) = &report.runtime.proton {
             if let Some(steam_client_path) = derive_steam_client_install_path(proton_path) {
-                upsert_env(&mut env, "STEAM_COMPAT_CLIENT_INSTALL_PATH", steam_client_path);
+                upsert_env(
+                    &mut env,
+                    "STEAM_COMPAT_CLIENT_INSTALL_PATH",
+                    steam_client_path,
+                );
             }
 
             if let Some(proton_bin_dir) = proton_bin_dir_from_script(proton_path) {
@@ -336,6 +362,8 @@ pub fn build_prefix_setup_execution_context(
             }
         }
     }
+
+    apply_heroic_like_runtime_env_defaults(&mut env, config, report, runtime, None, false);
 
     let mut adapted_plan = adapt_prefix_setup_plan_for_runtime(plan, report, runtime)?;
     filter_installed_winetricks_verbs(&mut adapted_plan, &effective_prefix_path);
@@ -362,9 +390,11 @@ pub fn apply_registry_keys_if_present(
         .runtime
         .selected_runtime
         .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
-    let effective_prefix_path = effective_prefix_path_for_runtime(prefix_root_path, selected_runtime);
+    let effective_prefix_path =
+        effective_prefix_path_for_runtime(prefix_root_path, selected_runtime);
 
-    let reg_windows_path = write_registry_import_file(&config.registry_keys, &effective_prefix_path)?;
+    let reg_windows_path =
+        write_registry_import_file(&config.registry_keys, &effective_prefix_path)?;
     let command_plan =
         build_regedit_import_command(config, report, prefix_root_path, &reg_windows_path)
             .context("failed to build registry import command")?;
@@ -378,7 +408,11 @@ pub fn apply_registry_keys_if_present(
         mandatory: true,
     };
 
-    Ok(Some(execute_external_command(&command, &command_plan.env, dry_run)))
+    Ok(Some(execute_external_command(
+        &command,
+        &command_plan.env,
+        dry_run,
+    )))
 }
 
 pub fn execute_script_if_present(
@@ -584,7 +618,9 @@ fn filter_installed_winetricks_verbs(plan: &mut PrefixSetupPlan, effective_prefi
     plan.commands = filtered_commands;
 }
 
-fn read_installed_winetricks_verbs(effective_prefix_path: &Path) -> std::collections::BTreeSet<String> {
+fn read_installed_winetricks_verbs(
+    effective_prefix_path: &Path,
+) -> std::collections::BTreeSet<String> {
     let path = effective_prefix_path.join("winetricks.log");
     let Ok(raw) = fs::read_to_string(path) else {
         return std::collections::BTreeSet::new();
@@ -615,8 +651,152 @@ fn split_winetricks_command_args(args: &[String]) -> (Vec<String>, Vec<String>) 
 fn is_protected_env_key(key: &str) -> bool {
     matches!(
         key,
-        "WINEPREFIX" | "PROTON_VERB" | "STEAM_COMPAT_DATA_PATH" | "STEAM_COMPAT_CLIENT_INSTALL_PATH"
+        "WINEPREFIX"
+            | "PROTON_VERB"
+            | "STEAM_COMPAT_DATA_PATH"
+            | "STEAM_COMPAT_CLIENT_INSTALL_PATH"
+            | "STEAM_COMPAT_INSTALL_PATH"
+            | "STEAM_COMPAT_APP_ID"
+            | "SteamAppId"
+            | "SteamGameId"
+            | "PROTONPATH"
+            | "GAMEID"
+            | "UMU_RUNTIME_UPDATE"
     )
+}
+
+fn apply_heroic_like_runtime_env_defaults(
+    env_pairs: &mut Vec<(String, String)>,
+    config: &GameConfig,
+    report: &DoctorReport,
+    runtime: RuntimeCandidate,
+    game_install_path: Option<&Path>,
+    set_ld_preload_default: bool,
+) {
+    let is_proton = matches!(
+        runtime,
+        RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu
+    );
+
+    if is_proton {
+        if let Some(game_install_path) = game_install_path {
+            upsert_env(
+                env_pairs,
+                "STEAM_COMPAT_INSTALL_PATH",
+                game_install_path.to_string_lossy().into_owned(),
+            );
+        }
+
+        if let Some(proton_path) = &report.runtime.proton {
+            if let Some(steam_client_path) = derive_steam_client_install_path(proton_path) {
+                upsert_env(
+                    env_pairs,
+                    "STEAM_COMPAT_CLIENT_INSTALL_PATH",
+                    steam_client_path,
+                );
+            }
+
+            if let Some(proton_root) = proton_root_from_script(proton_path) {
+                upsert_env(env_pairs, "PROTONPATH", proton_root);
+            }
+        }
+
+        let steam_compat_app_id =
+            std::env::var("STEAM_COMPAT_APP_ID").unwrap_or_else(|_| "0".to_string());
+        let steam_app_id =
+            std::env::var("SteamAppId").unwrap_or_else(|_| steam_compat_app_id.clone());
+        let steam_game_id =
+            std::env::var("SteamGameId").unwrap_or_else(|_| heroic_steam_game_id(config));
+
+        upsert_env(env_pairs, "STEAM_COMPAT_APP_ID", steam_compat_app_id);
+        upsert_env(env_pairs, "SteamAppId", steam_app_id);
+        upsert_env(env_pairs, "SteamGameId", steam_game_id);
+
+        if let Some(home) = std::env::var_os("HOME") {
+            upsert_env(
+                env_pairs,
+                "PROTON_LOG_DIR",
+                PathBuf::from(home).to_string_lossy().into_owned(),
+            );
+        }
+
+        apply_proton_feature_envs(env_pairs, config);
+    } else {
+        apply_wine_feature_envs(env_pairs, config);
+    }
+
+    if matches!(runtime, RuntimeCandidate::ProtonUmu) {
+        let game_id = std::env::var("GAMEID").unwrap_or_else(|_| "umu-0".to_string());
+        let umu_runtime_update =
+            std::env::var("UMU_RUNTIME_UPDATE").unwrap_or_else(|_| "0".to_string());
+        upsert_env(env_pairs, "GAMEID", game_id);
+        upsert_env(env_pairs, "UMU_RUNTIME_UPDATE", umu_runtime_update);
+    }
+
+    if set_ld_preload_default
+        && std::env::var_os("LD_PRELOAD").is_none()
+        && !env_pairs.iter().any(|(key, _)| key == "LD_PRELOAD")
+    {
+        upsert_env(env_pairs, "LD_PRELOAD", "");
+    }
+}
+
+fn apply_proton_feature_envs(env_pairs: &mut Vec<(String, String)>, config: &GameConfig) {
+    if !config.runner.esync {
+        upsert_env(env_pairs, "PROTON_NO_ESYNC", "1");
+    }
+
+    if !config.runner.fsync {
+        upsert_env(env_pairs, "PROTON_NO_FSYNC", "1");
+    }
+
+    if feature_enabled(config.compatibility.wine_wayland) {
+        upsert_env(env_pairs, "PROTON_ENABLE_WAYLAND", "1");
+
+        if feature_enabled(config.compatibility.hdr) {
+            upsert_env(env_pairs, "PROTON_ENABLE_HDR", "1");
+        }
+    }
+
+    if feature_enabled(config.compatibility.auto_dxvk_nvapi) {
+        upsert_env(env_pairs, "PROTON_ENABLE_NVAPI", "1");
+        upsert_env(env_pairs, "DXVK_NVAPI_ALLOW_OTHER_DRIVERS", "1");
+    } else {
+        upsert_env(env_pairs, "PROTON_DISABLE_NVAPI", "1");
+    }
+}
+
+fn apply_wine_feature_envs(env_pairs: &mut Vec<(String, String)>, config: &GameConfig) {
+    if config.runner.esync {
+        upsert_env(env_pairs, "WINEESYNC", "1");
+    }
+
+    if config.runner.fsync {
+        upsert_env(env_pairs, "WINEFSYNC", "1");
+    }
+
+    if feature_enabled(config.compatibility.wine_wayland) {
+        upsert_env(env_pairs, "DISPLAY", "");
+
+        if feature_enabled(config.compatibility.hdr) {
+            upsert_env(env_pairs, "DXVK_HDR", "1");
+        }
+    }
+
+    if feature_enabled(config.compatibility.auto_dxvk_nvapi) {
+        upsert_env(env_pairs, "DXVK_ENABLE_NVAPI", "1");
+        upsert_env(env_pairs, "DXVK_NVAPI_ALLOW_OTHER_DRIVERS", "1");
+    }
+}
+
+fn heroic_steam_game_id(config: &GameConfig) -> String {
+    let suffix = if config.exe_hash.trim().is_empty() {
+        "0"
+    } else {
+        config.exe_hash.trim()
+    };
+
+    format!("heroic-{suffix}")
 }
 
 pub fn effective_prefix_path_for_runtime(prefix_root: &Path, runtime: RuntimeCandidate) -> PathBuf {
@@ -631,7 +811,10 @@ fn derive_steam_client_install_path(proton_binary_path: &str) -> Option<String> 
     let proton_dir = proton_path.parent()?;
     let common_dir = proton_dir.parent()?;
     let steamapps_dir = common_dir.parent()?;
-    let steamapps_name = steamapps_dir.file_name()?.to_string_lossy().to_ascii_lowercase();
+    let steamapps_name = steamapps_dir
+        .file_name()?
+        .to_string_lossy()
+        .to_ascii_lowercase();
     if steamapps_name != "steamapps" {
         return None;
     }
@@ -653,11 +836,10 @@ fn build_regedit_import_command(
 
     let mut command_tokens = match selected_runtime {
         RuntimeCandidate::ProtonUmu => {
-            let umu = report
-                .runtime
-                .umu_run
-                .clone()
-                .ok_or_else(|| anyhow!("selected runtime ProtonUmu but umu-run path is missing"))?;
+            let umu =
+                report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected runtime ProtonUmu but umu-run path is missing")
+                })?;
             vec![
                 umu,
                 "regedit.exe".to_string(),
@@ -689,7 +871,11 @@ fn build_regedit_import_command(
                 .filter(|candidate| candidate.exists())
                 .map(|candidate| candidate.to_string_lossy().into_owned())
                 .unwrap_or_else(|| "regedit".to_string());
-            vec![regedit_program, "/S".to_string(), reg_windows_path.to_string()]
+            vec![
+                regedit_program,
+                "/S".to_string(),
+                reg_windows_path.to_string(),
+            ]
         }
     };
 
@@ -710,9 +896,13 @@ fn build_regedit_import_command(
     })
 }
 
-fn write_registry_import_file(registry_keys: &[orchestrator_core::RegistryKey], effective_prefix_path: &Path) -> anyhow::Result<String> {
+fn write_registry_import_file(
+    registry_keys: &[orchestrator_core::RegistryKey],
+    effective_prefix_path: &Path,
+) -> anyhow::Result<String> {
     let temp_dir = effective_prefix_path.join("drive_c/windows/temp");
-    fs::create_dir_all(&temp_dir).context("failed to create Windows temp directory inside prefix")?;
+    fs::create_dir_all(&temp_dir)
+        .context("failed to create Windows temp directory inside prefix")?;
 
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -826,7 +1016,10 @@ fn adapt_prefix_setup_plan_for_runtime(
 ) -> anyhow::Result<PrefixSetupPlan> {
     let mut out = plan.clone();
 
-    if !matches!(runtime, RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu) {
+    if !matches!(
+        runtime,
+        RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu
+    ) {
         return Ok(out);
     }
 
@@ -851,11 +1044,9 @@ fn adapt_prefix_setup_plan_for_runtime(
                 cmd.args = args;
             }
             RuntimeCandidate::ProtonUmu => {
-                cmd.program = report
-                    .runtime
-                    .umu_run
-                    .clone()
-                    .ok_or_else(|| anyhow!("selected ProtonUmu runtime but umu-run path is missing"))?;
+                cmd.program = report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected ProtonUmu runtime but umu-run path is missing")
+                })?;
                 cmd.args = vec!["createprefix".to_string()];
             }
             RuntimeCandidate::Wine => {}

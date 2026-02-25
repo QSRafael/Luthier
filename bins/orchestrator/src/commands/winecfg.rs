@@ -11,8 +11,8 @@ use orchestrator_core::{
 
 use crate::{
     launch::{
-        apply_registry_keys_if_present, build_prefix_setup_execution_context, build_winecfg_command,
-        dry_run_enabled,
+        apply_registry_keys_if_present, build_prefix_setup_execution_context,
+        build_winecfg_command, dry_run_enabled,
     },
     logging::log_event,
     paths::resolve_game_root,
@@ -52,9 +52,8 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
     }
 
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
-    let prefix_setup =
-        build_prefix_setup_execution_context(&prefix_plan, &report)
-            .context("failed to build runtime-aware prefix setup context")?;
+    let prefix_setup = build_prefix_setup_execution_context(&config, &prefix_plan, &report)
+        .context("failed to build runtime-aware prefix setup context")?;
     let setup_results = execute_prefix_setup_plan(&prefix_setup.plan, &prefix_setup.env, dry_run);
 
     if has_mandatory_failures(&setup_results) {

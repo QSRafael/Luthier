@@ -12,9 +12,8 @@ use orchestrator_core::{
 use crate::{
     instance_lock::acquire_instance_lock,
     launch::{
-        apply_registry_keys_if_present, build_launch_command,
-        build_prefix_setup_execution_context, dry_run_enabled, execute_script_if_present,
-        validate_integrity,
+        apply_registry_keys_if_present, build_launch_command, build_prefix_setup_execution_context,
+        dry_run_enabled, execute_script_if_present, validate_integrity,
     },
     logging::log_event,
     mounts::{apply_folder_mounts, MountStatus},
@@ -144,9 +143,8 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
     }
 
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
-    let prefix_setup =
-        build_prefix_setup_execution_context(&prefix_plan, &report)
-            .context("failed to build runtime-aware prefix setup context")?;
+    let prefix_setup = build_prefix_setup_execution_context(&config, &prefix_plan, &report)
+        .context("failed to build runtime-aware prefix setup context")?;
     let setup_results = execute_prefix_setup_plan(&prefix_setup.plan, &prefix_setup.env, dry_run);
 
     log_event(
@@ -226,9 +224,12 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
         }
     }
 
-    let mount_results =
-        match apply_folder_mounts(&config, &game_root, &prefix_setup.effective_prefix_path, dry_run)
-        {
+    let mount_results = match apply_folder_mounts(
+        &config,
+        &game_root,
+        &prefix_setup.effective_prefix_path,
+        dry_run,
+    ) {
         Ok(results) => results,
         Err(err) => {
             let output = serde_json::json!({
@@ -285,8 +286,9 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
         }),
     );
 
-    let launch_plan = build_launch_command(&config, &report, &game_root, &prefix_setup.prefix_root_path)
-        .context("failed to build launch command")?;
+    let launch_plan =
+        build_launch_command(&config, &report, &game_root, &prefix_setup.prefix_root_path)
+            .context("failed to build launch command")?;
 
     let pre_script_result = execute_script_if_present(
         "pre-launch-script",
