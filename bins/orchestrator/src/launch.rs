@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{anyhow, Context};
@@ -336,7 +337,8 @@ pub fn build_prefix_setup_execution_context(
         }
     }
 
-    let adapted_plan = adapt_prefix_setup_plan_for_runtime(plan, report, runtime)?;
+    let mut adapted_plan = adapt_prefix_setup_plan_for_runtime(plan, report, runtime)?;
+    filter_installed_winetricks_verbs(&mut adapted_plan, &effective_prefix_path);
 
     Ok(PrefixSetupExecutionContext {
         plan: adapted_plan,
@@ -344,6 +346,39 @@ pub fn build_prefix_setup_execution_context(
         prefix_root_path,
         effective_prefix_path,
     })
+}
+
+pub fn apply_registry_keys_if_present(
+    config: &GameConfig,
+    report: &DoctorReport,
+    prefix_root_path: &Path,
+    dry_run: bool,
+) -> anyhow::Result<Option<CommandExecutionResult>> {
+    if config.registry_keys.is_empty() {
+        return Ok(None);
+    }
+
+    let selected_runtime = report
+        .runtime
+        .selected_runtime
+        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
+    let effective_prefix_path = effective_prefix_path_for_runtime(prefix_root_path, selected_runtime);
+
+    let reg_windows_path = write_registry_import_file(&config.registry_keys, &effective_prefix_path)?;
+    let command_plan =
+        build_regedit_import_command(config, report, prefix_root_path, &reg_windows_path)
+            .context("failed to build registry import command")?;
+
+    let command = ExternalCommand {
+        name: "registry-import".to_string(),
+        program: command_plan.program,
+        args: command_plan.args,
+        timeout_secs: Some(120),
+        cwd: Some(command_plan.cwd),
+        mandatory: true,
+    };
+
+    Ok(Some(execute_external_command(&command, &command_plan.env, dry_run)))
 }
 
 pub fn execute_script_if_present(
@@ -507,6 +542,76 @@ fn prepend_path_env(env_pairs: &mut Vec<(String, String)>, prefix: &Path) {
     upsert_env(env_pairs, "PATH", value);
 }
 
+fn filter_installed_winetricks_verbs(plan: &mut PrefixSetupPlan, effective_prefix_path: &Path) {
+    let installed = read_installed_winetricks_verbs(effective_prefix_path);
+    if installed.is_empty() {
+        return;
+    }
+
+    let mut filtered_commands = Vec::with_capacity(plan.commands.len());
+
+    for mut command in std::mem::take(&mut plan.commands) {
+        if command.program != "winetricks" {
+            filtered_commands.push(command);
+            continue;
+        }
+
+        let (flags, verbs) = split_winetricks_command_args(&command.args);
+        if verbs.is_empty() {
+            filtered_commands.push(command);
+            continue;
+        }
+
+        let remaining_verbs = verbs
+            .into_iter()
+            .filter(|verb| !installed.contains(verb))
+            .collect::<Vec<_>>();
+
+        if remaining_verbs.is_empty() {
+            plan.notes.push(
+                "all configured winetricks verbs already installed; skipping winetricks step"
+                    .to_string(),
+            );
+            continue;
+        }
+
+        let mut args = flags;
+        args.extend(remaining_verbs);
+        command.args = args;
+        filtered_commands.push(command);
+    }
+
+    plan.commands = filtered_commands;
+}
+
+fn read_installed_winetricks_verbs(effective_prefix_path: &Path) -> std::collections::BTreeSet<String> {
+    let path = effective_prefix_path.join("winetricks.log");
+    let Ok(raw) = fs::read_to_string(path) else {
+        return std::collections::BTreeSet::new();
+    };
+
+    raw.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn split_winetricks_command_args(args: &[String]) -> (Vec<String>, Vec<String>) {
+    let mut flags = Vec::new();
+    let mut verbs = Vec::new();
+
+    for arg in args {
+        if verbs.is_empty() && arg.starts_with('-') {
+            flags.push(arg.clone());
+        } else {
+            verbs.push(arg.clone());
+        }
+    }
+
+    (flags, verbs)
+}
+
 fn is_protected_env_key(key: &str) -> bool {
     matches!(
         key,
@@ -533,6 +638,165 @@ fn derive_steam_client_install_path(proton_binary_path: &str) -> Option<String> 
 
     let steam_root = steamapps_dir.parent()?;
     Some(steam_root.to_string_lossy().into_owned())
+}
+
+fn build_regedit_import_command(
+    config: &GameConfig,
+    report: &DoctorReport,
+    prefix_root_path: &Path,
+    reg_windows_path: &str,
+) -> anyhow::Result<LaunchCommandPlan> {
+    let selected_runtime = report
+        .runtime
+        .selected_runtime
+        .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
+
+    let mut command_tokens = match selected_runtime {
+        RuntimeCandidate::ProtonUmu => {
+            let umu = report
+                .runtime
+                .umu_run
+                .clone()
+                .ok_or_else(|| anyhow!("selected runtime ProtonUmu but umu-run path is missing"))?;
+            vec![
+                umu,
+                "regedit.exe".to_string(),
+                "/S".to_string(),
+                reg_windows_path.to_string(),
+            ]
+        }
+        RuntimeCandidate::ProtonNative => {
+            let proton = report.runtime.proton.clone().ok_or_else(|| {
+                anyhow!("selected runtime ProtonNative but proton path is missing")
+            })?;
+            vec![
+                proton,
+                "run".to_string(),
+                "regedit.exe".to_string(),
+                "/S".to_string(),
+                reg_windows_path.to_string(),
+            ]
+        }
+        RuntimeCandidate::Wine => {
+            let wine = report
+                .runtime
+                .wine
+                .clone()
+                .ok_or_else(|| anyhow!("selected runtime Wine but wine path is missing"))?;
+            let regedit_program = Path::new(&wine)
+                .parent()
+                .map(|parent| parent.join("regedit"))
+                .filter(|candidate| candidate.exists())
+                .map(|candidate| candidate.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "regedit".to_string());
+            vec![regedit_program, "/S".to_string(), reg_windows_path.to_string()]
+        }
+    };
+
+    let (program, args) = split_program_and_args(std::mem::take(&mut command_tokens))
+        .ok_or_else(|| anyhow!("failed to build registry import command"))?;
+
+    let mut env_pairs = build_winecfg_command(config, report, prefix_root_path)
+        .context("failed to derive registry import env from runtime")?
+        .env;
+
+    // The `winecfg` helper already adds protected env keys. We only need command/env.
+    Ok(LaunchCommandPlan {
+        program,
+        args,
+        cwd: prefix_root_path.to_string_lossy().into_owned(),
+        runtime: format!("{:?}", selected_runtime),
+        env: std::mem::take(&mut env_pairs),
+    })
+}
+
+fn write_registry_import_file(registry_keys: &[orchestrator_core::RegistryKey], effective_prefix_path: &Path) -> anyhow::Result<String> {
+    let temp_dir = effective_prefix_path.join("drive_c/windows/temp");
+    fs::create_dir_all(&temp_dir).context("failed to create Windows temp directory inside prefix")?;
+
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let file_name = format!("go_registry_import_{nonce}.reg");
+    let file_path = temp_dir.join(&file_name);
+
+    let raw = render_registry_file(registry_keys);
+    let utf16 = encode_utf16le_with_bom(&raw);
+    fs::write(&file_path, utf16).context("failed to write temporary .reg import file")?;
+
+    Ok(format!(r"C:\windows\temp\{file_name}"))
+}
+
+fn render_registry_file(registry_keys: &[orchestrator_core::RegistryKey]) -> String {
+    let mut out = String::from("Windows Registry Editor Version 5.00\r\n\r\n");
+    let mut current_path: Option<&str> = None;
+
+    for key in registry_keys {
+        if current_path != Some(key.path.as_str()) {
+            if current_path.is_some() {
+                out.push_str("\r\n");
+            }
+            out.push('[');
+            out.push_str(&key.path);
+            out.push_str("]\r\n");
+            current_path = Some(key.path.as_str());
+        }
+
+        if let Some(line) = render_registry_key_line(key) {
+            out.push_str(&line);
+            out.push_str("\r\n");
+        }
+    }
+
+    out
+}
+
+fn render_registry_key_line(key: &orchestrator_core::RegistryKey) -> Option<String> {
+    let name = if key.name == "@" {
+        "@".to_string()
+    } else {
+        format!("\"{}\"", escape_reg_string(&key.name))
+    };
+
+    let ty = key.value_type.trim().to_ascii_uppercase();
+    let raw = key.value.trim();
+
+    let rendered = match ty.as_str() {
+        "REG_SZ" => format!("\"{}\"", escape_reg_string(raw)),
+        "REG_DWORD" => {
+            let value = raw.trim_start_matches("0x").to_ascii_lowercase();
+            format!("dword:{value}")
+        }
+        "REG_BINARY" => format!("hex:{}", normalize_hex_for_reg(raw)),
+        "REG_MULTI_SZ" => format!("hex(7):{}", normalize_hex_for_reg(raw)),
+        "REG_EXPAND_SZ" => format!("hex(2):{}", normalize_hex_for_reg(raw)),
+        "REG_QWORD" => format!("hex(b):{}", normalize_hex_for_reg(raw)),
+        _ => return None,
+    };
+
+    Some(format!("{name}={rendered}"))
+}
+
+fn normalize_hex_for_reg(raw: &str) -> String {
+    raw.split(',')
+        .map(str::trim)
+        .filter(|chunk| !chunk.is_empty())
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn escape_reg_string(raw: &str) -> String {
+    raw.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn encode_utf16le_with_bom(raw: &str) -> Vec<u8> {
+    let mut out = Vec::with_capacity(2 + raw.len() * 2);
+    out.extend_from_slice(&[0xFF, 0xFE]);
+    for unit in raw.encode_utf16() {
+        out.extend_from_slice(&unit.to_le_bytes());
+    }
+    out
 }
 
 fn proton_root_from_script(proton_binary_path: &str) -> Option<String> {

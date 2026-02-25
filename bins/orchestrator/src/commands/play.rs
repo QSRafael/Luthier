@@ -12,8 +12,9 @@ use orchestrator_core::{
 use crate::{
     instance_lock::acquire_instance_lock,
     launch::{
-        build_launch_command, build_prefix_setup_execution_context, dry_run_enabled,
-        execute_script_if_present, validate_integrity,
+        apply_registry_keys_if_present, build_launch_command,
+        build_prefix_setup_execution_context, dry_run_enabled, execute_script_if_present,
+        validate_integrity,
     },
     logging::log_event,
     mounts::{apply_folder_mounts, MountStatus},
@@ -183,6 +184,48 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
         ));
     }
 
+    let registry_apply_result =
+        apply_registry_keys_if_present(&config, &report, &prefix_setup.prefix_root_path, dry_run)
+            .context("failed to apply registry keys")?;
+
+    if let Some(result) = &registry_apply_result {
+        log_event(
+            trace_id,
+            LogLevel::Info,
+            "registry",
+            "GO-RG-020",
+            "registry_keys_import_executed",
+            serde_json::json!({
+                "status": result.status,
+                "exit_code": result.exit_code,
+                "duration_ms": result.duration_ms,
+                "entries": config.registry_keys.len(),
+                "dry_run": dry_run,
+            }),
+        );
+
+        if matches!(result.status, StepStatus::Failed | StepStatus::TimedOut) {
+            let output = serde_json::json!({
+                "doctor": report,
+                "prefix_setup_plan": prefix_plan,
+                "prefix_setup_execution": setup_results,
+                "registry_apply": result,
+                "launch": {
+                    "status": "aborted",
+                    "reason": "registry import failed"
+                }
+            });
+
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output)
+                    .context("failed to serialize registry import failure")?
+            );
+
+            return Err(anyhow!("registry import failed"));
+        }
+    }
+
     let mount_results =
         match apply_folder_mounts(&config, &game_root, &prefix_setup.effective_prefix_path, dry_run)
         {
@@ -192,6 +235,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
                 "doctor": report,
                 "prefix_setup_plan": prefix_plan,
                 "prefix_setup_execution": setup_results,
+                "registry_apply": registry_apply_result,
                 "folder_mounts": {
                     "status": "failed",
                     "error": err.to_string(),
@@ -274,6 +318,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
                 "doctor": report,
                 "prefix_setup_plan": prefix_plan,
                 "prefix_setup_execution": setup_results,
+                "registry_apply": registry_apply_result,
                 "folder_mounts": mount_results,
                 "pre_launch": result,
                 "launch": {
@@ -353,6 +398,7 @@ pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
         "doctor": report,
         "prefix_setup_plan": prefix_plan,
         "prefix_setup_execution": setup_results,
+        "registry_apply": registry_apply_result,
         "folder_mounts": mount_results,
         "launch_plan": launch_plan,
         "pre_launch": pre_script_result,

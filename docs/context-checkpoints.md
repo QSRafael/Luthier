@@ -1543,3 +1543,24 @@ Observacao:
 Validacao do checkpoint:
 - `/home/rafael/.cargo/bin/cargo build -p orchestrator`
 - `/home/rafael/.cargo/bin/cargo test -p orchestrator -- --nocapture`
+
+### 2026-02-24 - Checkpoint 49
+Escopo implementado:
+- Aplicacao de `registry_keys` no orquestrador (pendencia funcional fechada para fluxo basico):
+  - apos o setup do prefixo, o orquestrador gera um `.reg` temporario dentro do prefixo (`drive_c/windows/temp`) e executa import via `regedit` com o runtime selecionado (Wine/Proton/UMU);
+  - suporta tipos principais usados no MVP/imports atuais (`REG_SZ`, `REG_DWORD`, `REG_BINARY`, `REG_MULTI_SZ`, `REG_EXPAND_SZ`, `REG_QWORD`);
+  - falha de import passa a abortar `--play`/`--winecfg` com saida estruturada (`registry_apply`).
+- Prefix setup mais inteligente / idempotente:
+  - filtragem de verbos do `winetricks` ja instalados lendo `winetricks.log` do prefixo efetivo;
+  - evita rerodar `winetricks` a cada launch quando os verbos ja estao presentes (reduz risco de conflitos e tempo de startup).
+- Logs/saida JSON:
+  - `--play` e `--winecfg` agora incluem `registry_apply` na saida final (ou de erro), facilitando debug.
+
+Observacoes:
+- Essa etapa ataca diretamente os dois problemas vistos no teste real do Age of Empires III:
+  1) entradas de registro nao aplicadas;
+  2) rerun de winetricks em toda execucao (que estava contribuindo para conflitos de runtime).
+
+Validacao do checkpoint:
+- `/home/rafael/.cargo/bin/cargo build -p orchestrator`
+- `/home/rafael/.cargo/bin/cargo test -p orchestrator -- --nocapture`

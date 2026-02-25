@@ -10,7 +10,10 @@ use orchestrator_core::{
 };
 
 use crate::{
-    launch::{build_prefix_setup_execution_context, build_winecfg_command, dry_run_enabled},
+    launch::{
+        apply_registry_keys_if_present, build_prefix_setup_execution_context, build_winecfg_command,
+        dry_run_enabled,
+    },
     logging::log_event,
     paths::resolve_game_root,
     payload::load_embedded_config_required,
@@ -72,6 +75,10 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
         return Err(anyhow!("mandatory prefix setup step failed"));
     }
 
+    let registry_apply_result =
+        apply_registry_keys_if_present(&config, &report, &prefix_setup.prefix_root_path, dry_run)
+            .context("failed to apply registry keys")?;
+
     let command_plan = build_winecfg_command(&config, &report, &prefix_setup.prefix_root_path)
         .context("failed to build winecfg command")?;
 
@@ -106,6 +113,7 @@ pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
         "doctor": report,
         "prefix_setup_plan": prefix_plan,
         "prefix_setup_execution": setup_results,
+        "registry_apply": registry_apply_result,
         "winecfg_command": command_plan,
         "winecfg_result": result,
     });
