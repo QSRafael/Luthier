@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::config::{FeatureState, GameConfig, RuntimeCandidate};
+use crate::config::{FeatureState, GameConfig, RuntimeCandidate, RuntimePreference};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum CheckStatus {
@@ -46,11 +46,29 @@ pub struct DoctorReport {
 }
 
 pub fn run_doctor(config: Option<&GameConfig>) -> DoctorReport {
-    let proton = discover_proton().map(path_to_string);
+    let requested_proton_version = config
+        .and_then(|cfg| {
+            let value = cfg.runner.proton_version.trim();
+            if value.is_empty() {
+                None
+            } else {
+                Some(value.to_string())
+            }
+        });
+    let (proton_path, proton_version_matched) =
+        discover_proton_with_preference(requested_proton_version.as_deref());
+    let proton = proton_path.map(path_to_string);
     let wine = discover_wine().map(path_to_string);
     let umu_run = discover_umu().map(path_to_string);
 
-    let runtime = evaluate_runtime(config, proton.clone(), wine.clone(), umu_run.clone());
+    let runtime = evaluate_runtime(
+        config,
+        proton.clone(),
+        wine.clone(),
+        umu_run.clone(),
+        requested_proton_version.as_deref(),
+        proton_version_matched,
+    );
 
     let dependencies = evaluate_dependencies(config);
 
@@ -73,6 +91,8 @@ fn evaluate_runtime(
     proton: Option<String>,
     wine: Option<String>,
     umu_run: Option<String>,
+    requested_proton_version: Option<&str>,
+    proton_version_matched: bool,
 ) -> RuntimeDiscovery {
     let has_proton = proton.is_some();
     let has_wine = wine.is_some();
@@ -80,31 +100,58 @@ fn evaluate_runtime(
 
     if let Some(cfg) = config {
         let strict = cfg.requirements.runtime.strict;
-        let primary = cfg.requirements.runtime.primary;
-        let fallback = &cfg.requirements.runtime.fallback_order;
+        let candidates = effective_runtime_candidates(cfg);
 
         let selected_runtime = if strict {
-            if candidate_available(primary, has_proton, has_wine, has_umu) {
-                Some(primary)
+            if let Some(primary) = candidates.first().copied() {
+                if candidate_available(primary, has_proton, has_wine, has_umu) {
+                    Some(primary)
+                } else {
+                    None
+                }
             } else {
                 None
             }
         } else {
-            let mut candidates = Vec::new();
-            candidates.push(primary);
-            candidates.extend(fallback.iter().copied());
             candidates
                 .into_iter()
                 .find(|c| candidate_available(*c, has_proton, has_wine, has_umu))
         };
 
-        let (runtime_status, runtime_note) = if selected_runtime.is_some() {
-            (CheckStatus::OK, "runtime candidate selected".to_string())
-        } else {
+        let proton_runtime_selected = matches!(
+            selected_runtime,
+            Some(RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu)
+        );
+
+        let (runtime_status, runtime_note) = if selected_runtime.is_none() {
             (
                 CheckStatus::BLOCKER,
                 "no runtime candidate available with current policy".to_string(),
             )
+        } else if proton_runtime_selected {
+            match (requested_proton_version, proton.as_deref(), proton_version_matched) {
+                (Some(requested), Some(selected_path), true) => (
+                    CheckStatus::OK,
+                    format!(
+                        "runtime candidate selected (requested proton version '{requested}' found at {selected_path})"
+                    ),
+                ),
+                (Some(requested), Some(selected_path), false) if strict => (
+                    CheckStatus::BLOCKER,
+                    format!(
+                        "requested proton version '{requested}' not found and runtime strict mode is enabled (fallback candidate path: {selected_path})"
+                    ),
+                ),
+                (Some(requested), Some(selected_path), false) => (
+                    CheckStatus::WARN,
+                    format!(
+                        "requested proton version '{requested}' not found; using fallback proton at {selected_path}"
+                    ),
+                ),
+                _ => (CheckStatus::OK, "runtime candidate selected".to_string()),
+            }
+        } else {
+            (CheckStatus::OK, "runtime candidate selected".to_string())
         };
 
         RuntimeDiscovery {
@@ -126,8 +173,26 @@ fn evaluate_runtime(
             None
         };
 
-        let (runtime_status, runtime_note) = if selected_runtime.is_some() {
-            (CheckStatus::OK, "runtime discovered".to_string())
+        let (runtime_status, runtime_note) = if let Some(selected) = selected_runtime {
+            if matches!(selected, RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu) {
+                match (requested_proton_version, proton.as_deref(), proton_version_matched) {
+                    (Some(requested), Some(selected_path), true) => (
+                        CheckStatus::OK,
+                        format!(
+                            "runtime discovered (requested proton version '{requested}' found at {selected_path})"
+                        ),
+                    ),
+                    (Some(requested), Some(selected_path), false) => (
+                        CheckStatus::WARN,
+                        format!(
+                            "runtime discovered but requested proton version '{requested}' was not found; using {selected_path}"
+                        ),
+                    ),
+                    _ => (CheckStatus::OK, "runtime discovered".to_string()),
+                }
+            } else {
+                (CheckStatus::OK, "runtime discovered".to_string())
+            }
         } else {
             (
                 CheckStatus::WARN,
@@ -283,6 +348,59 @@ fn candidate_available(
     }
 }
 
+fn effective_runtime_candidates(cfg: &GameConfig) -> Vec<RuntimeCandidate> {
+    let mut base = Vec::new();
+    push_unique_candidate(&mut base, cfg.requirements.runtime.primary);
+    for candidate in &cfg.requirements.runtime.fallback_order {
+        push_unique_candidate(&mut base, *candidate);
+    }
+
+    match cfg.runner.runtime_preference {
+        RuntimePreference::Auto => base,
+        RuntimePreference::Proton => reorder_candidates(
+            &base,
+            &[
+                RuntimeCandidate::ProtonUmu,
+                RuntimeCandidate::ProtonNative,
+                RuntimeCandidate::Wine,
+            ],
+        ),
+        RuntimePreference::Wine => reorder_candidates(
+            &base,
+            &[
+                RuntimeCandidate::Wine,
+                RuntimeCandidate::ProtonUmu,
+                RuntimeCandidate::ProtonNative,
+            ],
+        ),
+    }
+}
+
+fn reorder_candidates(
+    base: &[RuntimeCandidate],
+    preferred_order: &[RuntimeCandidate],
+) -> Vec<RuntimeCandidate> {
+    let mut out = Vec::new();
+
+    for preferred in preferred_order {
+        if base.contains(preferred) {
+            push_unique_candidate(&mut out, *preferred);
+        }
+    }
+
+    for candidate in base {
+        push_unique_candidate(&mut out, *candidate);
+    }
+
+    out
+}
+
+fn push_unique_candidate(out: &mut Vec<RuntimeCandidate>, candidate: RuntimeCandidate) {
+    if !out.contains(&candidate) {
+        out.push(candidate);
+    }
+}
+
 fn discover_umu() -> Option<PathBuf> {
     if let Some(from_env) = env::var_os("UMU_RUNTIME") {
         let candidate = PathBuf::from(from_env);
@@ -308,7 +426,21 @@ fn discover_wine() -> Option<PathBuf> {
         .or_else(|| home_relative_executable(".local/bin/wine"))
 }
 
-fn discover_proton() -> Option<PathBuf> {
+fn discover_proton_with_preference(requested_version: Option<&str>) -> (Option<PathBuf>, bool) {
+    let requested_version = requested_version.map(str::trim).filter(|v| !v.is_empty());
+
+    if let Some(requested) = requested_version {
+        if let Some(found) = find_proton_by_requested_version(requested) {
+            return (Some(found), true);
+        }
+
+        return (discover_latest_proton(), false);
+    }
+
+    (discover_latest_proton(), false)
+}
+
+fn discover_latest_proton() -> Option<PathBuf> {
     if let Some(from_env) = env::var_os("PROTONPATH") {
         if let Some(path) = proton_from_path(PathBuf::from(from_env)) {
             return Some(path);
@@ -330,6 +462,78 @@ fn discover_proton() -> Option<PathBuf> {
     }
 
     None
+}
+
+fn find_proton_by_requested_version(requested_version: &str) -> Option<PathBuf> {
+    if let Some(direct) = proton_from_path(PathBuf::from(requested_version)) {
+        return Some(direct);
+    }
+
+    if let Some(from_env) = env::var_os("PROTONPATH") {
+        if let Some(path) = proton_from_path(PathBuf::from(from_env)) {
+            if proton_path_matches_requested_version(&path, requested_version) {
+                return Some(path);
+            }
+        }
+    }
+
+    if let Some(paths) = env::var_os("STEAM_COMPAT_TOOL_PATHS") {
+        for p in env::split_paths(&paths) {
+            if let Some(path) = proton_from_path(p) {
+                if proton_path_matches_requested_version(&path, requested_version) {
+                    return Some(path);
+                }
+            }
+        }
+    }
+
+    let mut exact: Option<(SystemTime, PathBuf)> = None;
+    let mut fuzzy: Option<(SystemTime, PathBuf)> = None;
+
+    for root in known_proton_roots() {
+        let entries = match fs::read_dir(&root) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            let proton_path = match proton_from_path(entry_path) {
+                Some(path) => path,
+                None => continue,
+            };
+
+            let parent_name = proton_path
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            let requested_lower = requested_version.to_ascii_lowercase();
+            let modified = path_modified_or_epoch(&proton_path);
+
+            if parent_name == requested_lower {
+                match &exact {
+                    Some((best_modified, best_path))
+                        if modified < *best_modified
+                            || (modified == *best_modified && proton_path <= *best_path) => {}
+                    _ => exact = Some((modified, proton_path)),
+                }
+                continue;
+            }
+
+            if proton_path_matches_requested_version(&proton_path, requested_version) {
+                match &fuzzy {
+                    Some((best_modified, best_path))
+                        if modified < *best_modified
+                            || (modified == *best_modified && proton_path <= *best_path) => {}
+                    _ => fuzzy = Some((modified, proton_path)),
+                }
+            }
+        }
+    }
+
+    exact.or(fuzzy).map(|(_, path)| path)
 }
 
 fn known_proton_roots() -> Vec<PathBuf> {
@@ -359,6 +563,33 @@ fn proton_from_path(path: PathBuf) -> Option<PathBuf> {
     }
 
     None
+}
+
+fn proton_path_matches_requested_version(proton_path: &Path, requested_version: &str) -> bool {
+    let requested = requested_version.trim();
+    if requested.is_empty() {
+        return false;
+    }
+
+    let requested_lower = requested.to_ascii_lowercase();
+    let proton_path_string = proton_path.to_string_lossy().to_ascii_lowercase();
+
+    if proton_path_string == requested_lower {
+        return true;
+    }
+
+    if proton_path_string.contains(&requested_lower) {
+        return true;
+    }
+
+    let parent_name = proton_path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    parent_name == requested_lower || parent_name.contains(&requested_lower)
 }
 
 fn find_latest_proton_from_root(root: &Path) -> Option<PathBuf> {
@@ -484,5 +715,32 @@ mod tests {
 
         let forced_off = evaluate_component("gamescope", Some(FeatureState::MandatoryOff), None);
         assert_eq!(forced_off.status, CheckStatus::INFO);
+    }
+
+    #[test]
+    fn reorder_candidates_prioritizes_preferred_entries_present_in_policy() {
+        let base = vec![
+            RuntimeCandidate::ProtonNative,
+            RuntimeCandidate::Wine,
+            RuntimeCandidate::ProtonUmu,
+        ];
+
+        let reordered = reorder_candidates(
+            &base,
+            &[
+                RuntimeCandidate::ProtonUmu,
+                RuntimeCandidate::ProtonNative,
+                RuntimeCandidate::Wine,
+            ],
+        );
+
+        assert_eq!(
+            reordered,
+            vec![
+                RuntimeCandidate::ProtonUmu,
+                RuntimeCandidate::ProtonNative,
+                RuntimeCandidate::Wine,
+            ]
+        );
     }
 }
