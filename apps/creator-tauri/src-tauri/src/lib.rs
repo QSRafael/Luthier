@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 const HERO_SPLASH_TARGET_WIDTH: u32 = 960;
 const HERO_SPLASH_TARGET_HEIGHT: u32 = 310;
 const HERO_SEARCH_ENDPOINT: &str = "https://steamgrid.usebottles.com/api/search/";
+const STEAMGRIDDB_API_BASE: &str = "https://www.steamgriddb.com/api/v2";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateExecutableInput {
@@ -296,6 +297,23 @@ pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageO
         .build()
         .map_err(|err| format!("failed to build HTTP client: {err}"))?;
 
+    if let Some((hero_url, source)) = search_hero_image_via_steamgriddb_api(game_name, &client)? {
+        log_backend_event(
+            "INFO",
+            "GO-CR-122",
+            "search_hero_image_completed",
+            serde_json::json!({
+                "game_name": game_name,
+                "image_url": hero_url,
+                "source": source,
+            }),
+        );
+        return Ok(SearchHeroImageOutput {
+            source,
+            image_url: hero_url,
+        });
+    }
+
     let response = client
         .get(&url)
         .header(
@@ -317,6 +335,12 @@ pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageO
     let image_url = parse_hero_search_response_url(&body)
         .ok_or_else(|| "hero image search returned an unsupported response".to_string())?;
 
+    if !is_hero_image_url(&image_url) {
+        return Err(
+            "automatic search returned a grid image, not a hero image; configure STEAMGRIDDB_API_KEY (or GAME_ORCH_STEAMGRIDDB_API_KEY) to fetch SteamGridDB hero images".to_string(),
+        );
+    }
+
     log_backend_event(
         "INFO",
         "GO-CR-122",
@@ -328,7 +352,7 @@ pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageO
     );
 
     Ok(SearchHeroImageOutput {
-        source: "steamgrid-usebottles".to_string(),
+        source: "steamgrid-usebottles-hero".to_string(),
         image_url,
     })
 }
@@ -611,6 +635,111 @@ fn parse_hero_search_response_url(body: &str) -> Option<String> {
     validate_hero_http_url(trimmed).map(str::to_string)
 }
 
+fn search_hero_image_via_steamgriddb_api(
+    game_name: &str,
+    client: &Client,
+) -> Result<Option<(String, String)>, String> {
+    let Some(api_key) = read_steamgriddb_api_key() else {
+        return Ok(None);
+    };
+
+    let encoded_title = urlencoding::encode(game_name);
+    let search_url = format!("{STEAMGRIDDB_API_BASE}/search/autocomplete/{encoded_title}");
+    let search_response = client
+        .get(&search_url)
+        .header(reqwest::header::AUTHORIZATION, format!("Bearer {api_key}"))
+        .header(
+            reqwest::header::USER_AGENT,
+            "game-orchestrator-creator/0.1 steamgriddb-hero-search",
+        )
+        .send()
+        .map_err(|err| format!("failed to query SteamGridDB autocomplete: {err}"))?;
+
+    let search_status = search_response.status();
+    let search_json: serde_json::Value = search_response
+        .json()
+        .map_err(|err| format!("failed to decode SteamGridDB autocomplete response: {err}"))?;
+    if !search_status.is_success() {
+        return Err(format!(
+            "SteamGridDB autocomplete failed with HTTP {search_status}"
+        ));
+    }
+
+    let game_id = search_json
+        .get("data")
+        .and_then(|data| data.as_array())
+        .and_then(|items| items.first())
+        .and_then(|item| item.get("id"))
+        .and_then(|id| id.as_u64())
+        .ok_or_else(|| "SteamGridDB autocomplete returned no matching game".to_string())?;
+
+    let heroes_url = format!("{STEAMGRIDDB_API_BASE}/heroes/game/{game_id}");
+    let heroes_response = client
+        .get(&heroes_url)
+        .header(reqwest::header::AUTHORIZATION, format!("Bearer {api_key}"))
+        .header(
+            reqwest::header::USER_AGENT,
+            "game-orchestrator-creator/0.1 steamgriddb-hero-search",
+        )
+        .send()
+        .map_err(|err| format!("failed to query SteamGridDB heroes: {err}"))?;
+
+    let heroes_status = heroes_response.status();
+    let heroes_json: serde_json::Value = heroes_response
+        .json()
+        .map_err(|err| format!("failed to decode SteamGridDB heroes response: {err}"))?;
+    if !heroes_status.is_success() {
+        return Err(format!("SteamGridDB heroes lookup failed with HTTP {heroes_status}"));
+    }
+
+    let hero_url = heroes_json
+        .get("data")
+        .and_then(|data| data.as_array())
+        .and_then(|items| items.iter().find_map(extract_steamgriddb_hero_url))
+        .ok_or_else(|| "SteamGridDB heroes lookup returned no hero image".to_string())?;
+
+    Ok(Some((hero_url, "steamgriddb-api-hero".to_string())))
+}
+
+fn read_steamgriddb_api_key() -> Option<String> {
+    for key in ["STEAMGRIDDB_API_KEY", "GAME_ORCH_STEAMGRIDDB_API_KEY"] {
+        if let Ok(value) = env::var(key) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn extract_steamgriddb_hero_url(item: &serde_json::Value) -> Option<String> {
+    for candidate in [
+        item.get("thumb"),
+        item.get("url"),
+        item.get("thumbnail"),
+        item.get("image"),
+    ] {
+        if let Some(value) = candidate {
+            if let Some(url) = value.as_str() {
+                if validate_hero_http_url(url).is_some() && is_hero_image_url(url) {
+                    return Some(url.to_string());
+                }
+            }
+            if let Some(obj) = value.as_object() {
+                for key in ["url", "thumb", "small", "medium", "large"] {
+                    if let Some(url) = obj.get(key).and_then(|v| v.as_str()) {
+                        if validate_hero_http_url(url).is_some() && is_hero_image_url(url) {
+                            return Some(url.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 fn validate_hero_http_url(raw: &str) -> Option<&str> {
     let trimmed = raw.trim();
     if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
@@ -618,6 +747,14 @@ fn validate_hero_http_url(raw: &str) -> Option<&str> {
     } else {
         None
     }
+}
+
+fn is_hero_image_url(raw: &str) -> bool {
+    let lower = raw.to_ascii_lowercase();
+    lower.contains("/hero/")
+        || lower.contains("/hero_thumb/")
+        || lower.contains("/file/sgdb-cdn/hero/")
+        || lower.contains("/file/sgdb-cdn/hero_thumb/")
 }
 
 fn fetch_remote_bytes(url: &str) -> Result<Vec<u8>, String> {
