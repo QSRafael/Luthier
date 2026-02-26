@@ -1,3 +1,4 @@
+pub mod create_executable;
 pub mod extract_icon;
 pub mod hash_executable;
 pub mod import_registry;
