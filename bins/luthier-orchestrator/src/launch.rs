@@ -1228,7 +1228,7 @@ fn registry_keys_content_hash(registry_keys: &[luthier_orchestrator_core::Regist
 }
 
 fn registry_import_cache_marker_path(cache_scope_path: &Path) -> PathBuf {
-    cache_scope_path.join(".game_orch_registry.sha256")
+    cache_scope_path.join(".luthier_registry.sha256")
 }
 
 fn registry_import_cache_is_fresh(cache_scope_path: &Path, expected_hash: &str) -> bool {
@@ -1265,7 +1265,7 @@ fn cached_registry_import_result() -> CommandExecutionResult {
 }
 
 fn winecfg_import_cache_marker_path(cache_scope_path: &Path) -> PathBuf {
-    cache_scope_path.join(".game_orch_winecfg.sha256")
+    cache_scope_path.join(".luthier_winecfg.sha256")
 }
 
 fn winecfg_import_cache_is_fresh(cache_scope_path: &Path, expected_hash: &str) -> bool {

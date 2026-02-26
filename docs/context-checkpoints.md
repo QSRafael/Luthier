@@ -178,7 +178,7 @@ Escopo implementado:
 
 Proximo checkpoint planejado:
 - Expor comandos Tauri reais (`#[tauri::command]`) no backend do App Luthier.
-- Criar UI mínima do Criador para gerar e testar sem sair da janela.
+- Criar UI mínima do Luthier para gerar e testar sem sair da janela.
 
 ### 2026-02-24 - Checkpoint 10
 Escopo implementado:
@@ -239,7 +239,7 @@ Proximo checkpoint planejado:
 
 ### 2026-02-24 - Checkpoint 13
 Escopo implementado:
-- i18n inicial da UI do Criador:
+- i18n inicial da UI do Luthier:
   - idiomas:
     - `pt-BR`
     - `en-US`
@@ -843,7 +843,7 @@ Escopo implementado:
   - `LuthierPage.tsx` e `useLuthierController.ts` agora usam chaves centralizadas (`ct(...)`) em vez de pares inline `tx('pt','en')`;
   - casos dinamicos (contagem/erro/interpolacao) migrados para `ctf(...)` com placeholders (`{count}`, `{error}`, etc.).
 - Novo dicionario dedicado do Luthier:
-  - arquivo `apps/luthier/src/features/luthier/luthier-copy.ts` com `creatorMessages`, `creatorTranslate` e `creatorFormat`;
+  - arquivo `apps/luthier/src/features/luthier/luthier-copy.ts` com `luthierMessages`, `luthierTranslate` e `luthierFormat`;
   - centraliza textos de interface da feature Luthier em um unico lugar.
 - Internacionalizacao pronta para escalar:
   - para adicionar novo idioma do Luthier, basta adicionar um novo bloco no dicionario da feature (e no `Locale` global), sem alterar componentes/tela;
@@ -1428,7 +1428,7 @@ Escopo implementado:
 
 Boas praticas aplicadas nesta etapa:
 - separacao por responsabilidade (componentes por secao visual e dados por idioma);
-- manutencao da API publica existente (sem alterar chamadas de `ct(...)` / `creatorTranslate(...)`);
+- manutencao da API publica existente (sem alterar chamadas de `ct(...)` / `luthierTranslate(...)`);
 - refatoracao incremental com validacao de build apos cada bloco.
 
 Validacao do checkpoint:

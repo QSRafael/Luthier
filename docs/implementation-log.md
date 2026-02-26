@@ -143,7 +143,7 @@
   - fallback de execução quando feature `tauri-commands` não está ativa.
 - `tauri.conf.json` mínimo adicionado para inicializar runtime/app window.
 - Próximo passo técnico:
-- iniciar frontend mínimo do Criador (estrutura de abas + formulário + revisão/gerar/testar).
+- iniciar frontend mínimo do Luthier (estrutura de abas + formulário + revisão/gerar/testar).
 
 ## 2026-02-24 (checkpoint 12)
 - Frontend mínimo do App Luthier implementado (`apps/luthier`):
