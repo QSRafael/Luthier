@@ -9,8 +9,8 @@ export function WinecfgWindowsVersionItem(props: WinecfgSectionViewProps) {
 
   return (
             <FieldShell
-              label={ct('creator_windows_version_winecfg')}
-              help={ct('creator_optional_override_for_the_windows_version_reported_by_th')}
+              label={ct('luthier_windows_version_winecfg')}
+              help={ct('luthier_optional_override_for_the_windows_version_reported_by_th')}
               compact
             >
               <Select

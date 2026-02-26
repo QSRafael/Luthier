@@ -48,7 +48,7 @@ export function RuntimeTabSection(props: LuthierPageSectionProps) {
   return (
           <section class="stack">
             <SegmentedField<RuntimePreference>
-              label={ct('creator_general_runtime_preference')}
+              label={ct('luthier_general_runtime_preference')}
               help="Selecione o runtime principal do jogo. Proton-GE é o padrão recomendado."
               value={config().runner.runtime_preference}
               options={runtimePreferenceOptions()}
@@ -100,8 +100,8 @@ export function RuntimeTabSection(props: LuthierPageSectionProps) {
               <ItemFooter>
                 <div class="grid gap-3 md:grid-cols-2">
                   <SwitchChoiceCard
-                    title={ct('creator_required_version')}
-                    description={ct('creator_when_enabled_requires_the_configured_runtime_version_to')}
+                    title={ct('luthier_required_version')}
+                    description={ct('luthier_when_enabled_requires_the_configured_runtime_version_to')}
                     checked={config().requirements.runtime.strict}
                     onChange={(checked) =>
                       patchConfig((prev) => ({
@@ -118,8 +118,8 @@ export function RuntimeTabSection(props: LuthierPageSectionProps) {
                   />
 
                   <SwitchChoiceCard
-                    title={ct('creator_auto_update')}
-                    description={ct('creator_updates_runtime_metadata_when_applicable_before_launchin')}
+                    title={ct('luthier_auto_update')}
+                    description={ct('luthier_updates_runtime_metadata_when_applicable_before_launchin')}
                     checked={config().runner.auto_update}
                     onChange={(checked) =>
                       patchConfig((prev) => ({
@@ -139,7 +139,7 @@ export function RuntimeTabSection(props: LuthierPageSectionProps) {
               <div class="grid gap-3 md:grid-cols-2">
                 <SwitchChoiceCard
                   title="ESYNC"
-                  description={ct('creator_enables_synchronization_optimizations_in_runtime')}
+                  description={ct('luthier_enables_synchronization_optimizations_in_runtime')}
                   checked={config().runner.esync}
                   onChange={(checked) =>
                     patchConfig((prev) => ({
@@ -154,7 +154,7 @@ export function RuntimeTabSection(props: LuthierPageSectionProps) {
 
                 <SwitchChoiceCard
                   title="FSYNC"
-                  description={ct('creator_enables_fsync_optimizations_when_supported')}
+                  description={ct('luthier_enables_fsync_optimizations_when_supported')}
                   checked={config().runner.fsync}
                   onChange={(checked) =>
                     patchConfig((prev) => ({
@@ -187,7 +187,7 @@ export function RuntimeTabSection(props: LuthierPageSectionProps) {
 
             <FeatureStateField
               label="Easy AntiCheat Runtime"
-              help={ct('creator_policy_for_local_easy_anticheat_runtime')}
+              help={ct('luthier_policy_for_local_easy_anticheat_runtime')}
               value={config().compatibility.easy_anti_cheat_runtime}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -202,7 +202,7 @@ export function RuntimeTabSection(props: LuthierPageSectionProps) {
 
             <FeatureStateField
               label="BattleEye Runtime"
-              help={ct('creator_policy_for_local_battleeye_runtime')}
+              help={ct('luthier_policy_for_local_battleeye_runtime')}
               value={config().compatibility.battleye_runtime}
               onChange={(value) =>
                 patchConfig((prev) => ({

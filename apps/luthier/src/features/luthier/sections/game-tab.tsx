@@ -123,7 +123,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
       (item) => item.target_windows_path.trim().toLowerCase() === target
     )
     if (duplicateTarget) {
-      return ct('creator_validation_duplicate_mount_target')
+      return ct('luthier_validation_duplicate_mount_target')
     }
     const duplicatePair = config().folder_mounts.some(
       (item) =>
@@ -131,7 +131,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
         item.target_windows_path.trim().toLowerCase() === target
     )
     if (duplicatePair) {
-      return ct('creator_validation_duplicate_mount')
+      return ct('luthier_validation_duplicate_mount')
     }
     return ''
   })
@@ -141,16 +141,16 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
             <Show when={mode === 'overview'}>
               <>
             <TextInputField
-              label={ct('creator_game_name')}
-              help={ct('creator_name_shown_in_splash_and_local_database')}
+              label={ct('luthier_game_name')}
+              help={ct('luthier_name_shown_in_splash_and_local_database')}
               value={config().game_name}
               onInput={(value) => patchConfig((prev) => ({ ...prev, game_name: value }))}
             />
 
             <FieldShell
-              label={ct('creator_splash_hero_image')}
-              help={ct('creator_hero_image_used_as_splash_background_downloaded_and_emb')}
-              hint={ct('creator_hero_image_ratio_96_31_and_converted_to_webp')}
+              label={ct('luthier_splash_hero_image')}
+              help={ct('luthier_hero_image_used_as_splash_background_downloaded_and_emb')}
+              hint={ct('luthier_hero_image_ratio_96_31_and_converted_to_webp')}
               footer={
                 config().splash.hero_image_data_url.trim() || heroImageProcessing()
                   ? (
@@ -163,14 +163,14 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                               <div class="absolute inset-0 grid place-items-center">
                                 <div class="flex items-center gap-2 text-xs text-muted-foreground">
                                   <Spinner class="size-3" />
-                                  <span>{ct('creator_processing')}</span>
+                                  <span>{ct('luthier_processing')}</span>
                                 </div>
                               </div>
                             }
                           >
                             <img
                               src={config().splash.hero_image_data_url}
-                              alt={ct('creator_splash_hero_image_preview')}
+                              alt={ct('luthier_splash_hero_image_preview')}
                               class="absolute inset-0 h-full w-full object-contain"
                             />
                             <Show when={heroImageProcessing()}>
@@ -178,7 +178,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                               <div class="absolute inset-0 grid place-items-center">
                                 <div class="flex items-center gap-2 rounded-md bg-background/70 px-2 py-1 text-xs">
                                   <Spinner class="size-3" />
-                                  <span>{ct('creator_processing')}</span>
+                                  <span>{ct('luthier_processing')}</span>
                                 </div>
                               </div>
                             </Show>
@@ -210,15 +210,15 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                     when={heroImageAutoSearching() || heroImageProcessing()}
                     fallback={
                       canSearchAnotherHeroImage()
-                        ? ct('creator_search_another')
-                        : ct('creator_search_automatically')
+                        ? ct('luthier_search_another')
+                        : ct('luthier_search_automatically')
                     }
                   >
                     <span class="inline-flex items-center gap-2">
                       <Spinner class="size-3" />
                       {heroImageAutoSearching()
-                        ? ct('creator_searching')
-                        : ct('creator_processing')}
+                        ? ct('luthier_searching')
+                        : ct('luthier_processing')}
                     </span>
                   </Show>
                 </Button>
@@ -226,19 +226,19 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
             </FieldShell>
 
             <FieldShell
-              label={ct('creator_main_executable_exe')}
-              help={ct('creator_use_picker_to_select_the_real_game_executable')}
+              label={ct('luthier_main_executable_exe')}
+              help={ct('luthier_use_picker_to_select_the_real_game_executable')}
             >
               <div class="grid gap-2">
                 <div class="picker-row">
                   <Input value={exePath()} placeholder="/home/user/Games/MyGame/game.exe" onInput={(e) => setExePath(e.currentTarget.value)} />
                   <Button type="button" variant="outline" onClick={pickExecutable}>
-                    {ct('creator_select_file')}
+                    {ct('luthier_select_file')}
                   </Button>
                 </div>
 
                 <div class="px-0.5 text-xs">
-                  <span class="font-medium text-muted-foreground">{ct('creator_sha_256_hash')}:</span>{' '}
+                  <span class="font-medium text-muted-foreground">{ct('luthier_sha_256_hash')}:</span>{' '}
                   <Show
                     when={!hashingExecutable()}
                     fallback={
@@ -257,13 +257,13 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
             </FieldShell>
 
             <FieldShell
-              label={ct('creator_extracted_icon')}
-              help={ct('creator_game_icon_preview_for_easier_visual_identification')}
-              hint={ct('creator_visual_is_ready_real_extraction_will_be_wired_to_backend')}
+              label={ct('luthier_extracted_icon')}
+              help={ct('luthier_game_icon_preview_for_easier_visual_identification')}
+              hint={ct('luthier_visual_is_ready_real_extraction_will_be_wired_to_backend')}
             >
               <div class="icon-preview">
                 <div class="icon-box">
-                  <Show when={iconPreviewPath()} fallback={<span>{ct('creator_no_extracted_icon')}</span>}>
+                  <Show when={iconPreviewPath()} fallback={<span>{ct('luthier_no_extracted_icon')}</span>}>
                     <img src={iconPreviewPath()} alt="icon preview" />
                   </Show>
                 </div>
@@ -273,8 +273,8 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                   onClick={extractExecutableIcon}
                   disabled={extractingExecutableIcon()}
                 >
-                  <Show when={!extractingExecutableIcon()} fallback={<span class="inline-flex items-center gap-2"><Spinner class="size-3" />{ct('creator_processing')}</span>}>
-                    {ct('creator_extract_icon')}
+                  <Show when={!extractingExecutableIcon()} fallback={<span class="inline-flex items-center gap-2"><Spinner class="size-3" />{ct('luthier_processing')}</span>}>
+                    {ct('luthier_extract_icon')}
                   </Show>
                 </Button>
               </div>
@@ -286,20 +286,20 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
               <>
 
             <FieldShell
-              label={ct('creator_game_root_folder')}
-              help={ct('creator_defaults_to_the_main_executable_folder_but_can_be_change')}
+              label={ct('luthier_game_root_folder')}
+              help={ct('luthier_defaults_to_the_main_executable_folder_but_can_be_change')}
               hint={
                 !exeInsideGameRoot()
-                  ? ct('creator_game_root_hint_invalid_exe_outside_root')
+                  ? ct('luthier_game_root_hint_invalid_exe_outside_root')
                   : gameRootManualOverride()
-                    ? ct('creator_game_root_hint_manual_override')
-                    : ct('creator_game_root_hint_auto')
+                    ? ct('luthier_game_root_hint_manual_override')
+                    : ct('luthier_game_root_hint_auto')
               }
             >
               <div class="picker-row">
                 <Input value={gameRootRelativeDisplay()} placeholder="./" readOnly class="readonly" />
                 <Button type="button" variant="outline" onClick={openGameRootChooser} disabled={!canChooseGameRoot()}>
-                  {ct('creator_choose_another')}
+                  {ct('luthier_choose_another')}
                 </Button>
               </div>
             </FieldShell>
@@ -307,9 +307,9 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
             <Dialog open={gameRootChooserOpen()} onOpenChange={setGameRootChooserOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{ct('creator_choose_game_root_folder')}</DialogTitle>
+                  <DialogTitle>{ct('luthier_choose_game_root_folder')}</DialogTitle>
                   <DialogDescription>
-                    {ct('creator_the_game_root_must_be_an_ancestor_of_the_folder_that_con')}
+                    {ct('luthier_the_game_root_must_be_an_ancestor_of_the_folder_that_con')}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -318,7 +318,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                   fallback={
                     <div class="grid gap-3">
                       <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {ct('creator_this_guided_flow_requires_an_absolute_executable_path_lo')}
+                        {ct('luthier_this_guided_flow_requires_an_absolute_executable_path_lo')}
                       </div>
                       <div class="flex justify-end">
                         <Button
@@ -329,7 +329,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                             await pickGameRootOverride()
                           }}
                         >
-                          {ct('creator_use_system_picker')}
+                          {ct('luthier_use_system_picker')}
                         </Button>
                       </div>
                     </div>
@@ -338,9 +338,9 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                   <div class="grid gap-3">
                     <div class="rounded-md border border-border/60 bg-muted/25 p-3">
                       <p class="mb-2 text-xs font-medium text-muted-foreground">
-                        {ct('creator_executable_folder_breadcrumb')}
+                        {ct('luthier_executable_folder_breadcrumb')}
                       </p>
-                      <nav class="overflow-x-auto" aria-label={ct('creator_executable_path')}>
+                      <nav class="overflow-x-auto" aria-label={ct('luthier_executable_path')}>
                         <ol class="flex min-w-max items-center gap-1 text-xs">
                           <For each={gameRootAncestorCandidates()}>
                             {(candidate, index) => (
@@ -373,7 +373,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
 
                     <div class="grid gap-2">
                       <p class="text-xs font-medium text-muted-foreground">
-                        {ct('creator_select_which_ancestor_level_should_be_the_game_root')}
+                        {ct('luthier_select_which_ancestor_level_should_be_the_game_root')}
                       </p>
                       <div class="grid gap-2">
                         <For each={[...gameRootAncestorCandidates()].reverse()}>
@@ -399,8 +399,8 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                                 <span class="text-sm font-medium">{candidate}</span>
                                 <span class="text-xs text-muted-foreground">
                                   {isAutoRoot
-                                    ? ct('creator_same_directory_as_executable_automatic')
-                                    : ctf('creator_executable_lives_in_relative_path', {
+                                    ? ct('luthier_same_directory_as_executable_automatic')
+                                    : ctf('luthier_executable_lives_in_relative_path', {
                                         path: relativeToExe ?? ''
                                       })}
                                 </span>
@@ -415,15 +415,15 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
 
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setGameRootChooserOpen(false)}>
-                    {ct('creator_close')}
+                    {ct('luthier_close')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
             <FieldShell
-              label={ct('creator_final_prefix_path')}
-              help={ct('creator_automatically_calculated_from_executable_hash')}
+              label={ct('luthier_final_prefix_path')}
+              help={ct('luthier_automatically_calculated_from_executable_hash')}
             >
               <div class="picker-row">
                 <Input value={prefixPathPreview()} readOnly class="readonly" />
@@ -433,40 +433,40 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(prefixPathPreview())
-                      setStatusMessage(ct('creator_prefix_path_copied'))
+                      setStatusMessage(ct('luthier_prefix_path_copied'))
                     } catch {
-                      setStatusMessage(ct('creator_failed_to_copy_to_clipboard'))
+                      setStatusMessage(ct('luthier_failed_to_copy_to_clipboard'))
                     }
                   }}
                 >
-                  {ct('creator_copy')}
+                  {ct('luthier_copy')}
                 </Button>
               </div>
             </FieldShell>
 
             <StringListField
-              label={ct('creator_launch_arguments')}
-              help={ct('creator_extra_arguments_passed_to_game_executable')}
+              label={ct('luthier_launch_arguments')}
+              help={ct('luthier_extra_arguments_passed_to_game_executable')}
               items={config().launch_args}
               onChange={(items) => patchConfig((prev) => ({ ...prev, launch_args: items }))}
-              placeholder={ct('creator_windowed')}
-              addLabel={ct('creator_add_argument')}
-              emptyMessage={ct('creator_no_launch_argument_added')}
-              tableValueHeader={ct('creator_argument')}
+              placeholder={ct('luthier_windowed')}
+              addLabel={ct('luthier_add_argument')}
+              emptyMessage={ct('luthier_no_launch_argument_added')}
+              tableValueHeader={ct('luthier_argument')}
             />
 
             <StringListField
-              label={ct('creator_required_files')}
-              help={ct('creator_if_any_listed_file_is_missing_from_the_game_folder_start')}
+              label={ct('luthier_required_files')}
+              help={ct('luthier_if_any_listed_file_is_missing_from_the_game_folder_start')}
               items={config().integrity_files}
               onChange={(items) => patchConfig((prev) => ({ ...prev, integrity_files: items }))}
-              placeholder={ct('creator_data_core_dll')}
-              addLabel={ct('creator_add_file')}
-              pickerLabel={ct('creator_pick_file_from_game_folder')}
+              placeholder={ct('luthier_data_core_dll')}
+              addLabel={ct('luthier_add_file')}
+              pickerLabel={ct('luthier_pick_file_from_game_folder')}
               onPickValue={pickIntegrityFileRelativeWithBrowser ?? pickIntegrityFileRelative}
               pickerDisabled={!canPickIntegrityFromGameRoot()}
-              emptyMessage={ct('creator_no_file_added')}
-              tableValueHeader={ct('creator_relative_file')}
+              emptyMessage={ct('luthier_no_file_added')}
+              tableValueHeader={ct('luthier_relative_file')}
               validateDraft={(value, items) => {
                 if (!value.trim()) return undefined
                 const validation = validateRelativeGamePath(value, locale(), {
@@ -477,7 +477,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                 if (validation.error) return validation
                 const duplicate = items.some((item) => item.trim() === value.trim())
                 if (duplicate) {
-                  return { error: ct('creator_validation_duplicate_required_file') }
+                  return { error: ct('luthier_validation_duplicate_required_file') }
                 }
                 return validation.hint ? validation : undefined
               }}
@@ -494,18 +494,18 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
             >
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{ct('creator_select_file_inside_game')}</DialogTitle>
+                  <DialogTitle>{ct('luthier_select_file_inside_game')}</DialogTitle>
                   <DialogDescription>
-                    {ct('creator_mini_file_browser_restricted_to_the_game_root_to_prevent')}
+                    {ct('luthier_mini_file_browser_restricted_to_the_game_root_to_prevent')}
                   </DialogDescription>
                 </DialogHeader>
 
                 <div class="grid gap-3">
                   <div class="rounded-md border border-border/60 bg-muted/25 p-3">
                     <p class="mb-2 text-xs font-medium text-muted-foreground">
-                      {ct('creator_current_path')}
+                      {ct('luthier_current_path')}
                     </p>
-                    <nav class="overflow-x-auto" aria-label={ct('creator_folder_breadcrumb')}>
+                    <nav class="overflow-x-auto" aria-label={ct('luthier_folder_breadcrumb')}>
                       <ol class="flex min-w-max items-center gap-1 text-xs">
                         <Show when={gameRoot().trim()}>
                           <li>
@@ -548,18 +548,18 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                       fallback={
                         <div class="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
                           <Spinner class="size-3" />
-                          {ct('creator_loading_files')}
+                          {ct('luthier_loading_files')}
                         </div>
                       }
                     >
                       <div class="grid gap-2 p-2">
                         <div class="grid gap-1">
-                          <p class="px-1 text-xs font-medium text-muted-foreground">{ct('creator_folders')}</p>
+                          <p class="px-1 text-xs font-medium text-muted-foreground">{ct('luthier_folders')}</p>
                           <Show
                             when={(integrityBrowserDirs?.() ?? []).length > 0}
                             fallback={
                               <div class="px-2 py-1 text-xs text-muted-foreground">
-                                {ct('creator_no_subfolder_found')}
+                                {ct('luthier_no_subfolder_found')}
                               </div>
                             }
                           >
@@ -579,12 +579,12 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                         </div>
 
                         <div class="grid gap-1 border-t border-border/60 pt-2">
-                          <p class="px-1 text-xs font-medium text-muted-foreground">{ct('creator_files')}</p>
+                          <p class="px-1 text-xs font-medium text-muted-foreground">{ct('luthier_files')}</p>
                           <Show
                             when={(integrityBrowserFiles?.() ?? []).length > 0}
                             fallback={
                               <div class="px-2 py-1 text-xs text-muted-foreground">
-                                {ct('creator_no_file_found_in_current_folder')}
+                                {ct('luthier_no_file_found_in_current_folder')}
                               </div>
                             }
                           >
@@ -614,7 +614,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                   </div>
 
                   <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                    {ct('creator_select_a_file_to_fill_this_field_automatically')}
+                    {ct('luthier_select_a_file_to_fill_this_field_automatically')}
                   </div>
                 </div>
 
@@ -627,22 +627,22 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                       resolveIntegrityFileBrowser?.(null)
                     }}
                   >
-                    {ct('creator_close')}
+                    {ct('luthier_close')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
             <FieldShell
-              label={ct('creator_mounted_folders')}
-              help={ct('creator_maps_a_folder_inside_the_game_to_a_windows_target_inside')}
+              label={ct('luthier_mounted_folders')}
+              help={ct('luthier_maps_a_folder_inside_the_game_to_a_windows_target_inside')}
               controlClass="flex justify-end"
               footer={
                 <Show
                   when={config().folder_mounts.length > 0}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {ct('creator_no_mount_added')}
+                      {ct('luthier_no_mount_added')}
                     </div>
                   }
                 >
@@ -650,10 +650,10 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{ct('creator_relative_source')}</TableHead>
-                          <TableHead>{ct('creator_windows_target')}</TableHead>
-                          <TableHead>{ct('creator_create_source')}</TableHead>
-                          <TableHead class="w-[120px] text-right">{ct('creator_label_actions')}</TableHead>
+                          <TableHead>{ct('luthier_relative_source')}</TableHead>
+                          <TableHead>{ct('luthier_windows_target')}</TableHead>
+                          <TableHead>{ct('luthier_create_source')}</TableHead>
+                          <TableHead class="w-[120px] text-right">{ct('luthier_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -667,7 +667,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                                 {item.target_windows_path}
                               </TableCell>
                               <TableCell class="text-xs text-muted-foreground">
-                                {item.create_source_if_missing ? ct('creator_yes') : ct('creator_no')}
+                                {item.create_source_if_missing ? ct('luthier_yes') : ct('luthier_no')}
                               </TableCell>
                               <TableCell class="text-right">
                                 <div class="flex items-center justify-end gap-1">
@@ -677,7 +677,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                                     class="h-8 px-2 text-xs"
                                     onClick={() => void pickMountFolder(index())}
                                   >
-                                    {ct('creator_folder')}
+                                    {ct('luthier_folder')}
                                   </Button>
                                   <Button
                                     type="button"
@@ -689,7 +689,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                                         folder_mounts: removeAt(prev.folder_mounts, index())
                                       }))
                                     }
-                                    title={ct('creator_remove_mount')}
+                                    title={ct('luthier_remove_mount')}
                                   >
                                     <IconTrash class="size-4" />
                                   </Button>
@@ -714,14 +714,14 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                   disabled={!canAddMount()}
                 >
                   <IconPlus class="size-4" />
-                  {ct('creator_add_mount')}
+                  {ct('luthier_add_mount')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{ct('creator_add_mount')}</DialogTitle>
+                    <DialogTitle>{ct('luthier_add_mount')}</DialogTitle>
                     <DialogDescription>
-                      {ct('creator_set_relative_source_and_windows_target_to_create_the_mou')}
+                      {ct('luthier_set_relative_source_and_windows_target_to_create_the_mou')}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -729,7 +729,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                     <div class="picker-row">
                       <Input
                         value={mountDraft().source_relative_path}
-                        placeholder={ct('creator_relative_source_e_g_save')}
+                        placeholder={ct('luthier_relative_source_e_g_save')}
                         class={mountSourceValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                         onInput={(e) =>
                           setMountDraft((prev: any) => ({
@@ -744,7 +744,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                         disabled={!canBrowseMountFolders()}
                         onClick={() => void openMountSourceBrowser()}
                       >
-                        {ct('creator_browse_folders')}
+                        {ct('luthier_browse_folders')}
                       </Button>
                     </div>
                     <Show when={mountSourceValidation().error || mountSourceValidation().hint}>
@@ -755,7 +755,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
 
                     <Input
                       value={mountDraft().target_windows_path}
-                      placeholder={ct('creator_windows_target_c_users')}
+                      placeholder={ct('luthier_windows_target_c_users')}
                       class={mountTargetValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setMountDraft((prev: any) => ({
@@ -784,13 +784,13 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                           }))
                         }
                       />
-                      {ct('creator_create_source_if_missing')}
+                      {ct('luthier_create_source_if_missing')}
                     </label>
                   </div>
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setMountDialogOpen(false)}>
-                      {ct('creator_label_cancel')}
+                      {ct('luthier_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -826,9 +826,9 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                             addedMount
                           ]
                         }))
-                        toast(ct('creator_mount_added'), {
+                        toast(ct('luthier_mount_added'), {
                           action: {
-                            label: ct('creator_undo'),
+                            label: ct('luthier_undo'),
                             onClick: () =>
                               patchConfig((prev) => {
                                 const index = [...prev.folder_mounts]
@@ -856,7 +856,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                         setMountDialogOpen(false)
                       }}
                     >
-                      {ct('creator_label_confirm')}
+                      {ct('luthier_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -865,18 +865,18 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
               <Dialog open={mountSourceBrowserOpen()} onOpenChange={setMountSourceBrowserOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{ct('creator_select_folder_inside_game')}</DialogTitle>
+                    <DialogTitle>{ct('luthier_select_folder_inside_game')}</DialogTitle>
                     <DialogDescription>
-                      {ct('creator_mini_browser_restricted_to_the_game_root_to_prevent_moun')}
+                      {ct('luthier_mini_browser_restricted_to_the_game_root_to_prevent_moun')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-3">
                     <div class="rounded-md border border-border/60 bg-muted/25 p-3">
                       <p class="mb-2 text-xs font-medium text-muted-foreground">
-                        {ct('creator_current_path')}
+                        {ct('luthier_current_path')}
                       </p>
-                      <nav class="overflow-x-auto" aria-label={ct('creator_folder_breadcrumb')}>
+                      <nav class="overflow-x-auto" aria-label={ct('luthier_folder_breadcrumb')}>
                         <ol class="flex min-w-max items-center gap-1 text-xs">
                           <Show when={gameRoot().trim()}>
                             <li>
@@ -919,7 +919,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                         fallback={
                           <div class="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
                             <Spinner class="size-3" />
-                            {ct('creator_loading_folders')}
+                            {ct('luthier_loading_folders')}
                           </div>
                         }
                       >
@@ -927,7 +927,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                           when={mountBrowserDirs().length > 0}
                           fallback={
                             <div class="px-3 py-2 text-xs text-muted-foreground">
-                              {ct('creator_no_subfolder_found')}
+                              {ct('luthier_no_subfolder_found')}
                             </div>
                           }
                         >
@@ -951,7 +951,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
 
                     <div class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
                       <div class="min-w-0">
-                        <p class="text-xs font-medium text-muted-foreground">{ct('creator_select_this_folder')}</p>
+                        <p class="text-xs font-medium text-muted-foreground">{ct('luthier_select_this_folder')}</p>
                         <p class="truncate text-xs">
                           {mountSourceBrowserCurrentRelative() || './'}
                         </p>
@@ -966,14 +966,14 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
                           setMountSourceBrowserOpen(false)
                         }}
                       >
-                        {ct('creator_use_this_folder')}
+                        {ct('luthier_use_this_folder')}
                       </Button>
                     </div>
                   </div>
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setMountSourceBrowserOpen(false)}>
-                      {ct('creator_close')}
+                      {ct('luthier_close')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

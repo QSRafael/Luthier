@@ -14,24 +14,24 @@ export function WinecfgAudioAccordionSection(props: WinecfgAccordionSectionProps
               <AccordionSection
                 open={props.open}
                 onToggle={props.onToggle}
-                title={ct('creator_audio')}
-                description={ct('creator_additional_audio_settings_from_winecfg_runtime_defaults')}
+                title={ct('luthier_audio')}
+                description={ct('luthier_additional_audio_settings_from_winecfg_runtime_defaults')}
               >
                 <div class="grid gap-3">
                   <Alert variant="warning">
                     <IconAlertCircle />
-                    <AlertTitle>{ct('creator_audio_change_only_if_needed')}</AlertTitle>
+                    <AlertTitle>{ct('luthier_audio_change_only_if_needed')}</AlertTitle>
                     <AlertDescription>
-                      {ct('creator_forcing_an_audio_backend_can_fix_compatibility_but_may_w')}
+                      {ct('luthier_forcing_an_audio_backend_can_fix_compatibility_but_may_w')}
                     </AlertDescription>
                   </Alert>
 
                   <Item>
                     <ItemMain>
                       <ItemContent>
-                        <ItemTitle>{ct('creator_audio_driver')}</ItemTitle>
+                        <ItemTitle>{ct('luthier_audio_driver')}</ItemTitle>
                         <ItemDescription>
-                          {ct('creator_select_the_preferred_backend_runtime_default_keeps_wine')}
+                          {ct('luthier_select_the_preferred_backend_runtime_default_keeps_wine')}
                         </ItemDescription>
                       </ItemContent>
 

@@ -30,15 +30,15 @@ export type LuthierPageSectionProps = {
 
 export function tabLabel(tab: LuthierTab, controller: LuthierController) {
   const ct = controller.ct as (key: LuthierCopyKey) => string
-  if (tab === 'game') return ct('creator_label_game')
-  if (tab === 'gameFiles') return ct('creator_label_game_files_and_launch')
-  if (tab === 'runtime') return ct('creator_label_runtime')
-  if (tab === 'performance') return ct('creator_enhancements')
-  if (tab === 'prefix') return ct('creator_dependencies')
+  if (tab === 'game') return ct('luthier_label_game')
+  if (tab === 'gameFiles') return ct('luthier_label_game_files_and_launch')
+  if (tab === 'runtime') return ct('luthier_label_runtime')
+  if (tab === 'performance') return ct('luthier_enhancements')
+  if (tab === 'prefix') return ct('luthier_dependencies')
   if (tab === 'winecfg') return 'Winecfg'
-  if (tab === 'wrappers') return ct('creator_launch_and_environment')
-  if (tab === 'scripts') return ct('creator_label_scripts')
-  return ct('creator_review_and_generate')
+  if (tab === 'wrappers') return ct('luthier_launch_and_environment')
+  if (tab === 'scripts') return ct('luthier_label_scripts')
+  return ct('luthier_review_and_generate')
 }
 
 type AccordionSectionProps = {

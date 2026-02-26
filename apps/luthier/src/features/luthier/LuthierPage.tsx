@@ -173,7 +173,7 @@ export default function LuthierPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = createSignal(false)
 
   const wineWindowsVersionOptions = [
-    { value: '__default__', label: ct('creator_runtime_default_do_not_override') },
+    { value: '__default__', label: ct('luthier_runtime_default_do_not_override') },
     { value: 'win11', label: 'Windows 11' },
     { value: 'win10', label: 'Windows 10' },
     { value: 'win81', label: 'Windows 8.1' },
@@ -184,20 +184,20 @@ export default function LuthierPage() {
   ] as const
 
   const wineDesktopFolderKeyOptions = [
-    { value: 'desktop', label: ct('creator_desktop') },
-    { value: 'documents', label: ct('creator_documents') },
-    { value: 'downloads', label: ct('creator_downloads') },
-    { value: 'music', label: ct('creator_music') },
-    { value: 'pictures', label: ct('creator_pictures') },
-    { value: 'videos', label: ct('creator_videos') }
+    { value: 'desktop', label: ct('luthier_desktop') },
+    { value: 'documents', label: ct('luthier_documents') },
+    { value: 'downloads', label: ct('luthier_downloads') },
+    { value: 'music', label: ct('luthier_music') },
+    { value: 'pictures', label: ct('luthier_pictures') },
+    { value: 'videos', label: ct('luthier_videos') }
   ] as const
 
   const wineDriveTypeOptions = [
-    { value: 'auto', label: ct('creator_auto_detect') },
-    { value: 'local_disk', label: ct('creator_local_hard_disk') },
-    { value: 'network_share', label: ct('creator_network_share') },
-    { value: 'floppy', label: ct('creator_floppy_disk') },
-    { value: 'cdrom', label: ct('creator_cd_rom') }
+    { value: 'auto', label: ct('luthier_auto_detect') },
+    { value: 'local_disk', label: ct('luthier_local_hard_disk') },
+    { value: 'network_share', label: ct('luthier_network_share') },
+    { value: 'floppy', label: ct('luthier_floppy_disk') },
+    { value: 'cdrom', label: ct('luthier_cd_rom') }
   ] as const
 
   const allWineDriveLetters = 'DEFGHIJKLMNOPQRSTUVWXY'.split('')
@@ -241,20 +241,20 @@ export default function LuthierPage() {
 
   const runtimeVersionFieldLabel = () => {
     const preference = config().runner.runtime_preference
-    if (preference === 'Proton') return ct('creator_proton_version')
-    if (preference === 'Wine') return ct('creator_wine_version')
-    return ct('creator_preferred_runtime_version')
+    if (preference === 'Proton') return ct('luthier_proton_version')
+    if (preference === 'Wine') return ct('luthier_wine_version')
+    return ct('luthier_preferred_runtime_version')
   }
 
   const runtimeVersionFieldHelp = () => {
     const preference = config().runner.runtime_preference
     if (preference === 'Proton') {
-      return ct('creator_target_proton_version_used_by_the_orchestrator_when_pref')
+      return ct('luthier_target_proton_version_used_by_the_orchestrator_when_pref')
     }
     if (preference === 'Wine') {
-      return ct('creator_expected_wine_version_identifier_when_preference_is_wine')
+      return ct('luthier_expected_wine_version_identifier_when_preference_is_wine')
     }
-    return ct('creator_preferred_runtime_version_when_auto_mode_picks_proton_wi')
+    return ct('luthier_preferred_runtime_version_when_auto_mode_picks_proton_wi')
   }
 
   const gamescopeAdditionalOptionsList = createMemo(() => {
@@ -341,7 +341,7 @@ export default function LuthierPage() {
 
       if (!isLikelyAbsolutePath(selected)) {
         setStatusMessage(
-          ct('creator_importing_reg_requires_an_absolute_path_in_browser_lan_m')
+          ct('luthier_importing_reg_requires_an_absolute_path_in_browser_lan_m')
         )
         return
       }
@@ -372,10 +372,10 @@ export default function LuthierPage() {
 
       const warningSuffix =
         result.warnings.length > 0
-          ? ctf('creator_registry_import_warning_suffix_count', { count: result.warnings.length })
+          ? ctf('luthier_registry_import_warning_suffix_count', { count: result.warnings.length })
           : ''
 
-      const successMessage = ctf('creator_imported_registry_keys_from_reg_file', {
+      const successMessage = ctf('luthier_imported_registry_keys_from_reg_file', {
         count: deduped.length,
         warningSuffix
       })
@@ -387,7 +387,7 @@ export default function LuthierPage() {
         toast.success(successMessage, {
           description: selected,
           action: {
-            label: ct('creator_undo'),
+            label: ct('luthier_undo'),
             onClick: () => {
               patchConfig((prev) => ({
                 ...prev,
@@ -396,7 +396,7 @@ export default function LuthierPage() {
                   return !importedSignatures.has(signature)
                 })
               }))
-              toast.info(ct('creator_registry_import_undone'))
+              toast.info(ct('luthier_registry_import_undone'))
             }
           }
         })
@@ -407,7 +407,7 @@ export default function LuthierPage() {
       setRegistryImportWarnings(result.warnings)
       setRegistryImportWarningsOpen(result.warnings.length > 0)
     } catch (error) {
-      setStatusMessage(ctf('creator_failed_to_import_reg_file_error', { error: String(error) }))
+      setStatusMessage(ctf('luthier_failed_to_import_reg_file_error', { error: String(error) }))
     }
   }
 
@@ -424,7 +424,7 @@ export default function LuthierPage() {
   const loadMountBrowserDirs = async (absolutePath: string) => {
     if (!isLikelyAbsolutePath(absolutePath)) {
       setStatusMessage(
-        ct('creator_mounted_folder_browser_requires_an_absolute_game_root_pa')
+        ct('luthier_mounted_folder_browser_requires_an_absolute_game_root_pa')
       )
       return
     }
@@ -436,7 +436,7 @@ export default function LuthierPage() {
       setMountBrowserPath(result.path)
       setMountBrowserDirs(result.directories)
     } catch (error) {
-      setStatusMessage(ctf('creator_failed_to_list_folders_error', { error: String(error) }))
+      setStatusMessage(ctf('luthier_failed_to_list_folders_error', { error: String(error) }))
     } finally {
       setMountBrowserLoading(false)
     }
@@ -445,7 +445,7 @@ export default function LuthierPage() {
   const loadIntegrityBrowserEntries = async (absolutePath: string) => {
     if (!isLikelyAbsolutePath(absolutePath)) {
       setStatusMessage(
-        ct('creator_required_file_browser_requires_an_absolute_game_root_pat')
+        ct('luthier_required_file_browser_requires_an_absolute_game_root_pat')
       )
       return
     }
@@ -458,7 +458,7 @@ export default function LuthierPage() {
       setIntegrityBrowserDirs(result.directories)
       setIntegrityBrowserFiles(result.files)
     } catch (error) {
-      setStatusMessage(ctf('creator_failed_to_list_files_error', { error: String(error) }))
+      setStatusMessage(ctf('luthier_failed_to_list_files_error', { error: String(error) }))
     } finally {
       setIntegrityBrowserLoading(false)
     }
@@ -473,12 +473,12 @@ export default function LuthierPage() {
   const openIntegrityFileBrowser = async () => {
     const root = gameRoot().trim()
     if (!root) {
-      setStatusMessage(ct('creator_select_an_executable_first_to_define_the_game_folder'))
+      setStatusMessage(ct('luthier_select_an_executable_first_to_define_the_game_folder'))
       return null
     }
     if (!isLikelyAbsolutePath(root)) {
       setStatusMessage(
-        ct('creator_in_browser_lan_mode_the_mini_file_browser_cannot_access_')
+        ct('luthier_in_browser_lan_mode_the_mini_file_browser_cannot_access_')
       )
       return null
     }
@@ -494,12 +494,12 @@ export default function LuthierPage() {
   const openMountSourceBrowser = async () => {
     const root = gameRoot().trim()
     if (!root) {
-      setStatusMessage(ct('creator_select_an_executable_first_to_define_the_game_folder'))
+      setStatusMessage(ct('luthier_select_an_executable_first_to_define_the_game_folder'))
       return
     }
     if (!isLikelyAbsolutePath(root)) {
       setStatusMessage(
-        ct('creator_in_browser_lan_mode_the_mini_folder_browser_cannot_acces')
+        ct('luthier_in_browser_lan_mode_the_mini_folder_browser_cannot_acces')
       )
       return
     }
@@ -573,38 +573,38 @@ export default function LuthierPage() {
     setTheme('dark')
   }
 
-  const sidebarLocaleLabel = createMemo(() => `${ct('creator_language')}: ${locale()}`)
+  const sidebarLocaleLabel = createMemo(() => `${ct('luthier_language')}: ${locale()}`)
 
   const sidebarThemeLabel = createMemo(() => {
     const current = theme()
     const label =
       current === 'dark'
-        ? ct('creator_dark')
+        ? ct('luthier_dark')
         : current === 'light'
-          ? ct('creator_light')
-          : ct('creator_system')
-    return `${ct('creator_theme')}: ${label}`
+          ? ct('luthier_light')
+          : ct('luthier_system')
+    return `${ct('luthier_theme')}: ${label}`
   })
 
   const formControlsI18n = createMemo(() => ({
-    enabled: ct('creator_label_enabled'),
-    disabled: ct('creator_label_disabled'),
-    mandatory: ct('creator_label_mandatory'),
-    wineDefault: ct('creator_use_wine_default'),
-    actions: ct('creator_label_actions'),
-    action: ct('creator_label_action'),
-    add: ct('creator_label_add'),
-    addItem: ct('creator_add_item'),
-    addListDialogDescription: ct('creator_enter_a_value_and_confirm_to_add_it_to_the_list'),
-    addKeyValueDialogDescription: ct('creator_fill_in_key_and_value_to_add_a_new_row'),
-    pickFile: ct('creator_choose_file'),
-    pickFileHint: ct('creator_select_a_file_to_fill_this_field_automatically'),
-    cancel: ct('creator_label_cancel'),
-    confirm: ct('creator_label_confirm'),
-    remove: ct('creator_label_remove'),
-    noItemAdded: ct('creator_no_item_added'),
-    keyPlaceholder: ct('creator_key'),
-    valuePlaceholder: ct('creator_value')
+    enabled: ct('luthier_label_enabled'),
+    disabled: ct('luthier_label_disabled'),
+    mandatory: ct('luthier_label_mandatory'),
+    wineDefault: ct('luthier_use_wine_default'),
+    actions: ct('luthier_label_actions'),
+    action: ct('luthier_label_action'),
+    add: ct('luthier_label_add'),
+    addItem: ct('luthier_add_item'),
+    addListDialogDescription: ct('luthier_enter_a_value_and_confirm_to_add_it_to_the_list'),
+    addKeyValueDialogDescription: ct('luthier_fill_in_key_and_value_to_add_a_new_row'),
+    pickFile: ct('luthier_choose_file'),
+    pickFileHint: ct('luthier_select_a_file_to_fill_this_field_automatically'),
+    cancel: ct('luthier_label_cancel'),
+    confirm: ct('luthier_label_confirm'),
+    remove: ct('luthier_label_remove'),
+    noItemAdded: ct('luthier_no_item_added'),
+    keyPlaceholder: ct('luthier_key'),
+    valuePlaceholder: ct('luthier_value')
   }))
 
   const tabIndex = createMemo(() => tabs.indexOf(activeTab()))
@@ -809,15 +809,15 @@ export default function LuthierPage() {
               size="icon"
               class="absolute left-0 h-10 w-10 lg:hidden"
               onClick={() => setMobileSidebarOpen(true)}
-              aria-label={ct('creator_open_menu')}
-              title={ct('creator_open_menu')}
+              aria-label={ct('luthier_open_menu')}
+              title={ct('luthier_open_menu')}
             >
               <IconMenu2 class="size-4" />
             </Button>
             <div class="min-w-0 px-12 text-center lg:px-0">
               <p class="truncate text-sm font-semibold">{tabLabel(activeTab(), controller)}</p>
               <p class="text-xs text-muted-foreground">
-                {ct('creator_step')} {Math.max(tabIndex(), 0) + 1}/{tabs.length}
+                {ct('luthier_step')} {Math.max(tabIndex(), 0) + 1}/{tabs.length}
               </p>
             </div>
         </div>
@@ -860,14 +860,14 @@ export default function LuthierPage() {
           <div class="flex justify-start">
             <Show when={canGoPrevTab()}>
               <Button type="button" variant="outline" class="h-10" onClick={goPrevTab}>
-                {ct('creator_back')}
+                {ct('luthier_back')}
               </Button>
             </Show>
           </div>
           <div class="flex justify-end">
             <Show when={canGoNextTab()}>
               <Button type="button" class="h-10" onClick={goNextTab}>
-                {ct('creator_next')}
+                {ct('luthier_next')}
               </Button>
             </Show>
           </div>

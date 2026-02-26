@@ -32,20 +32,20 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
     if (!dll) return ''
     const duplicate = config().winecfg.dll_overrides.some((item) => item.dll.trim().toLowerCase() === dll)
     if (!duplicate) return ''
-    return ct('creator_validation_duplicate_dll_override')
+    return ct('luthier_validation_duplicate_dll_override')
   })
 
   return (
             <FieldShell
-              label={ct('creator_dll_overrides')}
-              help={ct('creator_configures_per_dll_overrides_such_as_native_builtin')}
+              label={ct('luthier_dll_overrides')}
+              help={ct('luthier_configures_per_dll_overrides_such_as_native_builtin')}
               controlClass="flex justify-end"
               footer={
                 <Show
                   when={config().winecfg.dll_overrides.length > 0}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {ct('creator_no_override_added')}
+                      {ct('luthier_no_override_added')}
                     </div>
                   }
                 >
@@ -53,9 +53,9 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{ct('creator_dll')}</TableHead>
-                          <TableHead>{ct('creator_mode')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
+                          <TableHead>{ct('luthier_dll')}</TableHead>
+                          <TableHead>{ct('luthier_mode')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -98,7 +98,7 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                                       }
                                     }))
                                   }
-                                  title={ct('creator_label_remove')}
+                                  title={ct('luthier_label_remove')}
                                 >
                                   <IconTrash class="size-4" />
                                 </Button>
@@ -115,14 +115,14 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
               <Dialog open={dllDialogOpen()} onOpenChange={setDllDialogOpen}>
                 <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setDllDialogOpen(true)}>
                   <IconPlus class="size-4" />
-                  {ct('creator_add_dll_override')}
+                  {ct('luthier_add_dll_override')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{ct('creator_add_dll_override')}</DialogTitle>
+                    <DialogTitle>{ct('luthier_add_dll_override')}</DialogTitle>
                     <DialogDescription>
-                      {ct('creator_set_the_dll_name_and_override_mode')}
+                      {ct('luthier_set_the_dll_name_and_override_mode')}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -161,7 +161,7 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setDllDialogOpen(false)}>
-                      {ct('creator_label_cancel')}
+                      {ct('luthier_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -186,7 +186,7 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                         setDllDialogOpen(false)
                       }}
                     >
-                      {ct('creator_label_confirm')}
+                      {ct('luthier_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

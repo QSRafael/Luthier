@@ -150,19 +150,19 @@ export function useLuthierController() {
   const featureStateOptions = createMemo<SelectOption<FeatureState>[]>(() => [
     {
       value: 'MandatoryOn',
-      label: ct('creator_mandatory_enabled')
+      label: ct('luthier_mandatory_enabled')
     },
     {
       value: 'MandatoryOff',
-      label: ct('creator_mandatory_disabled')
+      label: ct('luthier_mandatory_disabled')
     },
     {
       value: 'OptionalOn',
-      label: ct('creator_optional_enabled')
+      label: ct('luthier_optional_enabled')
     },
     {
       value: 'OptionalOff',
-      label: ct('creator_optional_disabled')
+      label: ct('luthier_optional_disabled')
     }
   ])
 
@@ -178,7 +178,7 @@ export function useLuthierController() {
   const audioDriverOptions = createMemo<SelectOption<AudioDriverOption>[]>(() => [
     {
       value: '__none__',
-      label: ct('creator_runtime_default')
+      label: ct('luthier_runtime_default')
     },
     { value: 'pipewire', label: 'pipewire' },
     { value: 'pulseaudio', label: 'pulseaudio' },
@@ -192,14 +192,14 @@ export function useLuthierController() {
   const upscaleMethodOptions = createMemo<SelectOption<UpscaleMethod>[]>(() => [
     { value: 'fsr', label: 'AMD FSR' },
     { value: 'nis', label: 'NVIDIA NIS' },
-    { value: 'integer', label: ct('creator_integer_scaling') },
-    { value: 'stretch', label: ct('creator_stretch_image') }
+    { value: 'integer', label: ct('luthier_integer_scaling') },
+    { value: 'stretch', label: ct('luthier_stretch_image') }
   ])
 
   const windowTypeOptions = createMemo<SelectOption<GamescopeWindowType>[]>(() => [
-    { value: 'fullscreen', label: ct('creator_fullscreen') },
-    { value: 'borderless', label: ct('creator_borderless') },
-    { value: 'windowed', label: ct('creator_windowed_2') }
+    { value: 'fullscreen', label: ct('luthier_fullscreen') },
+    { value: 'borderless', label: ct('luthier_borderless') },
+    { value: 'windowed', label: ct('luthier_windowed_2') }
   ])
 
   const prefixPathPreview = createMemo(() => {
@@ -579,7 +579,7 @@ export function useLuthierController() {
         labelEn: 'Game resolution height'
       })
       if (!gamescope.game_width.trim() || !gamescope.game_height.trim()) {
-        errors.push(ct('creator_fill_gamescope_game_resolution_before_creating'))
+        errors.push(ct('luthier_fill_gamescope_game_resolution_before_creating'))
       } else if (gameWidthValidation.error || gameHeightValidation.error) {
         errors.push(prefixed('Gamescope', 'Gamescope', gameWidthValidation.error ?? gameHeightValidation.error ?? ''))
       }
@@ -601,7 +601,7 @@ export function useLuthierController() {
         })
         if (!gamescope.output_width.trim() || !gamescope.output_height.trim()) {
           errors.push(
-            ct('creator_fill_gamescope_output_resolution_or_enable_monitor_auto_befo')
+            ct('luthier_fill_gamescope_output_resolution_or_enable_monitor_auto_befo')
           )
         } else if (outputWidthValidation.error || outputHeightValidation.error) {
           errors.push(prefixed('Gamescope', 'Gamescope', outputWidthValidation.error ?? outputHeightValidation.error ?? ''))
@@ -622,7 +622,7 @@ export function useLuthierController() {
           labelEn: 'FPS limit without focus'
         })
         if (!gamescope.fps_limiter.trim() || !gamescope.fps_limiter_no_focus.trim()) {
-          errors.push(ct('creator_fill_gamescope_fps_limits_before_creating'))
+          errors.push(ct('luthier_fill_gamescope_fps_limits_before_creating'))
         } else if (fpsFocusValidation.error || fpsNoFocusValidation.error) {
           errors.push(prefixed('Gamescope', 'Gamescope', fpsFocusValidation.error ?? fpsNoFocusValidation.error ?? ''))
         }
@@ -908,13 +908,13 @@ export function useLuthierController() {
       setWinetricksSource(result.source)
       setWinetricksCatalogError(false)
       setWinetricksLoaded(true)
-      setStatusMessage(ctf('creator_winetricks_catalog_loaded_count', { count: result.components.length }))
+      setStatusMessage(ctf('luthier_winetricks_catalog_loaded_count', { count: result.components.length }))
     } catch (error) {
       setWinetricksAvailable([])
       setWinetricksSource('fallback')
       setWinetricksCatalogError(true)
       setWinetricksLoaded(true)
-      setStatusMessage(ctf('creator_failed_to_load_winetricks_catalog_error', { error: String(error) }))
+      setStatusMessage(ctf('luthier_failed_to_load_winetricks_catalog_error', { error: String(error) }))
     } finally {
       setWinetricksLoading(false)
     }
@@ -930,7 +930,7 @@ export function useLuthierController() {
     })()
 
     const selected = await pickFile({
-      title: ct('creator_select_game_executable'),
+      title: ct('luthier_select_game_executable'),
       filters: [{ name: 'Windows Launchers', extensions: ['exe', 'bat', 'cmd', 'com'] }],
       defaultPath: defaultPathCandidate
     })
@@ -958,7 +958,7 @@ export function useLuthierController() {
 
   const pickRegistryFile = async () => {
     const selected = await pickFile({
-      title: ct('creator_select_reg_file'),
+      title: ct('luthier_select_reg_file'),
       filters: [{ name: 'Registry file', extensions: ['reg'] }]
     })
     if (!selected) return null
@@ -968,7 +968,7 @@ export function useLuthierController() {
 
   const pickGameRootOverride = async () => {
     const selected = await pickFolder({
-      title: ct('creator_select_game_root_folder'),
+      title: ct('luthier_select_game_root_folder'),
       defaultPath: (isLikelyAbsolutePath(exeDirectory()) ? exeDirectory() : undefined) ?? undefined
     })
     if (!selected) return
@@ -984,7 +984,7 @@ export function useLuthierController() {
 
   const pickIntegrityFileRelative = async () => {
     const selected = await pickFile({
-      title: ct('creator_select_required_file'),
+      title: ct('luthier_select_required_file'),
       defaultPath: gameRoot() || undefined
     })
     if (!selected) return null
@@ -1004,7 +1004,7 @@ export function useLuthierController() {
 
   const pickMountFolder = async (index: number) => {
     const selected = await pickFolder({
-      title: ct('creator_select_folder_to_mount')
+      title: ct('luthier_select_folder_to_mount')
     })
     if (!selected) return
 
@@ -1024,7 +1024,7 @@ export function useLuthierController() {
 
   const pickMountSourceRelative = async () => {
     const selected = await pickFolder({
-      title: ct('creator_select_folder_to_mount')
+      title: ct('luthier_select_folder_to_mount')
     })
     if (!selected) return null
 
@@ -1039,32 +1039,32 @@ export function useLuthierController() {
   const extractExecutableIcon = async () => {
     const currentExe = exePath().trim()
     if (!currentExe) {
-      setStatusMessage(ct('creator_select_an_executable_before_extracting_icon'))
+      setStatusMessage(ct('luthier_select_an_executable_before_extracting_icon'))
       return
     }
 
     if (!isLikelyAbsolutePath(currentExe)) {
       setStatusMessage(
-        ct('creator_icon_extraction_requires_an_absolute_path_in_browser_lan_m')
+        ct('luthier_icon_extraction_requires_an_absolute_path_in_browser_lan_m')
       )
       return
     }
 
     try {
       setExtractingExecutableIcon(true)
-      setStatusMessage(ct('creator_extracting_icon_from_executable'))
+      setStatusMessage(ct('luthier_extracting_icon_from_executable'))
       const result = await invokeCommand<ExtractExecutableIconOutput>('cmd_extract_executable_icon', {
         executable_path: currentExe
       })
       setIconPreviewPath(result.data_url)
       setStatusMessage(
-        ctf('creator_executable_icon_extracted_size', {
+        ctf('luthier_executable_icon_extracted_size', {
           width: result.width,
           height: result.height
         })
       )
     } catch (error) {
-      setStatusMessage(ctf('creator_failed_to_extract_executable_icon_error', { error: String(error) }))
+      setStatusMessage(ctf('luthier_failed_to_extract_executable_icon_error', { error: String(error) }))
     } finally {
       setExtractingExecutableIcon(false)
     }
@@ -1091,7 +1091,7 @@ export function useLuthierController() {
 
     try {
       setHeroImageProcessing(true)
-      setStatusMessage(ct('creator_processing_hero_image'))
+      setStatusMessage(ct('luthier_processing_hero_image'))
       const result = await invokeCommand<PrepareHeroImageOutput>('cmd_prepare_hero_image', {
         image_url: imageUrl
       })
@@ -1105,7 +1105,7 @@ export function useLuthierController() {
       }))
       setLastPreparedHeroImageUrl(result.source_url)
       setStatusMessage(
-        ctf('creator_hero_image_ready_size', {
+        ctf('luthier_hero_image_ready_size', {
           width: result.width,
           height: result.height
         })
@@ -1118,7 +1118,7 @@ export function useLuthierController() {
           hero_image_data_url: ''
         }
       }))
-      setStatusMessage(ctf('creator_failed_to_prepare_hero_image_error', { error: String(error) }))
+      setStatusMessage(ctf('luthier_failed_to_prepare_hero_image_error', { error: String(error) }))
     } finally {
       setHeroImageProcessing(false)
     }
@@ -1127,7 +1127,7 @@ export function useLuthierController() {
   const searchHeroImageAutomatically = async () => {
     const gameName = config().game_name.trim()
     if (!gameName) {
-      setStatusMessage(ct('creator_type_game_name_before_searching_hero_image'))
+      setStatusMessage(ct('luthier_type_game_name_before_searching_hero_image'))
       return
     }
 
@@ -1147,11 +1147,11 @@ export function useLuthierController() {
       const nextUrl = cachedCandidates[nextIndex]
       setHeroImageSearchIndex(nextIndex)
       setHeroImageUrl(nextUrl)
-      setStatusMessage(ct('creator_hero_image_found_processing_preview'))
+      setStatusMessage(ct('luthier_hero_image_found_processing_preview'))
       await prepareHeroImageFromUrl(nextUrl)
-      toast(ct('creator_hero_image_updated'), {
+      toast(ct('luthier_hero_image_updated'), {
         action: {
-          label: ct('creator_undo'),
+          label: ct('luthier_undo'),
           onClick: () => {
             patchConfig((prev) => ({
               ...prev,
@@ -1171,7 +1171,7 @@ export function useLuthierController() {
 
     try {
       setHeroImageAutoSearching(true)
-      setStatusMessage(ct('creator_searching_hero_image'))
+      setStatusMessage(ct('luthier_searching_hero_image'))
       const search = await invokeCommand<SearchHeroImageOutput>('cmd_search_hero_image', {
         game_name: gameName
       })
@@ -1185,11 +1185,11 @@ export function useLuthierController() {
       setHeroImageSearchCandidates(candidates)
       setHeroImageSearchIndex(selectedIndex)
       setHeroImageUrl(search.image_url)
-      setStatusMessage(ct('creator_hero_image_found_processing_preview'))
+      setStatusMessage(ct('luthier_hero_image_found_processing_preview'))
       await prepareHeroImageFromUrl(search.image_url)
-      toast(ct('creator_hero_image_updated'), {
+      toast(ct('luthier_hero_image_updated'), {
         action: {
-          label: ct('creator_undo'),
+          label: ct('luthier_undo'),
           onClick: () => {
             patchConfig((prev) => ({
               ...prev,
@@ -1205,7 +1205,7 @@ export function useLuthierController() {
         }
       })
     } catch (error) {
-      setStatusMessage(ctf('creator_failed_to_search_hero_image_error', { error: String(error) }))
+      setStatusMessage(ctf('luthier_failed_to_search_hero_image_error', { error: String(error) }))
     } finally {
       setHeroImageAutoSearching(false)
     }
@@ -1345,10 +1345,10 @@ export function useLuthierController() {
       return { ...prev, dependencies: [...prev.dependencies, verb] }
     })
     if (!added) return
-    toast(ct('creator_winetricks_verb_added'), {
+    toast(ct('luthier_winetricks_verb_added'), {
       description: verb,
       action: {
-        label: ct('creator_undo'),
+        label: ct('luthier_undo'),
         onClick: () => removeWinetricksVerb(verb)
       }
     })

@@ -42,28 +42,28 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
       (item) => item.folder_key.trim().toLowerCase() === key
     )
     if (!duplicate) return ''
-    return ct('creator_validation_duplicate_desktop_folder_type')
+    return ct('luthier_validation_duplicate_desktop_folder_type')
   })
 
   return (
               <AccordionSection
                 open={props.open}
                 onToggle={props.onToggle}
-                title={ct('creator_desktop_integration')}
-                description={ct('creator_file_protocol_associations_and_wine_special_desktop_fold')}
+                title={ct('luthier_desktop_integration')}
+                description={ct('luthier_file_protocol_associations_and_wine_special_desktop_fold')}
               >
                 <div class="grid gap-3">
                   <Alert variant="warning">
                     <IconAlertCircle />
-                    <AlertTitle>{ct('creator_integration_can_affect_user_system_behavior')}</AlertTitle>
+                    <AlertTitle>{ct('luthier_integration_can_affect_user_system_behavior')}</AlertTitle>
                     <AlertDescription>
-                      {ct('creator_mime_protocol_associations_and_special_folders_can_chang')}
+                      {ct('luthier_mime_protocol_associations_and_special_folders_can_chang')}
                     </AlertDescription>
                   </Alert>
 
                   <WinecfgFeatureStateField
-                    label={ct('creator_desktop_integration_general')}
-                    help={ct('creator_controls_wine_integration_with_the_linux_shell_desktop')}
+                    label={ct('luthier_desktop_integration_general')}
+                    help={ct('luthier_controls_wine_integration_with_the_linux_shell_desktop')}
                     value={config().winecfg.desktop_integration}
                     onChange={(value) =>
                       patchConfig((prev) => ({
@@ -74,8 +74,8 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                   />
 
                   <WinecfgFeatureStateField
-                    label={ct('creator_mime_types_file_protocol_associations')}
-                    help={ct('creator_equivalent_to_manage_file_and_protocol_associations')}
+                    label={ct('luthier_mime_types_file_protocol_associations')}
+                    help={ct('luthier_equivalent_to_manage_file_and_protocol_associations')}
                     value={config().winecfg.mime_associations}
                     onChange={(value) =>
                       patchConfig((prev) => ({
@@ -88,9 +88,9 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                   <div class="rounded-xl border border-border/70 bg-card/70 p-3">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p class="text-sm font-semibold">{ct('creator_special_folders')}</p>
+                        <p class="text-sm font-semibold">{ct('luthier_special_folders')}</p>
                         <p class="text-xs text-muted-foreground">
-                          {ct('creator_add_folder_shortcut_mappings_for_wine_optional_override')}
+                          {ct('luthier_add_folder_shortcut_mappings_for_wine_optional_override')}
                         </p>
                       </div>
                       <Dialog open={wineDesktopFolderDialogOpen()} onOpenChange={setWineDesktopFolderDialogOpen}>
@@ -102,14 +102,14 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                           onClick={() => setWineDesktopFolderDialogOpen(true)}
                         >
                           <IconPlus class="size-4" />
-                          {ct('creator_add_folder')}
+                          {ct('luthier_add_folder')}
                         </Button>
 
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>{ct('creator_add_wine_special_folder')}</DialogTitle>
+                            <DialogTitle>{ct('luthier_add_wine_special_folder')}</DialogTitle>
                             <DialogDescription>
-                              {ct('creator_set_folder_type_shortcut_name_and_linux_path')}
+                              {ct('luthier_set_folder_type_shortcut_name_and_linux_path')}
                             </DialogDescription>
                           </DialogHeader>
 
@@ -126,7 +126,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                             </Select>
                             <Input
                               value={wineDesktopFolderDraft().shortcut_name}
-                              placeholder={ct('creator_shortcut_name_in_wine')}
+                              placeholder={ct('luthier_shortcut_name_in_wine')}
                               class={shortcutNameValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                               onInput={(e) =>
                                 setWineDesktopFolderDraft((prev: any) => ({ ...prev, shortcut_name: e.currentTarget.value }))
@@ -154,13 +154,13 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                               <p class="text-xs text-destructive">{desktopFolderDuplicateValidation()}</p>
                             </Show>
                             <p class="text-xs text-muted-foreground">
-                              {ct('creator_prefer_generic_paths_without_a_fixed_username_when_possi')}
+                              {ct('luthier_prefer_generic_paths_without_a_fixed_username_when_possi')}
                             </p>
                           </div>
 
                           <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setWineDesktopFolderDialogOpen(false)}>
-                              {ct('creator_label_cancel')}
+                              {ct('luthier_label_cancel')}
                             </Button>
                             <Button
                               type="button"
@@ -200,7 +200,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                                 setWineDesktopFolderDialogOpen(false)
                               }}
                             >
-                              {ct('creator_label_confirm')}
+                              {ct('luthier_label_confirm')}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -212,7 +212,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                         when={config().winecfg.desktop_folders.length > 0}
                         fallback={
                           <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                            {ct('creator_no_special_folder_added')}
+                            {ct('luthier_no_special_folder_added')}
                           </div>
                         }
                       >
@@ -220,10 +220,10 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                           <Table>
                             <TableHeader>
                               <TableRow class="hover:bg-transparent">
-                                <TableHead>{ct('creator_type')}</TableHead>
-                                <TableHead>{ct('creator_shortcut')}</TableHead>
-                                <TableHead>{ct('creator_linux_path')}</TableHead>
-                                <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
+                                <TableHead>{ct('luthier_type')}</TableHead>
+                                <TableHead>{ct('luthier_shortcut')}</TableHead>
+                                <TableHead>{ct('luthier_linux_path')}</TableHead>
+                                <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>

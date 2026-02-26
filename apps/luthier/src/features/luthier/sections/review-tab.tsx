@@ -76,36 +76,36 @@ export function ReviewTabSection(props: LuthierPageSectionProps) {
     const runtimeItems = [
       cfg.runner.runtime_preference === 'Proton' ? `Proton (${cfg.runner.proton_version || 'GE-Proton-latest'})` : cfg.runner.runtime_preference,
       cfg.requirements.runtime.strict
-        ? `${ct('creator_summary_strict_proton_version')}: ${cfg.runner.proton_version || 'GE-Proton-latest'}`
+        ? `${ct('luthier_summary_strict_proton_version')}: ${cfg.runner.proton_version || 'GE-Proton-latest'}`
         : '',
       cfg.runner.esync ? 'ESYNC' : '',
       cfg.runner.fsync ? 'FSYNC' : '',
-      cfg.runner.auto_update ? ct('creator_auto_update') : '',
+      cfg.runner.auto_update ? ct('luthier_auto_update') : '',
       featureStateEnabled(cfg.compatibility.easy_anti_cheat_runtime) ? 'EAC Runtime' : '',
       featureStateEnabled(cfg.compatibility.battleye_runtime) ? 'BattlEye Runtime' : ''
     ]
     const fileLaunchItems = [
-      gameRootManualOverride() ? `${ct('creator_summary_game_root')}: ${gameRootRelativeDisplay()}` : '',
+      gameRootManualOverride() ? `${ct('luthier_summary_game_root')}: ${gameRootRelativeDisplay()}` : '',
       cfg.launch_args.length > 0 ? `Args: ${cfg.launch_args.length}` : '',
-      cfg.integrity_files.length > 0 ? `${ct('creator_required_files')}: ${cfg.integrity_files.length}` : '',
-      cfg.folder_mounts.length > 0 ? `${ct('creator_mounts')}: ${cfg.folder_mounts.length}` : ''
+      cfg.integrity_files.length > 0 ? `${ct('luthier_required_files')}: ${cfg.integrity_files.length}` : '',
+      cfg.folder_mounts.length > 0 ? `${ct('luthier_mounts')}: ${cfg.folder_mounts.length}` : ''
     ]
     const dependencyItems = [
       cfg.dependencies.length > 0 ? `Winetricks: ${compactList(cfg.dependencies, 4).join(', ')}` : '',
-      cfg.registry_keys.length > 0 ? `${ct('creator_windows_registry')}: ${cfg.registry_keys.length}` : '',
-      cfg.extra_system_dependencies.length > 0 ? `${ct('creator_extra_system_dependencies')}: ${cfg.extra_system_dependencies.length}` : ''
+      cfg.registry_keys.length > 0 ? `${ct('luthier_windows_registry')}: ${cfg.registry_keys.length}` : '',
+      cfg.extra_system_dependencies.length > 0 ? `${ct('luthier_extra_system_dependencies')}: ${cfg.extra_system_dependencies.length}` : ''
     ]
     const scriptEnvItems = [
       cfg.scripts.pre_launch.trim() ? 'pre-launch' : '',
       cfg.scripts.post_launch.trim() ? 'post-launch' : '',
-      cfg.compatibility.wrapper_commands.length > 0 ? `${ct('creator_wrappers')}: ${cfg.compatibility.wrapper_commands.length}` : '',
+      cfg.compatibility.wrapper_commands.length > 0 ? `${ct('luthier_wrappers')}: ${cfg.compatibility.wrapper_commands.length}` : '',
       Object.keys(cfg.environment.custom_vars).length > 0 ? `Env: ${Object.keys(cfg.environment.custom_vars).length}` : ''
     ]
     const enhancementItems = [
       featureStateEnabled(cfg.environment.gamescope.state) ? 'Gamescope' : '',
       featureStateEnabled(cfg.environment.mangohud) ? 'MangoHud' : '',
       featureStateEnabled(cfg.environment.gamemode) ? 'GameMode' : '',
-      featureStateEnabled(cfg.environment.prime_offload) ? ct('creator_use_dedicated_gpu') : '',
+      featureStateEnabled(cfg.environment.prime_offload) ? ct('luthier_use_dedicated_gpu') : '',
       featureStateEnabled(cfg.compatibility.wine_wayland) ? 'Wine-Wayland' : '',
       featureStateEnabled(cfg.compatibility.hdr) ? 'HDR' : '',
       featureStateEnabled(cfg.compatibility.auto_dxvk_nvapi) ? 'DXVK-NVAPI' : ''
@@ -118,7 +118,7 @@ export function ReviewTabSection(props: LuthierPageSectionProps) {
       }
       if (cfg.environment.gamescope.window_type !== 'windowed') {
         enhancementItems.push(
-          cfg.environment.gamescope.window_type === 'fullscreen' ? ct('creator_fullscreen') : ct('creator_borderless')
+          cfg.environment.gamescope.window_type === 'fullscreen' ? ct('luthier_fullscreen') : ct('luthier_borderless')
         )
       }
       if (cfg.environment.gamescope.enable_limiter) {
@@ -128,51 +128,51 @@ export function ReviewTabSection(props: LuthierPageSectionProps) {
 
     const winecfgItems: string[] = []
     if (cfg.winecfg.windows_version) {
-      winecfgItems.push(`${ct('creator_summary_windows_version')}: ${cfg.winecfg.windows_version}`)
+      winecfgItems.push(`${ct('luthier_summary_windows_version')}: ${cfg.winecfg.windows_version}`)
     }
     if (cfg.winecfg.dll_overrides.length > 0) {
-      winecfgItems.push(`${ct('creator_dll_overrides')}: ${cfg.winecfg.dll_overrides.length}`)
+      winecfgItems.push(`${ct('luthier_dll_overrides')}: ${cfg.winecfg.dll_overrides.length}`)
     }
     if (cfg.winecfg.screen_dpi != null) winecfgItems.push(`DPI ${cfg.winecfg.screen_dpi}`)
     if (!cfg.winecfg.virtual_desktop.state.use_wine_default) {
       winecfgItems.push(
-        `${ct('creator_summary_virtual_desktop')}: ${
-          featureStateEnabled(cfg.winecfg.virtual_desktop.state.state) ? ct('creator_label_enabled') : ct('creator_label_disabled')
+        `${ct('luthier_summary_virtual_desktop')}: ${
+          featureStateEnabled(cfg.winecfg.virtual_desktop.state.state) ? ct('luthier_label_enabled') : ct('luthier_label_disabled')
         }`
       )
     }
     if (cfg.winecfg.virtual_desktop.resolution) {
-      winecfgItems.push(`${ct('creator_desktop')} ${cfg.winecfg.virtual_desktop.resolution}`)
+      winecfgItems.push(`${ct('luthier_desktop')} ${cfg.winecfg.virtual_desktop.resolution}`)
     }
-    if (cfg.winecfg.audio_driver) winecfgItems.push(`${ct('creator_audio')}: ${cfg.winecfg.audio_driver}`)
-    if (cfg.winecfg.drives.length > 0) winecfgItems.push(`${ct('creator_drives')}: ${cfg.winecfg.drives.length}`)
-    if (cfg.winecfg.desktop_folders.length > 0) winecfgItems.push(`${ct('creator_special_folders')}: ${cfg.winecfg.desktop_folders.length}`)
-    if (!cfg.winecfg.desktop_integration.use_wine_default) winecfgItems.push(ct('creator_desktop_integration'))
-    if (!cfg.winecfg.mime_associations.use_wine_default) winecfgItems.push(ct('creator_summary_mime_protocols'))
+    if (cfg.winecfg.audio_driver) winecfgItems.push(`${ct('luthier_audio')}: ${cfg.winecfg.audio_driver}`)
+    if (cfg.winecfg.drives.length > 0) winecfgItems.push(`${ct('luthier_drives')}: ${cfg.winecfg.drives.length}`)
+    if (cfg.winecfg.desktop_folders.length > 0) winecfgItems.push(`${ct('luthier_special_folders')}: ${cfg.winecfg.desktop_folders.length}`)
+    if (!cfg.winecfg.desktop_integration.use_wine_default) winecfgItems.push(ct('luthier_desktop_integration'))
+    if (!cfg.winecfg.mime_associations.use_wine_default) winecfgItems.push(ct('luthier_summary_mime_protocols'))
 
     // Keep the same order as the navigation tabs.
-    pushRow(ct('creator_label_game'), [cfg.game_name || null, exeName ? `EXE: ${exeName}` : null])
-    pushRow(ct('creator_label_game_files_and_launch'), fileLaunchItems)
-    pushRow(ct('creator_label_runtime'), runtimeItems)
-    pushRow(ct('creator_enhancements'), enhancementItems)
-    pushRow(ct('creator_dependencies'), dependencyItems)
+    pushRow(ct('luthier_label_game'), [cfg.game_name || null, exeName ? `EXE: ${exeName}` : null])
+    pushRow(ct('luthier_label_game_files_and_launch'), fileLaunchItems)
+    pushRow(ct('luthier_label_runtime'), runtimeItems)
+    pushRow(ct('luthier_enhancements'), enhancementItems)
+    pushRow(ct('luthier_dependencies'), dependencyItems)
     pushRow('Winecfg', winecfgItems)
-    pushRow(ct('creator_launch_and_environment'), scriptEnvItems)
+    pushRow(ct('luthier_launch_and_environment'), scriptEnvItems)
     return rows
   }
 
   return (
           <section class="stack">
             <FieldShell
-              label={ct('creator_configuration_summary')}
-              help={ct('creator_quick_view_of_how_many_items_were_configured_in_each_sec')}
+              label={ct('luthier_configuration_summary')}
+              help={ct('luthier_quick_view_of_how_many_items_were_configured_in_each_sec')}
               controlClass="hidden"
               footer={
                 <Show
                   when={summaryRows().length > 0}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {ct('creator_no_items_found')}
+                      {ct('luthier_no_items_found')}
                     </div>
                   }
                 >
@@ -201,7 +201,7 @@ export function ReviewTabSection(props: LuthierPageSectionProps) {
             </FieldShell>
 
             <section class="preview">
-              <h3>{ct('creator_configuration_preview_json')}</h3>
+              <h3>{ct('luthier_configuration_preview_json')}</h3>
               <pre>{configPreview()}</pre>
             </section>
 
@@ -230,7 +230,7 @@ export function ReviewTabSection(props: LuthierPageSectionProps) {
                   fallback={
                     <span class="inline-flex items-center gap-2">
                       <Spinner class="size-4" />
-                      {ct('creator_loading')}
+                      {ct('luthier_loading')}
                     </span>
                   }
                 >
@@ -253,7 +253,7 @@ export function ReviewTabSection(props: LuthierPageSectionProps) {
                   fallback={
                     <span class="inline-flex items-center gap-2">
                       <Spinner class="size-4" />
-                      {ct('creator_loading')}
+                      {ct('luthier_loading')}
                     </span>
                   }
                 >
@@ -263,7 +263,7 @@ export function ReviewTabSection(props: LuthierPageSectionProps) {
             </div>
 
             <section class="preview">
-              <h3>{ct('creator_last_action_result')}</h3>
+              <h3>{ct('luthier_last_action_result')}</h3>
               <pre>{resultJson() || t('noResult')}</pre>
             </section>
           </section>

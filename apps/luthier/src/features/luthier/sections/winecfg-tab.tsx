@@ -16,9 +16,9 @@ export function WinecfgTabSection(props: LuthierPageSectionProps) {
     <section class="stack">
       <Alert variant="warning">
         <IconAlertCircle />
-        <AlertTitle>{ct('creator_winecfg_overrides_do_not_replace_everything')}</AlertTitle>
+        <AlertTitle>{ct('luthier_winecfg_overrides_do_not_replace_everything')}</AlertTitle>
         <AlertDescription>
-          {ct('creator_settings_in_this_tab_are_additive_overrides_on_top_of_wi')}
+          {ct('luthier_settings_in_this_tab_are_additive_overrides_on_top_of_wi')}
         </AlertDescription>
       </Alert>
 

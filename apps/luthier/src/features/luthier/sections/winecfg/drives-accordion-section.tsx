@@ -46,15 +46,15 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
               <AccordionSection
                 open={props.open}
                 onToggle={props.onToggle}
-                title={ct('creator_drives')}
-                description={ct('creator_additional_wine_drives_as_overrides_c_and_z_usually_alre')}
+                title={ct('luthier_drives')}
+                description={ct('luthier_additional_wine_drives_as_overrides_c_and_z_usually_alre')}
               >
                 <div class="grid gap-3">
                   <Alert variant="warning">
                     <IconAlertCircle />
-                    <AlertTitle>{ct('creator_wine_drives_require_care')}</AlertTitle>
+                    <AlertTitle>{ct('luthier_wine_drives_require_care')}</AlertTitle>
                     <AlertDescription>
-                      {ct('creator_c_and_z_usually_already_exist_in_the_default_prefix_add')}
+                      {ct('luthier_c_and_z_usually_already_exist_in_the_default_prefix_add')}
                     </AlertDescription>
                   </Alert>
 
@@ -62,11 +62,11 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                     <div class="grid gap-1">
                       <p>
                         <strong class="text-foreground">C:</strong>{' '}
-                        {ct('creator_usually_points_to_drive_c_internal_prefix_path')}
+                        {ct('luthier_usually_points_to_drive_c_internal_prefix_path')}
                       </p>
                       <p>
                         <strong class="text-foreground">Z:</strong>{' '}
-                        {ct('creator_usually_exposes_the_linux_filesystem_root_for_compatibil')}
+                        {ct('luthier_usually_exposes_the_linux_filesystem_root_for_compatibil')}
                       </p>
                     </div>
                     <div class="mt-2">
@@ -94,7 +94,7 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                           }))
                         }
                       >
-                        {ct('creator_restore_shown_default_z')}
+                        {ct('luthier_restore_shown_default_z')}
                       </Button>
                     </div>
                   </div>
@@ -119,14 +119,14 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                         }}
                       >
                         <IconPlus class="size-4" />
-                        {ct('creator_add_drive')}
+                        {ct('luthier_add_drive')}
                       </Button>
 
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>{ct('creator_add_wine_drive')}</DialogTitle>
+                          <DialogTitle>{ct('luthier_add_wine_drive')}</DialogTitle>
                           <DialogDescription>
-                            {ct('creator_choose_an_available_letter_and_configure_drive_metadata')}
+                            {ct('luthier_choose_an_available_letter_and_configure_drive_metadata')}
                           </DialogDescription>
                         </DialogHeader>
 
@@ -164,13 +164,13 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                           <div class="grid gap-2 md:grid-cols-2">
                             <Input
                               value={wineDriveDraft().label}
-                              placeholder={ct('creator_label_optional')}
+                              placeholder={ct('luthier_label_optional')}
                               class={wineDriveLabelValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                               onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, label: e.currentTarget.value }))}
                             />
                             <Input
                               value={wineDriveDraft().serial}
-                              placeholder={ct('creator_serial_optional')}
+                              placeholder={ct('luthier_serial_optional')}
                               class={wineDriveSerialValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                               onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, serial: e.currentTarget.value }))}
                             />
@@ -187,13 +187,13 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                           </Show>
 
                           <p class="text-xs text-muted-foreground">
-                            {ct('creator_use_a_generic_linux_directory_when_possible_avoid_user_s')}
+                            {ct('luthier_use_a_generic_linux_directory_when_possible_avoid_user_s')}
                           </p>
                         </div>
 
                         <DialogFooter>
                           <Button type="button" variant="outline" onClick={() => setWineDriveDialogOpen(false)}>
-                            {ct('creator_label_cancel')}
+                            {ct('luthier_label_cancel')}
                           </Button>
                           <Button
                             type="button"
@@ -217,7 +217,7 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                                 return
                               }
                               if (config().winecfg.drives.some((item) => item.letter.trim().toUpperCase() === letter)) {
-                                setStatusMessage(ct('creator_that_drive_letter_is_already_in_use'))
+                                setStatusMessage(ct('luthier_that_drive_letter_is_already_in_use'))
                                 return
                               }
                               patchConfig((prev) => ({
@@ -241,7 +241,7 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                               setWineDriveDialogOpen(false)
                             }}
                           >
-                            {ct('creator_label_confirm')}
+                            {ct('luthier_label_confirm')}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -252,7 +252,7 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                     when={config().winecfg.drives.length > 0}
                     fallback={
                       <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                        {ct('creator_no_additional_drive_configured')}
+                        {ct('luthier_no_additional_drive_configured')}
                       </div>
                     }
                   >
@@ -260,12 +260,12 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                       <Table>
                         <TableHeader>
                           <TableRow class="hover:bg-transparent">
-                            <TableHead>{ct('creator_letter')}</TableHead>
-                            <TableHead>{ct('creator_linux_path')}</TableHead>
-                            <TableHead>{ct('creator_type')}</TableHead>
-                            <TableHead>{ct('creator_label')}</TableHead>
-                            <TableHead>{ct('creator_serial')}</TableHead>
-                            <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
+                            <TableHead>{ct('luthier_letter')}</TableHead>
+                            <TableHead>{ct('luthier_linux_path')}</TableHead>
+                            <TableHead>{ct('luthier_type')}</TableHead>
+                            <TableHead>{ct('luthier_label')}</TableHead>
+                            <TableHead>{ct('luthier_serial')}</TableHead>
+                            <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

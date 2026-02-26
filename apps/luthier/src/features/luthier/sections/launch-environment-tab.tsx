@@ -63,14 +63,14 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
       (item) => item.executable.trim() === executable && item.args.trim() === args
     )
     if (!duplicate) return ''
-    return ct('creator_validation_duplicate_wrapper')
+    return ct('luthier_validation_duplicate_wrapper')
   })
 
   return (
           <section class="stack">
             <FieldShell
-              label={ct('creator_wrapper_commands')}
-              help={ct('creator_commands_executed_before_the_main_runtime_e_g_gamescope')}
+              label={ct('luthier_wrapper_commands')}
+              help={ct('luthier_commands_executed_before_the_main_runtime_e_g_gamescope')}
               controlClass="flex justify-end"
               footer={
                 <div class="grid gap-2">
@@ -78,7 +78,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                     when={config().compatibility.wrapper_commands.length > 0}
                     fallback={
                       <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {ct('creator_no_wrapper_command_added')}
+                      {ct('luthier_no_wrapper_command_added')}
                       </div>
                     }
                   >
@@ -86,19 +86,19 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                       <Table>
                         <TableHeader>
                           <TableRow class="hover:bg-transparent">
-                            <TableHead>{ct('creator_label_enabled')}</TableHead>
-                            <TableHead>{ct('creator_label_mandatory')}</TableHead>
-                            <TableHead>{ct('creator_executable')}</TableHead>
-                            <TableHead>{ct('creator_arguments')}</TableHead>
-                            <TableHead class="w-14 text-right">{ct('creator_label_action')}</TableHead>
+                            <TableHead>{ct('luthier_label_enabled')}</TableHead>
+                            <TableHead>{ct('luthier_label_mandatory')}</TableHead>
+                            <TableHead>{ct('luthier_executable')}</TableHead>
+                            <TableHead>{ct('luthier_arguments')}</TableHead>
+                            <TableHead class="w-14 text-right">{ct('luthier_label_action')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           <For each={config().compatibility.wrapper_commands}>
                             {(item, index) => (
                               <TableRow>
-                                <TableCell>{featureStateEnabled(item.state) ? ct('creator_yes') : ct('creator_no')}</TableCell>
-                                <TableCell>{featureStateMandatory(item.state) ? ct('creator_yes') : ct('creator_no')}</TableCell>
+                                <TableCell>{featureStateEnabled(item.state) ? ct('luthier_yes') : ct('luthier_no')}</TableCell>
+                                <TableCell>{featureStateMandatory(item.state) ? ct('luthier_yes') : ct('luthier_no')}</TableCell>
                                 <TableCell class="font-medium">{item.executable}</TableCell>
                                 <TableCell class="text-muted-foreground">{item.args || '—'}</TableCell>
                                 <TableCell class="text-right">
@@ -115,7 +115,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                                         }
                                       }))
                                     }
-                                    title={ct('creator_remove_wrapper')}
+                                    title={ct('luthier_remove_wrapper')}
                                   >
                                     <IconTrash class="size-4" />
                                   </Button>
@@ -133,21 +133,21 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
               <Dialog open={wrapperDialogOpen()} onOpenChange={setWrapperDialogOpen}>
                 <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setWrapperDialogOpen(true)}>
                   <IconPlus class="size-4" />
-                  {ct('creator_add_wrapper')}
+                  {ct('luthier_add_wrapper')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{ct('creator_add_wrapper')}</DialogTitle>
+                    <DialogTitle>{ct('luthier_add_wrapper')}</DialogTitle>
                     <DialogDescription>
-                      {ct('creator_set_policy_executable_and_wrapper_arguments')}
+                      {ct('luthier_set_policy_executable_and_wrapper_arguments')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-3">
                     <div class="grid gap-2 md:grid-cols-2">
                       <SwitchChoiceCard
-                        title={ct('creator_label_enabled')}
+                        title={ct('luthier_label_enabled')}
                         checked={featureStateEnabled(wrapperDraft().state)}
                         onChange={(checked) =>
                           setWrapperDraft((prev: any) => ({
@@ -157,7 +157,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                         }
                       />
                       <SwitchChoiceCard
-                        title={ct('creator_label_mandatory')}
+                        title={ct('luthier_label_mandatory')}
                         checked={featureStateMandatory(wrapperDraft().state)}
                         onChange={(checked) =>
                           setWrapperDraft((prev: any) => ({
@@ -169,7 +169,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                     </div>
                     <Input
                       value={wrapperDraft().executable}
-                      placeholder={ct('creator_executable_e_g_gamescope')}
+                      placeholder={ct('luthier_executable_e_g_gamescope')}
                       class={wrapperExecutableValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setWrapperDraft((prev: any) => ({
@@ -185,7 +185,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                     </Show>
                     <Input
                       value={wrapperDraft().args}
-                      placeholder={ct('creator_args_e_g_w_1920_h_1080')}
+                      placeholder={ct('luthier_args_e_g_w_1920_h_1080')}
                       onInput={(e) =>
                         setWrapperDraft((prev: any) => ({
                           ...prev,
@@ -200,7 +200,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setWrapperDialogOpen(false)}>
-                      {ct('creator_label_cancel')}
+                      {ct('luthier_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -234,7 +234,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                         setWrapperDialogOpen(false)
                       }}
                     >
-                      {ct('creator_label_confirm')}
+                      {ct('luthier_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -242,18 +242,18 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
             </FieldShell>
 
             <KeyValueListField
-              label={ct('creator_environment_variables')}
-              help={ct('creator_applied_at_launch_protected_keys_are_ignored_by_runtime')}
+              label={ct('luthier_environment_variables')}
+              help={ct('luthier_applied_at_launch_protected_keys_are_ignored_by_runtime')}
               items={environmentVarsAsList()}
               onChange={updateCustomVars}
               keyPlaceholder="WINE_FULLSCREEN_FSR"
               valuePlaceholder="1"
-              addLabel={ct('creator_add_variable')}
-              removeLabel={ct('creator_label_remove')}
-              emptyMessage={ct('creator_no_environment_variable_added')}
+              addLabel={ct('luthier_add_variable')}
+              removeLabel={ct('luthier_label_remove')}
+              emptyMessage={ct('luthier_no_environment_variable_added')}
               tableHeaders={{
-                key: ct('creator_variable'),
-                value: ct('creator_value')
+                key: ct('luthier_variable'),
+                value: ct('luthier_value')
               }}
               validateDraft={(draft, items) => {
                 if (!draft.key && !draft.value) return undefined
@@ -264,7 +264,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
 
                 const duplicate = items.some((item) => item.key.trim() === draft.key.trim())
                 if (duplicate) {
-                  return { formError: ct('creator_validation_duplicate_env_var') }
+                  return { formError: ct('luthier_validation_duplicate_env_var') }
                 }
 
                 return undefined
@@ -273,10 +273,10 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
 
             <Alert variant="warning">
               <IconAlertCircle />
-              <AlertTitle>{ct('creator_runtime_protected_keys')}</AlertTitle>
+              <AlertTitle>{ct('luthier_runtime_protected_keys')}</AlertTitle>
               <AlertDescription>
                 <span class="block">
-                  {ct('creator_the_keys_below_are_reserved_if_added_above_they_will_be')}
+                  {ct('luthier_the_keys_below_are_reserved_if_added_above_they_will_be')}
                 </span>
                 <span class="mt-1 block font-mono text-[11px]">WINEPREFIX · PROTON_VERB</span>
               </AlertDescription>
@@ -285,13 +285,13 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
             <AccordionSection
               open={launchScriptsAccordionOpen()}
               onToggle={() => setLaunchScriptsAccordionOpen((prev: boolean) => !prev)}
-              title={ct('creator_label_scripts')}
-              description={ct('creator_local_scripts_mvp')}
+              title={ct('luthier_label_scripts')}
+              description={ct('luthier_local_scripts_mvp')}
             >
               <div class="grid gap-3">
                 <FieldShell
-                  label={ct('creator_pre_launch_script_bash')}
-                  help={ct('creator_executed_before_starting_the_game')}
+                  label={ct('luthier_pre_launch_script_bash')}
+                  help={ct('luthier_executed_before_starting_the_game')}
                   controlClass="hidden"
                   footer={
                     <Textarea
@@ -311,8 +311,8 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                 </FieldShell>
 
                 <FieldShell
-                  label={ct('creator_post_launch_script_bash')}
-                  help={ct('creator_executed_after_the_game_exits')}
+                  label={ct('luthier_post_launch_script_bash')}
+                  help={ct('luthier_executed_after_the_game_exits')}
                   controlClass="hidden"
                   footer={
                     <Textarea
@@ -333,13 +333,13 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
 
                 <Alert variant="warning">
                   <IconAlertCircle />
-                  <AlertTitle>{ct('creator_local_scripts_mvp')}</AlertTitle>
+                  <AlertTitle>{ct('luthier_local_scripts_mvp')}</AlertTitle>
                   <AlertDescription>
                     <span class="block">
-                      {ct('creator_scripts_accept_bash_only_and_local_execution_in_the_mvp')}
+                      {ct('luthier_scripts_accept_bash_only_and_local_execution_in_the_mvp')}
                     </span>
                     <span class="mt-1 block">
-                      {ct('creator_scripts_are_not_sent_to_the_community_api_use_trusted_co')}
+                      {ct('luthier_scripts_are_not_sent_to_the_community_api_use_trusted_co')}
                     </span>
                   </AlertDescription>
                 </Alert>

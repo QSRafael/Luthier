@@ -109,7 +109,7 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
           <section class="stack">
             <FeatureStateField
               label="Gamescope"
-              help={ct('creator_defines_gamescope_policy_and_syncs_with_requirements_gam')}
+              help={ct('luthier_defines_gamescope_policy_and_syncs_with_requirements_gam')}
               value={
                 config().environment.gamescope.state === 'OptionalOff'
                   ? 'MandatoryOff'
@@ -121,7 +121,7 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                   when={gamescopeEnabled()}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {ct('creator_gamescope_is_disabled_enable_it_to_configure_resolution')}
+                      {ct('luthier_gamescope_is_disabled_enable_it_to_configure_resolution')}
                     </div>
                   }
                 >
@@ -129,9 +129,9 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                     <div class="grid gap-3 md:grid-cols-2">
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{ct('creator_upscale_method')}</p>
+                          <p class="text-sm font-medium">{ct('luthier_upscale_method')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {ct('creator_method_used_by_gamescope_for_upscaling')}
+                            {ct('luthier_method_used_by_gamescope_for_upscaling')}
                           </p>
                         </div>
                         <Tabs
@@ -168,9 +168,9 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
 
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{ct('creator_window_type')}</p>
+                          <p class="text-sm font-medium">{ct('luthier_window_type')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {ct('creator_defines_gamescope_window_behavior')}
+                            {ct('luthier_defines_gamescope_window_behavior')}
                           </p>
                         </div>
                         <Tabs
@@ -208,9 +208,9 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                     <div class="grid gap-3 md:grid-cols-2">
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{ct('creator_game_resolution')}</p>
+                          <p class="text-sm font-medium">{ct('luthier_game_resolution')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {ct('creator_game_render_resolution_width_x_height')}
+                            {ct('luthier_game_render_resolution_width_x_height')}
                           </p>
                         </div>
                         <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
@@ -261,16 +261,16 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
 
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
                         <div class="space-y-1.5">
-                          <p class="text-sm font-medium">{ct('creator_display_resolution')}</p>
+                          <p class="text-sm font-medium">{ct('luthier_display_resolution')}</p>
                           <p class="text-xs text-muted-foreground">
-                            {ct('creator_final_gamescope_output_resolution_width_x_height')}
+                            {ct('luthier_final_gamescope_output_resolution_width_x_height')}
                           </p>
                         </div>
 
                         <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                           <Input
                             value={config().environment.gamescope.output_width}
-                            placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1920'}
+                            placeholder={gamescopeUsesMonitorResolution() ? ct('luthier_auto') : '1920'}
                             disabled={gamescopeUsesMonitorResolution()}
                             inputMode="numeric"
                             class={gamescopeOutputWidthValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
@@ -279,7 +279,7 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                           <span class="text-sm font-semibold text-muted-foreground">x</span>
                           <Input
                             value={config().environment.gamescope.output_height}
-                            placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1080'}
+                            placeholder={gamescopeUsesMonitorResolution() ? ct('luthier_auto') : '1080'}
                             disabled={gamescopeUsesMonitorResolution()}
                             inputMode="numeric"
                             class={gamescopeOutputHeightValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
@@ -299,7 +299,7 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
 
                         <div class="mt-3">
                           <SwitchChoiceCard
-                            title={ct('creator_use_monitor_resolution')}
+                            title={ct('luthier_use_monitor_resolution')}
                             checked={gamescopeUsesMonitorResolution()}
                             onChange={(checked) => {
                               patchConfig((prev) => {
@@ -348,8 +348,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
 
                     <div class="grid gap-3 md:grid-cols-2">
                       <SwitchChoiceCard
-                        title={ct('creator_enable_fps_limiter')}
-                        description={ct('creator_enables_gamescope_fps_limiter')}
+                        title={ct('luthier_enable_fps_limiter')}
+                        description={ct('luthier_enables_gamescope_fps_limiter')}
                         checked={config().environment.gamescope.enable_limiter}
                         onChange={(checked) =>
                           patchConfig((prev) => ({
@@ -366,8 +366,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                       />
 
                       <SwitchChoiceCard
-                        title={ct('creator_force_grab_cursor')}
-                        description={ct('creator_forces_relative_mouse_mode_to_avoid_focus_loss')}
+                        title={ct('luthier_force_grab_cursor')}
+                        description={ct('luthier_forces_relative_mouse_mode_to_avoid_focus_loss')}
                         checked={config().environment.gamescope.force_grab_cursor}
                         onChange={(checked) =>
                           patchConfig((prev) => ({
@@ -387,8 +387,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                     <Show when={config().environment.gamescope.enable_limiter}>
                       <div class="table-grid table-grid-two">
                         <TextInputField
-                          label={ct('creator_fps_limit')}
-                          help={ct('creator_fps_limit_when_game_is_focused')}
+                          label={ct('luthier_fps_limit')}
+                          help={ct('luthier_fps_limit_when_game_is_focused')}
                           value={config().environment.gamescope.fps_limiter}
                           inputMode="numeric"
                           error={gamescopeFpsFocusValidation().error}
@@ -407,8 +407,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                         />
 
                         <TextInputField
-                          label={ct('creator_fps_limit_without_focus')}
-                          help={ct('creator_fps_limit_when_game_loses_focus')}
+                          label={ct('luthier_fps_limit_without_focus')}
+                          help={ct('luthier_fps_limit_when_game_loses_focus')}
                           value={config().environment.gamescope.fps_limiter_no_focus}
                           inputMode="numeric"
                           error={gamescopeFpsNoFocusValidation().error}
@@ -429,12 +429,12 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                     </Show>
 
                     <StringListField
-                      label={ct('creator_gamescope_additional_options')}
-                      help={ct('creator_add_extra_flags_that_will_be_appended_to_the_gamescope_c')}
+                      label={ct('luthier_gamescope_additional_options')}
+                      help={ct('luthier_add_extra_flags_that_will_be_appended_to_the_gamescope_c')}
                       items={gamescopeAdditionalOptionsList()}
                       onChange={setGamescopeAdditionalOptionsList}
-                      placeholder={ct('creator_prefer_vk_device_1002_73bf')}
-                      addLabel={ct('creator_add_option')}
+                      placeholder={ct('luthier_prefer_vk_device_1002_73bf')}
+                      addLabel={ct('luthier_add_option')}
                     />
                   </div>
                 </Show>
@@ -443,21 +443,21 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
 
             <FeatureStateField
               label="Gamemode"
-              help={ct('creator_defines_gamemode_policy')}
+              help={ct('luthier_defines_gamemode_policy')}
               value={config().environment.gamemode}
               onChange={setGamemodeState}
             />
 
             <FeatureStateField
               label="MangoHud"
-              help={ct('creator_defines_mangohud_policy')}
+              help={ct('luthier_defines_mangohud_policy')}
               value={config().environment.mangohud}
               onChange={setMangohudState}
             />
 
             <FeatureStateField
               label="Wine-Wayland"
-              help={ct('creator_policy_for_enabling_wine_wayland')}
+              help={ct('luthier_policy_for_enabling_wine_wayland')}
               value={config().compatibility.wine_wayland}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -472,7 +472,7 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                 wineWaylandEnabled() ? (
                   <FeatureStateField
                     label="HDR"
-                    help={ct('creator_policy_for_hdr_depends_on_wine_wayland')}
+                    help={ct('luthier_policy_for_hdr_depends_on_wine_wayland')}
                     value={config().compatibility.hdr}
                     onChange={(value) =>
                       patchConfig((prev) => ({
@@ -490,7 +490,7 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
 
             <FeatureStateField
               label="Auto DXVK-NVAPI"
-              help={ct('creator_controls_automatic_dxvk_nvapi_setup')}
+              help={ct('luthier_controls_automatic_dxvk_nvapi_setup')}
               value={config().compatibility.auto_dxvk_nvapi}
               onChange={(value) =>
                 patchConfig((prev) => ({
@@ -504,8 +504,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
             />
 
             <FeatureStateField
-              label={ct('creator_use_dedicated_gpu')}
-              help={ct('creator_exports_prime_render_offload_variables_to_try_using_the')}
+              label={ct('luthier_use_dedicated_gpu')}
+              help={ct('luthier_exports_prime_render_offload_variables_to_try_using_the')}
               value={config().environment.prime_offload}
               onChange={(value) =>
                 patchConfig((prev) => ({

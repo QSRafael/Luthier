@@ -92,7 +92,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
       (item) => item.path.trim().toLowerCase() === path && item.name.trim().toLowerCase() === name
     )
     if (!duplicate) return ''
-    return ct('creator_validation_duplicate_registry_key')
+    return ct('luthier_validation_duplicate_registry_key')
   })
 
   const extraDependencyCommandValidation = createMemo(() => {
@@ -123,14 +123,14 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
       (item) => item.name.trim().toLowerCase() === name
     )
     if (!duplicate) return ''
-    return ct('creator_validation_duplicate_extra_dependency')
+    return ct('luthier_validation_duplicate_extra_dependency')
   })
 
   return (
           <section class="stack">
             <FieldShell
               label="Winetricks"
-              help={ct('creator_enabled_automatically_when_at_least_one_verb_is_configur')}
+              help={ct('luthier_enabled_automatically_when_at_least_one_verb_is_configur')}
               controlClass="flex flex-col items-end gap-2"
               footer={
                 <div class="grid gap-2">
@@ -144,8 +144,8 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                               type="button"
                               class="inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:text-destructive"
                               onClick={() => removeWinetricksVerb(verb)}
-                              aria-label={ct('creator_remove_verb')}
-                              title={ct('creator_remove_verb')}
+                              aria-label={ct('luthier_remove_verb')}
+                              title={ct('luthier_remove_verb')}
                             >
                               <IconX class="size-3" />
                             </button>
@@ -158,8 +158,8 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                         disabled={winetricksCatalogError() || winetricksLoading()}
                         placeholder={
                           winetricksCatalogError()
-                            ? ct('creator_failed_to_load_winetricks_catalog')
-                            : ct('creator_search_and_add_verbs_e_g_vcrun_corefonts')
+                            ? ct('luthier_failed_to_load_winetricks_catalog')
+                            : ct('luthier_search_and_add_verbs_e_g_vcrun_corefonts')
                         }
                         class="h-7 min-w-[220px] flex-1 border-0 bg-transparent px-1 py-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         onInput={(e) => setWinetricksSearch(e.currentTarget.value)}
@@ -191,9 +191,9 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                   <Show when={winetricksCatalogError()}>
                     <Alert variant="destructive">
                       <IconAlertCircle />
-                      <AlertTitle>{ct('creator_failed_to_load_winetricks_catalog')}</AlertTitle>
+                      <AlertTitle>{ct('luthier_failed_to_load_winetricks_catalog')}</AlertTitle>
                       <AlertDescription>
-                        {ct('creator_the_local_remote_catalog_could_not_be_loaded_you_can_sti')}
+                        {ct('luthier_the_local_remote_catalog_could_not_be_loaded_you_can_sti')}
                       </AlertDescription>
                     </Alert>
                   </Show>
@@ -213,7 +213,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                               </div>
                             }
                           >
-                            {ct('creator_type_at_least_2_characters_to_search_verbs_in_the_catalo')}
+                            {ct('luthier_type_at_least_2_characters_to_search_verbs_in_the_catalo')}
                           </Show>
                         </div>
                       </Show>
@@ -224,7 +224,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                         when={winetricksCandidates().length > 0}
                         fallback={
                           <div class="px-2 py-2 text-xs text-muted-foreground">
-                            {ct('creator_no_items_found')}
+                            {ct('luthier_no_items_found')}
                           </div>
                         }
                       >
@@ -240,7 +240,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                                 }}
                               >
                                 <span class="truncate">{verb}</span>
-                                <span class="text-xs text-muted-foreground">{ct('creator_label_add')}</span>
+                                <span class="text-xs text-muted-foreground">{ct('luthier_label_add')}</span>
                               </button>
                             )}
                           </For>
@@ -255,7 +255,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                 <Show when={winetricksLoading()}>
                   <div class="inline-flex items-center gap-2 text-xs text-muted-foreground">
                     <Spinner class="size-3" />
-                    <span>{ct('creator_loading_catalog_in_background')}</span>
+                    <span>{ct('luthier_loading_catalog_in_background')}</span>
                   </div>
                 </Show>
                 <Button type="button" variant="outline" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
@@ -264,30 +264,30 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                     fallback={
                       <span class="inline-flex items-center gap-2">
                         <Spinner class="size-3" />
-                        {ct('creator_loading')}
+                        {ct('luthier_loading')}
                       </span>
                     }
                   >
-                    {ct('creator_refresh_catalog')}
+                    {ct('luthier_refresh_catalog')}
                   </Show>
                 </Button>
                 <p class="text-xs text-muted-foreground">
-                  {ct('creator_source')} <strong>{winetricksSource()}</strong> ·{' '}
-                  {ct('creator_catalog')} <strong>{winetricksAvailable().length}</strong>
+                  {ct('luthier_source')} <strong>{winetricksSource()}</strong> ·{' '}
+                  {ct('luthier_catalog')} <strong>{winetricksAvailable().length}</strong>
                 </p>
               </div>
             </FieldShell>
 
             <FieldShell
-              label={ct('creator_registry_keys')}
-              help={ct('creator_table_of_keys_applied_to_prefix_after_bootstrap')}
+              label={ct('luthier_registry_keys')}
+              help={ct('luthier_table_of_keys_applied_to_prefix_after_bootstrap')}
               controlClass="flex flex-wrap justify-end gap-2"
               footer={
                 <Show
                   when={config().registry_keys.length > 0}
                   fallback={
                     <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {ct('creator_no_key_added')}
+                      {ct('luthier_no_key_added')}
                     </div>
                   }
                 >
@@ -295,11 +295,11 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{ct('creator_path')}</TableHead>
-                          <TableHead>{ct('creator_name')}</TableHead>
-                          <TableHead>{ct('creator_type')}</TableHead>
-                          <TableHead>{ct('creator_value')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
+                          <TableHead>{ct('luthier_path')}</TableHead>
+                          <TableHead>{ct('luthier_name')}</TableHead>
+                          <TableHead>{ct('luthier_type')}</TableHead>
+                          <TableHead>{ct('luthier_value')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -323,7 +323,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                                       registry_keys: removeAt(prev.registry_keys, index())
                                     }))
                                   }
-                                  title={ct('creator_remove_key')}
+                                  title={ct('luthier_remove_key')}
                                 >
                                   <IconTrash class="size-4" />
                                 </Button>
@@ -340,21 +340,21 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
               <Dialog open={registryDialogOpen()} onOpenChange={setRegistryDialogOpen}>
                 <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setRegistryDialogOpen(true)}>
                   <IconPlus class="size-4" />
-                  {ct('creator_add_key')}
+                  {ct('luthier_add_key')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{ct('creator_add_registry_key')}</DialogTitle>
+                    <DialogTitle>{ct('luthier_add_registry_key')}</DialogTitle>
                     <DialogDescription>
-                      {ct('creator_fill_fields_and_confirm_to_add_row')}
+                      {ct('luthier_fill_fields_and_confirm_to_add_row')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-2">
                     <Input
                       value={registryDraft().path}
-                      placeholder={ct('creator_path_hkcu')}
+                      placeholder={ct('luthier_path_hkcu')}
                       class={registryPathValidationSafe().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setRegistryDraft((prev: any) => ({
@@ -370,7 +370,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                     </Show>
                     <Input
                       value={registryDraft().name}
-                      placeholder={ct('creator_key_name')}
+                      placeholder={ct('luthier_key_name')}
                       onInput={(e) =>
                         setRegistryDraft((prev: any) => ({
                           ...prev,
@@ -381,7 +381,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                     <div class="grid gap-2 md:grid-cols-2">
                       <Input
                         value={registryDraft().value_type}
-                        placeholder={ct('creator_type_reg_sz')}
+                        placeholder={ct('luthier_type_reg_sz')}
                         class={registryTypeValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                         onInput={(e) =>
                           setRegistryDraft((prev: any) => ({
@@ -392,7 +392,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                       />
                       <Input
                         value={registryDraft().value}
-                        placeholder={ct('creator_value')}
+                        placeholder={ct('luthier_value')}
                         onInput={(e) =>
                           setRegistryDraft((prev: any) => ({
                             ...prev,
@@ -413,7 +413,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setRegistryDialogOpen(false)}>
-                      {ct('creator_label_cancel')}
+                      {ct('luthier_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -451,7 +451,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                         setRegistryDialogOpen(false)
                       }}
                     >
-                      {ct('creator_label_confirm')}
+                      {ct('luthier_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -466,15 +466,15 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                 disabled={!canImportRegistryFromFile()}
               >
                 <IconPlus class="size-4" />
-                {ct('creator_add_from_file_reg')}
+                {ct('luthier_add_from_file_reg')}
               </Button>
 
               <Dialog open={registryImportWarningsOpen()} onOpenChange={setRegistryImportWarningsOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{ct('creator_reg_import_warnings')}</DialogTitle>
+                    <DialogTitle>{ct('luthier_reg_import_warnings')}</DialogTitle>
                     <DialogDescription>
-                      {ct('creator_some_lines_were_ignored_or_imported_with_fallback_review')}
+                      {ct('luthier_some_lines_were_ignored_or_imported_with_fallback_review')}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -493,7 +493,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
 
                   <DialogFooter>
                     <Button type="button" onClick={() => setRegistryImportWarningsOpen(false)}>
-                      {ct('creator_close')}
+                      {ct('luthier_close')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -501,8 +501,8 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
             </FieldShell>
 
             <FieldShell
-              label={ct('creator_extra_system_dependencies')}
-              help={ct('creator_additional_dependencies_validated_in_doctor_by_command_e')}
+              label={ct('luthier_extra_system_dependencies')}
+              help={ct('luthier_additional_dependencies_validated_in_doctor_by_command_e')}
               controlClass="flex justify-end"
               footer={
                 config().extra_system_dependencies.length > 0 ? (
@@ -510,11 +510,11 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
-                          <TableHead>{ct('creator_name')}</TableHead>
-                          <TableHead>{ct('creator_command')}</TableHead>
-                          <TableHead>{ct('creator_env_vars')}</TableHead>
-                          <TableHead>{ct('creator_default_paths')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{ct('creator_label_actions')}</TableHead>
+                          <TableHead>{ct('luthier_name')}</TableHead>
+                          <TableHead>{ct('luthier_command')}</TableHead>
+                          <TableHead>{ct('luthier_env_vars')}</TableHead>
+                          <TableHead>{ct('luthier_default_paths')}</TableHead>
+                          <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -522,7 +522,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                           {(item, index) => (
                             <TableRow>
                               <TableCell class="max-w-[220px] truncate font-medium">
-                                {item.name || ct('creator_unnamed')}
+                                {item.name || ct('luthier_unnamed')}
                               </TableCell>
                               <TableCell class="max-w-[220px] truncate text-muted-foreground">
                                 {item.check_commands.length > 0 ? joinCommaList(item.check_commands) : '—'}
@@ -544,7 +544,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                                       extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
                                     }))
                                   }
-                                  title={ct('creator_remove_dependency')}
+                                  title={ct('luthier_remove_dependency')}
                                 >
                                   <IconTrash class="size-4" />
                                 </Button>
@@ -557,7 +557,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                   </div>
                 ) : (
                   <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                    {ct('creator_no_extra_dependency_added')}
+                    {ct('luthier_no_extra_dependency_added')}
                   </div>
                 )
               }
@@ -571,21 +571,21 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                   onClick={() => setExtraDependencyDialogOpen(true)}
                 >
                   <IconPlus class="size-4" />
-                  {ct('creator_add_dependency')}
+                  {ct('luthier_add_dependency')}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{ct('creator_add_extra_system_dependency')}</DialogTitle>
+                    <DialogTitle>{ct('luthier_add_extra_system_dependency')}</DialogTitle>
                     <DialogDescription>
-                      {ct('creator_define_how_doctor_can_detect_this_dependency_command_env')}
+                      {ct('luthier_define_how_doctor_can_detect_this_dependency_command_env')}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div class="grid gap-2">
                     <Input
                       value={extraDependencyDraft().name}
-                      placeholder={ct('creator_dependency_name')}
+                      placeholder={ct('luthier_dependency_name')}
                       class={extraDependencyDuplicateValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
@@ -600,7 +600,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
 
                     <Input
                       value={extraDependencyDraft().command}
-                      placeholder={ct('creator_terminal_command_e_g_mangohud')}
+                      placeholder={ct('luthier_terminal_command_e_g_mangohud')}
                       class={extraDependencyCommandValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
@@ -615,7 +615,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
 
                     <Input
                       value={extraDependencyDraft().env_vars}
-                      placeholder={ct('creator_environment_vars_comma_separated')}
+                      placeholder={ct('luthier_environment_vars_comma_separated')}
                       class={extraDependencyEnvVarsValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
@@ -630,7 +630,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
 
                     <Input
                       value={extraDependencyDraft().paths}
-                      placeholder={ct('creator_default_paths_comma_separated')}
+                      placeholder={ct('luthier_default_paths_comma_separated')}
                       class={extraDependencyPathsValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
@@ -646,7 +646,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
 
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setExtraDependencyDialogOpen(false)}>
-                      {ct('creator_label_cancel')}
+                      {ct('luthier_label_cancel')}
                     </Button>
                     <Button
                       type="button"
@@ -692,7 +692,7 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                         setExtraDependencyDialogOpen(false)
                       }}
                     >
-                      {ct('creator_label_confirm')}
+                      {ct('luthier_label_confirm')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
