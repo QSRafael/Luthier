@@ -1,5 +1,7 @@
+mod application;
 mod cli;
 mod commands;
+mod domain;
 mod instance_lock;
 mod launch;
 mod logging;
@@ -7,6 +9,7 @@ mod mounts;
 mod overrides;
 mod paths;
 mod payload;
+mod services;
 mod splash;
 
 use anyhow::{anyhow, Context};

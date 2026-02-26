@@ -1,7 +1,5 @@
 use anyhow::Context;
-
-#[path = "../application/play_flow.rs"]
-mod play_flow;
+use crate::application::play_flow;
 
 pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
     let execution = play_flow::execute_play_flow(trace_id)?;

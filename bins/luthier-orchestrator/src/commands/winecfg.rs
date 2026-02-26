@@ -1,7 +1,5 @@
 use anyhow::Context;
-
-#[path = "../application/winecfg_flow.rs"]
-mod winecfg_flow;
+use crate::application::winecfg_flow;
 
 pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
     let execution = winecfg_flow::run_winecfg_flow(trace_id)?;
