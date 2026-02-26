@@ -184,6 +184,7 @@ export function featureStateMandatory(value: FeatureState): boolean {
 }
 
 export function buildFeatureState(enabled: boolean, mandatory: boolean): FeatureState {
-  if (enabled) return mandatory ? 'MandatoryOn' : 'OptionalOn'
-  return mandatory ? 'MandatoryOff' : 'OptionalOff'
+  const normalizedMandatory = enabled ? mandatory : true
+  if (enabled) return normalizedMandatory ? 'MandatoryOn' : 'OptionalOn'
+  return normalizedMandatory ? 'MandatoryOff' : 'OptionalOff'
 }

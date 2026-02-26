@@ -3,7 +3,7 @@ import { IconAlertCircle } from '@tabler/icons-solidjs'
 
 import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/alert'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMain, ItemTitle } from '../../../../components/ui/item'
-import { Select } from '../../../../components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '../../../../components/ui/tabs'
 import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 
@@ -35,23 +35,30 @@ export function WinecfgAudioAccordionSection(props: WinecfgAccordionSectionProps
                         </ItemDescription>
                       </ItemContent>
 
-                      <ItemActions class="md:self-end md:max-w-sm">
-                        <Select
+                      <ItemActions class="md:self-end md:max-w-none">
+                        <Tabs
                           value={audioDriverValue()}
-                          onInput={(e) =>
+                          onChange={(value) =>
                             patchConfig((prev) => ({
                               ...prev,
                               winecfg: {
                                 ...prev.winecfg,
-                                audio_driver: e.currentTarget.value === '__none__' ? null : e.currentTarget.value
+                                audio_driver: value === '__none__' ? null : (value as string)
                               }
                             }))
                           }
+                          class="items-end"
                         >
-                          <For each={audioDriverOptions()}>
-                            {(option) => <option value={option.value}>{option.label}</option>}
-                          </For>
-                        </Select>
+                          <TabsList class="w-full justify-start md:w-auto">
+                            <For each={audioDriverOptions()}>
+                              {(option) => (
+                                <TabsTrigger value={option.value} class="min-w-[84px]">
+                                  {option.label}
+                                </TabsTrigger>
+                              )}
+                            </For>
+                          </TabsList>
+                        </Tabs>
                       </ItemActions>
                     </ItemMain>
 

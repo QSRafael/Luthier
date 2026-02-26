@@ -39,7 +39,7 @@ const defaultFormControlsI18n: FormControlsI18n = {
   enabled: 'Ativado',
   disabled: 'Desativado',
   mandatory: 'Obrigatório',
-  wineDefault: 'Padrão do Wine',
+  wineDefault: 'Padrão',
   actions: 'Ações',
   action: 'Ação',
   add: 'Adicionar',
@@ -228,4 +228,3 @@ export function ToggleField(props: ToggleFieldProps) {
     </FieldShell>
   )
 }
-

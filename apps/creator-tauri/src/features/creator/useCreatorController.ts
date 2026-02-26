@@ -104,6 +104,9 @@ export function useCreatorController() {
   const [winetricksCatalogError, setWinetricksCatalogError] = createSignal(false)
   const [hashingExePath, setHashingExePath] = createSignal('')
   const [lastHashedExePath, setLastHashedExePath] = createSignal('')
+  const [extractingExecutableIcon, setExtractingExecutableIcon] = createSignal(false)
+  const [testingConfiguration, setTestingConfiguration] = createSignal(false)
+  const [creatingExecutable, setCreatingExecutable] = createSignal(false)
   const [lastPreparedHeroImageUrl, setLastPreparedHeroImageUrl] = createSignal('')
   const [heroImageSearchCacheGameName, setHeroImageSearchCacheGameName] = createSignal('')
   const [heroImageSearchCacheGameId, setHeroImageSearchCacheGameId] = createSignal<number | null>(null)
@@ -261,6 +264,56 @@ export function useCreatorController() {
     wrappers: config().compatibility.wrapper_commands.length,
     envVars: Object.keys(config().environment.custom_vars).length
   }))
+
+  const hashingExecutable = createMemo(() => {
+    const currentExe = exePath().trim()
+    return !!currentExe && hashingExePath() === currentExe
+  })
+
+  const createExecutableValidationErrors = createMemo(() => {
+    const errors: string[] = []
+    const cfg = config()
+    const gamescope = cfg.environment.gamescope
+    const parsePositiveInt = (raw: string) => {
+      const trimmed = raw.trim()
+      if (!/^\d+$/.test(trimmed)) return null
+      const parsed = Number.parseInt(trimmed, 10)
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+    }
+
+    if (isFeatureEnabled(gamescope.state)) {
+      const gameWidth = parsePositiveInt(gamescope.game_width)
+      const gameHeight = parsePositiveInt(gamescope.game_height)
+      if (!gameWidth || !gameHeight) {
+        errors.push(ct('creator_fill_gamescope_game_resolution_before_creating'))
+      }
+
+      const usesMonitorResolution =
+        !gamescope.output_width.trim() && !gamescope.output_height.trim()
+      if (!usesMonitorResolution) {
+        const outputWidth = parsePositiveInt(gamescope.output_width)
+        const outputHeight = parsePositiveInt(gamescope.output_height)
+        if (!outputWidth || !outputHeight) {
+          errors.push(
+            ct('creator_fill_gamescope_output_resolution_or_enable_monitor_auto_befo')
+          )
+        }
+      }
+
+      if (gamescope.enable_limiter) {
+        const fpsFocus = parsePositiveInt(gamescope.fps_limiter)
+        const fpsNoFocus = parsePositiveInt(gamescope.fps_limiter_no_focus)
+        if (!fpsFocus || !fpsNoFocus) {
+          errors.push(ct('creator_fill_gamescope_fps_limits_before_creating'))
+        }
+      }
+    }
+
+    return errors
+  })
+  const createExecutableBlockedReason = createMemo(
+    () => createExecutableValidationErrors()[0] ?? ''
+  )
 
   const statusTone = createMemo<StatusTone>(() => {
     const text = statusMessage().toLowerCase()
@@ -492,6 +545,7 @@ export function useCreatorController() {
 
   const runTest = async () => {
     try {
+      setTestingConfiguration(true)
       setStatusMessage(t('msgTestStart'))
       const result = await invokeCommand<unknown>('cmd_test_configuration', {
         config_json: configPreview(),
@@ -501,11 +555,20 @@ export function useCreatorController() {
       setStatusMessage(t('msgTestOk'))
     } catch (error) {
       setStatusMessage(`${t('msgTestFail')} ${String(error)}`)
+    } finally {
+      setTestingConfiguration(false)
     }
   }
 
   const runCreate = async () => {
+    const blockedReason = createExecutableBlockedReason()
+    if (blockedReason) {
+      setStatusMessage(blockedReason)
+      return
+    }
+
     try {
+      setCreatingExecutable(true)
       setStatusMessage(t('msgCreateStart'))
       const result = await invokeCommand<unknown>('cmd_create_executable', {
         base_binary_path: ORCHESTRATOR_BASE_PATH,
@@ -519,6 +582,8 @@ export function useCreatorController() {
       setStatusMessage(t('msgCreateOk'))
     } catch (error) {
       setStatusMessage(`${t('msgCreateFail')} ${String(error)}`)
+    } finally {
+      setCreatingExecutable(false)
     }
   }
 
@@ -689,6 +754,7 @@ export function useCreatorController() {
     }
 
     try {
+      setExtractingExecutableIcon(true)
       setStatusMessage(ct('creator_extracting_icon_from_executable'))
       const result = await invokeCommand<ExtractExecutableIconOutput>('cmd_extract_executable_icon', {
         executable_path: currentExe
@@ -702,6 +768,8 @@ export function useCreatorController() {
       )
     } catch (error) {
       setStatusMessage(ctf('creator_failed_to_extract_executable_icon_error', { error: String(error) }))
+    } finally {
+      setExtractingExecutableIcon(false)
     }
   }
 
@@ -1001,6 +1069,12 @@ export function useCreatorController() {
     winetricksSearch,
     setWinetricksSearch,
     winetricksCatalogError,
+    hashingExecutable,
+    extractingExecutableIcon,
+    testingConfiguration,
+    creatingExecutable,
+    createExecutableValidationErrors,
+    createExecutableBlockedReason,
     config,
     patchConfig,
     setHeroImageUrl,

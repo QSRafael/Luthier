@@ -597,10 +597,10 @@ fn show_prelaunch_window(
 
         let gear_visible = !state.configurable_rows.is_empty();
         let gear_button = Rect {
-            x: WIN_W as i32 - 52,
+            x: WIN_W as i32 - 154,
             y: 20,
-            w: 30,
-            h: 30,
+            w: 132,
+            h: 28,
         };
         let start_button = Rect {
             x: WIN_W as i32 - 134,
@@ -1475,11 +1475,12 @@ fn draw_prelaunch(
 
     if gear_visible {
         draw_button_secondary_clean(buffer, gear_button, gear_button.contains(mouse.x, mouse.y));
-        draw_gear_icon(
+        draw_button_label_centered(
             buffer,
-            gear_button.x + ((gear_button.w - 12) / 2),
-            gear_button.y + ((gear_button.h - 12) / 2),
+            gear_button,
+            t(SplashTextKey::ScreenConfig),
             TEXT,
+            1,
         );
     }
 
@@ -2487,6 +2488,7 @@ fn blend_over(dst: u32, src: u32, alpha: u8) -> u32 {
     (r << 16) | (g << 8) | b
 }
 
+#[allow(dead_code)]
 fn draw_gear_icon(buffer: &mut [u32], x: i32, y: i32, color: u32) {
     // Minimal 12x12 "gear-like" sprite.
     let points = [

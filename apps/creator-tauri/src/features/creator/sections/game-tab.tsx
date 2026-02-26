@@ -17,6 +17,7 @@ import { Button } from '../../../components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
 import { Select } from '../../../components/ui/select'
+import { Skeleton } from '../../../components/ui/skeleton'
 import { Spinner } from '../../../components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
 import { Textarea } from '../../../components/ui/textarea'
@@ -57,6 +58,8 @@ export function GameTabSection(props: CreatorPageSectionProps) {
     pickIntegrityFileRelative,
     pickMountFolder,
     extractExecutableIcon,
+    hashingExecutable,
+    extractingExecutableIcon,
     heroImageProcessing,
     heroImageAutoSearching,
     canSearchAnotherHeroImage,
@@ -99,16 +102,37 @@ export function GameTabSection(props: CreatorPageSectionProps) {
               help={ct('creator_hero_image_used_as_splash_background_downloaded_and_emb')}
               hint={ct('creator_hero_image_ratio_96_31_and_converted_to_webp')}
               footer={
-                config().splash.hero_image_data_url.trim()
+                config().splash.hero_image_data_url.trim() || heroImageProcessing()
                   ? (
                       <div class="rounded-md border border-border/60 bg-muted/15 p-3">
                         <div class="relative overflow-hidden rounded-md border border-border/60 bg-black">
                           <div class="aspect-[96/31] w-full" />
-                          <img
-                            src={config().splash.hero_image_data_url}
-                            alt={ct('creator_splash_hero_image_preview')}
-                            class="absolute inset-0 h-full w-full object-contain"
-                          />
+                          <Show
+                            when={config().splash.hero_image_data_url.trim()}
+                            fallback={
+                              <div class="absolute inset-0 grid place-items-center">
+                                <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Spinner class="size-3" />
+                                  <span>{ct('creator_processing')}</span>
+                                </div>
+                              </div>
+                            }
+                          >
+                            <img
+                              src={config().splash.hero_image_data_url}
+                              alt={ct('creator_splash_hero_image_preview')}
+                              class="absolute inset-0 h-full w-full object-contain"
+                            />
+                            <Show when={heroImageProcessing()}>
+                              <div class="absolute inset-0 bg-background/35 backdrop-blur-[1px]" />
+                              <div class="absolute inset-0 grid place-items-center">
+                                <div class="flex items-center gap-2 rounded-md bg-background/70 px-2 py-1 text-xs">
+                                  <Spinner class="size-3" />
+                                  <span>{ct('creator_processing')}</span>
+                                </div>
+                              </div>
+                            </Show>
+                          </Show>
                         </div>
                       </div>
                     )
@@ -165,9 +189,19 @@ export function GameTabSection(props: CreatorPageSectionProps) {
 
                 <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
                   <span class="font-medium text-muted-foreground">{ct('creator_sha_256_hash')}:</span>{' '}
-                  <span class="break-all font-mono text-foreground">
-                    {config().exe_hash.trim() || '—'}
-                  </span>
+                  <Show
+                    when={!hashingExecutable()}
+                    fallback={
+                      <span class="inline-flex items-center gap-2 align-middle">
+                        <Spinner class="size-3" />
+                        <Skeleton class="h-3 w-36 rounded-sm" />
+                      </span>
+                    }
+                  >
+                    <span class="break-all font-mono text-foreground">
+                      {config().exe_hash.trim() || '—'}
+                    </span>
+                  </Show>
                 </div>
               </div>
             </FieldShell>
@@ -342,8 +376,15 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                     <img src={iconPreviewPath()} alt="icon preview" />
                   </Show>
                 </div>
-                <Button type="button" variant="outline" onClick={extractExecutableIcon}>
-                  {ct('creator_extract_icon')}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={extractExecutableIcon}
+                  disabled={extractingExecutableIcon()}
+                >
+                  <Show when={!extractingExecutableIcon()} fallback={<span class="inline-flex items-center gap-2"><Spinner class="size-3" />{ct('creator_processing')}</span>}>
+                    {ct('creator_extract_icon')}
+                  </Show>
                 </Button>
               </div>
             </FieldShell>

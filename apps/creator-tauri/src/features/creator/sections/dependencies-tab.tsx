@@ -17,6 +17,7 @@ import { Button } from '../../../components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
 import { Select } from '../../../components/ui/select'
+import { Skeleton } from '../../../components/ui/skeleton'
 import { Spinner } from '../../../components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
 import { Textarea } from '../../../components/ui/textarea'
@@ -146,7 +147,18 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                     fallback={
                       <Show when={!winetricksCatalogError()}>
                         <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                          {ct('creator_type_at_least_2_characters_to_search_verbs_in_the_catalo')}
+                          <Show
+                            when={!winetricksLoading() || winetricksAvailable().length > 0}
+                            fallback={
+                              <div class="grid gap-2 py-1">
+                                <Skeleton class="h-7 w-full" />
+                                <Skeleton class="h-7 w-full" />
+                                <Skeleton class="h-7 w-4/5" />
+                              </div>
+                            }
+                          >
+                            {ct('creator_type_at_least_2_characters_to_search_verbs_in_the_catalo')}
+                          </Show>
                         </div>
                       </Show>
                     }
@@ -191,7 +203,17 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                   </div>
                 </Show>
                 <Button type="button" variant="outline" onClick={loadWinetricksCatalog} disabled={winetricksLoading()}>
-                  {winetricksLoading() ? ct('creator_loading') : ct('creator_refresh_catalog')}
+                  <Show
+                    when={!winetricksLoading()}
+                    fallback={
+                      <span class="inline-flex items-center gap-2">
+                        <Spinner class="size-3" />
+                        {ct('creator_loading')}
+                      </span>
+                    }
+                  >
+                    {ct('creator_refresh_catalog')}
+                  </Show>
                 </Button>
                 <p class="text-xs text-muted-foreground">
                   {ct('creator_source')} <strong>{winetricksSource()}</strong> ·{' '}
