@@ -4,4 +4,5 @@ pub mod import_registry;
 pub mod list_fs;
 pub mod prepare_hero;
 pub mod search_hero;
+pub mod test_configuration;
 pub mod winetricks_available;
