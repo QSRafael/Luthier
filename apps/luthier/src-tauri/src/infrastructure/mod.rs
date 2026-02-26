@@ -4,3 +4,4 @@ pub mod image_codec;
 pub mod logging;
 pub mod pe_icon_reader;
 pub mod registry_parser;
+pub mod winetricks_catalog;
