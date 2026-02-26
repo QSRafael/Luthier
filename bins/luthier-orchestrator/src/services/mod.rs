@@ -1,3 +1,4 @@
+pub mod gamescope_flags;
 pub mod integrity_service;
 pub mod launch_plan_builder;
 pub mod prefix_setup_service;
