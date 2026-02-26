@@ -55,7 +55,7 @@ export function StringListField(props: StringListFieldProps) {
       footer={
         props.items.length > 0 ? (
           props.tableValueHeader ? (
-            <div class="rounded-md border border-border/60 bg-background/40">
+            <div class="max-h-[20rem] overflow-auto rounded-md border border-border/60 bg-background/40">
               <Table>
                 <TableHeader>
                   <TableRow class="hover:bg-transparent">
@@ -274,7 +274,7 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
               </div>
             }
           >
-            <div class="rounded-md border border-border/60 bg-background/40">
+            <div class="max-h-[20rem] overflow-auto rounded-md border border-border/60 bg-background/40">
               <Table>
                 <TableHeader>
                   <TableRow class="hover:bg-transparent">

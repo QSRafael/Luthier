@@ -698,7 +698,11 @@ export default function CreatorPage() {
         </div>
         <div class="flex-1">
         <Show when={activeTab() === 'game'}>
-          <GameTabSection view={sectionView} />
+          <GameTabSection view={sectionView} mode="overview" />
+        </Show>
+
+        <Show when={activeTab() === 'gameFiles'}>
+          <GameTabSection view={sectionView} mode="files" />
         </Show>
 
         <Show when={activeTab() === 'runtime'}>

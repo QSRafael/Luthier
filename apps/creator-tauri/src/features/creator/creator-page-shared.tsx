@@ -25,6 +25,7 @@ export type CreatorPageSectionProps = {
 export function tabLabel(tab: CreatorTab, controller: CreatorController) {
   const ct = controller.ct as (key: CreatorCopyKey) => string
   if (tab === 'game') return ct('creator_label_game')
+  if (tab === 'gameFiles') return ct('creator_label_game_files_and_launch')
   if (tab === 'runtime') return ct('creator_label_runtime')
   if (tab === 'performance') return ct('creator_enhancements')
   if (tab === 'prefix') return ct('creator_dependencies')

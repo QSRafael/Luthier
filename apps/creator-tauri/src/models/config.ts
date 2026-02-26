@@ -7,6 +7,7 @@ export type RuntimePreference = 'Auto' | 'Proton' | 'Wine'
 
 export type CreatorTab =
   | 'game'
+  | 'gameFiles'
   | 'runtime'
   | 'performance'
   | 'prefix'

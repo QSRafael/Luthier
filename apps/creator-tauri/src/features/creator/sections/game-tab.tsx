@@ -35,7 +35,8 @@ import {
   type CreatorPageSectionProps
 } from '../creator-page-shared'
 
-export function GameTabSection(props: CreatorPageSectionProps) {
+export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overview' | 'files' }) {
+  const mode = props.mode ?? 'overview'
     const {
     gameRoot,
     setGameRoot,
@@ -90,6 +91,8 @@ export function GameTabSection(props: CreatorPageSectionProps) {
 
   return (
           <section class="stack">
+            <Show when={mode === 'overview'}>
+              <>
             <TextInputField
               label={ct('creator_game_name')}
               help={ct('creator_name_shown_in_splash_and_local_database')}
@@ -187,7 +190,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                   </Button>
                 </div>
 
-                <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
+                <div class="px-0.5 text-xs">
                   <span class="font-medium text-muted-foreground">{ct('creator_sha_256_hash')}:</span>{' '}
                   <Show
                     when={!hashingExecutable()}
@@ -205,6 +208,35 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                 </div>
               </div>
             </FieldShell>
+
+            <FieldShell
+              label={ct('creator_extracted_icon')}
+              help={ct('creator_game_icon_preview_for_easier_visual_identification')}
+              hint={ct('creator_visual_is_ready_real_extraction_will_be_wired_to_backend')}
+            >
+              <div class="icon-preview">
+                <div class="icon-box">
+                  <Show when={iconPreviewPath()} fallback={<span>{ct('creator_no_extracted_icon')}</span>}>
+                    <img src={iconPreviewPath()} alt="icon preview" />
+                  </Show>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={extractExecutableIcon}
+                  disabled={extractingExecutableIcon()}
+                >
+                  <Show when={!extractingExecutableIcon()} fallback={<span class="inline-flex items-center gap-2"><Spinner class="size-3" />{ct('creator_processing')}</span>}>
+                    {ct('creator_extract_icon')}
+                  </Show>
+                </Button>
+              </div>
+            </FieldShell>
+              </>
+            </Show>
+
+            <Show when={mode === 'files'}>
+              <>
 
             <FieldShell
               label={ct('creator_game_root_folder')}
@@ -365,30 +397,6 @@ export function GameTabSection(props: CreatorPageSectionProps) {
               </div>
             </FieldShell>
 
-            <FieldShell
-              label={ct('creator_extracted_icon')}
-              help={ct('creator_game_icon_preview_for_easier_visual_identification')}
-              hint={ct('creator_visual_is_ready_real_extraction_will_be_wired_to_backend')}
-            >
-              <div class="icon-preview">
-                <div class="icon-box">
-                  <Show when={iconPreviewPath()} fallback={<span>{ct('creator_no_extracted_icon')}</span>}>
-                    <img src={iconPreviewPath()} alt="icon preview" />
-                  </Show>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={extractExecutableIcon}
-                  disabled={extractingExecutableIcon()}
-                >
-                  <Show when={!extractingExecutableIcon()} fallback={<span class="inline-flex items-center gap-2"><Spinner class="size-3" />{ct('creator_processing')}</span>}>
-                    {ct('creator_extract_icon')}
-                  </Show>
-                </Button>
-              </div>
-            </FieldShell>
-
             <StringListField
               label={ct('creator_launch_arguments')}
               help={ct('creator_extra_arguments_passed_to_game_executable')}
@@ -427,7 +435,7 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                     </div>
                   }
                 >
-                  <div class="rounded-md border border-border/60 bg-background/40">
+                  <div class="max-h-[20rem] overflow-auto rounded-md border border-border/60 bg-background/40">
                     <Table>
                       <TableHeader>
                         <TableRow class="hover:bg-transparent">
@@ -699,6 +707,8 @@ export function GameTabSection(props: CreatorPageSectionProps) {
                 </DialogContent>
               </Dialog>
             </FieldShell>
+              </>
+            </Show>
           </section>
   )
 }

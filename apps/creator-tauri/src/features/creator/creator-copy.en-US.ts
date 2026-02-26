@@ -1,5 +1,6 @@
 export const creatorMessagesEnUS = {
     "creator_label_game": "Game",
+    "creator_label_game_files_and_launch": "Files & Launch",
     "creator_label_runtime": "Runtime",
     "creator_enhancements": "Enhancements",
     "creator_dependencies": "Dependencies",

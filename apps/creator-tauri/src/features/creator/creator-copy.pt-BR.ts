@@ -1,5 +1,6 @@
 export const creatorMessagesPtBR = {
     "creator_label_game": "Jogo",
+    "creator_label_game_files_and_launch": "Arquivos e Inicialização",
     "creator_label_runtime": "Runtime",
     "creator_enhancements": "Melhorias",
     "creator_dependencies": "Dependências",
