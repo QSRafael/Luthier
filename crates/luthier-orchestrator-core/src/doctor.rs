@@ -13,6 +13,8 @@ mod doctor_models;
 mod doctor_dependency_checks;
 #[path = "doctor_runtime_selection.rs"]
 mod doctor_runtime_selection;
+#[path = "doctor_status_policy.rs"]
+mod doctor_status_policy;
 
 pub use doctor_models::{CheckStatus, DependencyStatus, DoctorReport, RuntimeDiscovery};
 
@@ -40,11 +42,13 @@ pub fn run_doctor(config: Option<&GameConfig>) -> DoctorReport {
         proton_version_matched,
     );
 
-    let dependencies = doctor_dependency_checks::evaluate_dependencies(config, &runtime);
+    let dependencies = doctor_status_policy::apply_dependency_status_policy(
+        doctor_dependency_checks::evaluate_dependencies(config, &runtime),
+    );
 
     let mut summary = runtime.runtime_status;
     for dep in &dependencies {
-        summary = worse_status(summary, dep.status);
+        summary = doctor_status_policy::worse_status(summary, dep.status);
     }
 
     DoctorReport {
@@ -353,23 +357,6 @@ fn path_to_string(path: PathBuf) -> String {
     path.to_string_lossy().into_owned()
 }
 
-fn worse_status(a: CheckStatus, b: CheckStatus) -> CheckStatus {
-    use CheckStatus::*;
-
-    let rank = |value| match value {
-        BLOCKER => 3,
-        WARN => 2,
-        OK => 1,
-        INFO => 0,
-    };
-
-    if rank(a) >= rank(b) {
-        a
-    } else {
-        b
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -378,11 +365,11 @@ mod tests {
     #[test]
     fn worse_status_prefers_blocker() {
         assert_eq!(
-            worse_status(CheckStatus::OK, CheckStatus::BLOCKER),
+            super::doctor_status_policy::worse_status(CheckStatus::OK, CheckStatus::BLOCKER),
             CheckStatus::BLOCKER
         );
         assert_eq!(
-            worse_status(CheckStatus::WARN, CheckStatus::INFO),
+            super::doctor_status_policy::worse_status(CheckStatus::WARN, CheckStatus::INFO),
             CheckStatus::WARN
         );
     }
