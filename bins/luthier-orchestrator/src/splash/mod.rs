@@ -1,6 +1,5 @@
 
-#[cfg(target_os = "linux")]
-use std::convert::TryFrom;
+
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
@@ -10,10 +9,8 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose, Engine as _};
-use font8x8::{UnicodeFonts, BASIC_FONTS};
-use fontdue::Font;
 use image::imageops::FilterType;
-use minifb::{Icon, Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
+use minifb::{Key, Scale, Window};
 use luthier_orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use luthier_orchestrator_core::GameConfig;
 use serde_json::Value;
@@ -24,9 +21,12 @@ use crate::overrides::{
 };
 use crate::payload::load_embedded_config_required;
 
+pub mod input;
 pub mod renderer;
 pub mod theme;
 pub mod state;
+
+use input::*;
 use theme::*;
 pub use state::*;
 use renderer::*;
@@ -207,7 +207,6 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             SplashTextKey::SpawnFailed => "Launch failed",
         },
     }
-
 }
 
 fn t_installing_winetricks(verbs: &str) -> String {
@@ -253,6 +252,8 @@ fn non_empty_trimmed(raw: &str) -> Option<&str> {
     }
 }
 
+// ── Public entry point ──────────────────────────────────────────────────────
+
 pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> anyhow::Result<()> {
     let _ = SPLASH_LOCALE.set(resolve_splash_locale(lang_override));
     let mut config =
@@ -294,12 +295,13 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
                 prelaunch.hero_background.clone(),
             )?;
             let _ = show_post_game_feedback_window(outcome);
-            // Refresh/save not needed here; overrides are already persisted in config screen.
             let _ = overrides;
             Ok(())
         }
     }
 }
+
+// ── Toggle-row helpers ───────────────────────────────────────────────────────
 
 fn build_toggle_rows(config: &GameConfig, overrides: &RuntimeOverrides) -> Vec<ToggleRow> {
     let mut rows = Vec::new();
@@ -394,6 +396,8 @@ fn push_optional_toggle_row(
     }
 }
 
+// ── Window loops ─────────────────────────────────────────────────────────────
+
 fn show_prelaunch_window(
     state: &mut PrelaunchState,
     mode: SplashLaunchMode,
@@ -405,7 +409,6 @@ fn show_prelaunch_window(
     let mut config_working = state.overrides.clone();
     let mut config_rows = build_toggle_rows(&state.config, &config_working);
 
-    // Autostart countdown for splash mode.
     state.countdown_started_at = Instant::now();
 
     loop {
@@ -433,47 +436,18 @@ fn show_prelaunch_window(
         };
 
         let gear_visible = !state.configurable_rows.is_empty();
-        let gear_button = Rect {
-            x: WIN_W as i32 - 154,
-            y: 20,
-            w: 132,
-            h: 28,
-        };
-        let start_button = Rect {
-            x: WIN_W as i32 - 134,
-            y: WIN_H as i32 - 50,
-            w: 104,
-            h: 28,
-        };
-        let exit_button = Rect {
-            x: 30,
-            y: WIN_H as i32 - 50,
-            w: 84,
-            h: 28,
-        };
+        let rects = prelaunch_button_rects(WIN_W as i32, WIN_H as i32, gear_visible);
 
         if config_open {
-            let save_button = Rect {
-                x: WIN_W as i32 - 126,
-                y: WIN_H as i32 - 50,
-                w: 96,
-                h: 28,
-            };
-            let cancel_button = Rect {
-                x: 30,
-                y: WIN_H as i32 - 50,
-                w: 96,
-                h: 28,
-            };
-
+            let cfg = config_button_rects(WIN_W as i32, WIN_H as i32);
             let row_buttons = config_toggle_button_rects(config_rows.len());
 
-            if mouse.left_pressed && cancel_button.contains(mouse.x, mouse.y) {
+            if mouse.left_pressed && cfg.cancel_button.contains(mouse.x, mouse.y) {
                 config_open = false;
                 config_working = state.overrides.clone();
                 config_rows = build_toggle_rows(&state.config, &config_working);
                 state.countdown_started_at = Instant::now();
-            } else if mouse.left_pressed && save_button.contains(mouse.x, mouse.y) {
+            } else if mouse.left_pressed && cfg.save_button.contains(mouse.x, mouse.y) {
                 save_runtime_overrides(&state.config.exe_hash, &config_working)
                     .context("failed to save runtime overrides from splash")?;
                 state.overrides = config_working.clone();
@@ -507,8 +481,8 @@ fn show_prelaunch_window(
                 &mut buffer,
                 &window,
                 &config_rows,
-                save_button,
-                cancel_button,
+                cfg.save_button,
+                cfg.cancel_button,
                 &mouse,
                 state.hero_background.as_deref(),
             );
@@ -519,19 +493,22 @@ fn show_prelaunch_window(
             continue;
         }
 
-        if gear_visible && mouse.left_pressed && gear_button.contains(mouse.x, mouse.y) {
+        if rects.gear_visible && mouse.left_pressed && rects.gear_button.contains(mouse.x, mouse.y)
+        {
             config_open = true;
             config_working = state.overrides.clone();
             config_rows = build_toggle_rows(&state.config, &config_working);
             continue;
         }
 
-        if mouse.left_pressed && exit_button.contains(mouse.x, mouse.y) {
+        if mouse.left_pressed && rects.exit_button.contains(mouse.x, mouse.y) {
             return Ok(PrelaunchDecision::Exit);
         }
 
         let auto_start_ready = elapsed >= Duration::from_secs(PRELAUNCH_AUTOSTART_SECS);
-        if auto_start_ready || (mouse.left_pressed && start_button.contains(mouse.x, mouse.y)) {
+        if auto_start_ready
+            || (mouse.left_pressed && rects.start_button.contains(mouse.x, mouse.y))
+        {
             return Ok(PrelaunchDecision::Start {
                 overrides: state.overrides.clone(),
                 window,
@@ -545,9 +522,9 @@ fn show_prelaunch_window(
             state,
             countdown_left.max(0),
             gear_visible,
-            gear_button,
-            start_button,
-            exit_button,
+            rects.gear_button,
+            rects.start_button,
+            rects.exit_button,
             mode,
             mouse,
             state.hero_background.as_deref(),
@@ -557,30 +534,6 @@ fn show_prelaunch_window(
             .context("failed to present splash prelaunch frame")?;
         thread::sleep(Duration::from_millis(1000 / FPS));
     }
-}
-
-fn cycle_override_for_key(overrides: &mut RuntimeOverrides, key: &str) {
-    let target = match key {
-        "gamescope" => &mut overrides.gamescope,
-        "mangohud" => &mut overrides.mangohud,
-        "gamemode" => &mut overrides.gamemode,
-        "umu" => &mut overrides.umu,
-        "winetricks" => &mut overrides.winetricks,
-        "steam_runtime" => &mut overrides.steam_runtime,
-        "prime_offload" => &mut overrides.prime_offload,
-        "wine_wayland" => &mut overrides.wine_wayland,
-        "hdr" => &mut overrides.hdr,
-        "auto_dxvk_nvapi" => &mut overrides.auto_dxvk_nvapi,
-        "easy_anti_cheat_runtime" => &mut overrides.easy_anti_cheat_runtime,
-        "battleye_runtime" => &mut overrides.battleye_runtime,
-        _ => return,
-    };
-
-    *target = match *target {
-        None => Some(true),
-        Some(true) => Some(false),
-        Some(false) => None,
-    };
 }
 
 fn show_doctor_block_window(
@@ -601,12 +554,7 @@ fn show_doctor_block_window(
 
         let mouse = read_mouse(&window, last_left_down);
         last_left_down = mouse.left_down;
-        let exit_button = Rect {
-            x: (WIN_W as i32 / 2) - 70,
-            y: WIN_H as i32 - 64,
-            w: 140,
-            h: 36,
-        };
+        let exit_button = doctor_exit_button_rect(WIN_W as i32, WIN_H as i32);
 
         if mouse.left_pressed && exit_button.contains(mouse.x, mouse.y) {
             return Ok(());
@@ -678,7 +626,6 @@ fn show_runtime_progress_window(
         }
 
         if progress.child_finished && progress.launching_started_at.is_none() {
-            // Failed before launch start; keep window for a short visual message.
             progress.set_status(t(SplashTextKey::StatusLaunchFailed));
         }
 
@@ -686,7 +633,6 @@ fn show_runtime_progress_window(
             && progress.launching_started_at.is_some()
             && !progress.game_runtime_start_seen
         {
-            // Game process ended before we saw a startup heuristic; stop waiting after minimum.
             if min_launch_elapsed {
                 break;
             }
@@ -709,7 +655,6 @@ fn show_runtime_progress_window(
     // may show it as "not responding" while we intentionally stop presenting frames.
     drop(window);
 
-    // Wait for child exit if it is still running; keep draining events.
     let wait_start = Instant::now();
     while !progress.child_finished && wait_start.elapsed() < Duration::from_secs(24 * 60 * 60) {
         match rx.recv_timeout(Duration::from_millis(50)) {
@@ -724,6 +669,56 @@ fn show_runtime_progress_window(
         hero_background,
     })
 }
+
+fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<FeedbackDecision> {
+    let title = if outcome.game_name.trim().is_empty() {
+        t(SplashTextKey::WindowTitle)
+    } else {
+        outcome.game_name.trim()
+    };
+    let mut window = create_window(title)?;
+    let mut buffer = vec![0u32; WIN_W * WIN_H];
+    let mut last_left_down = false;
+    let mut question = 1;
+
+    loop {
+        if !window.is_open() || window.is_key_down(Key::Escape) {
+            return Ok(FeedbackDecision::Close);
+        }
+
+        let mouse = read_mouse(&window, last_left_down);
+        last_left_down = mouse.left_down;
+
+        let (left, right) = feedback_button_rects(WIN_W as i32, WIN_H as i32);
+
+        if mouse.left_pressed && left.contains(mouse.x, mouse.y) {
+            if question == 1 {
+                question = 2;
+            } else {
+                return Ok(FeedbackDecision::Close);
+            }
+        }
+        if mouse.left_pressed && right.contains(mouse.x, mouse.y) {
+            return Ok(FeedbackDecision::Close);
+        }
+
+        draw_feedback(
+            &mut buffer,
+            &window,
+            &outcome,
+            question,
+            left,
+            right,
+            &mouse,
+        );
+        window
+            .update_with_buffer(&buffer, WIN_W, WIN_H)
+            .context("failed to present post-game feedback splash")?;
+        thread::sleep(Duration::from_millis(1000 / FPS));
+    }
+}
+
+// ── Child process management ──────────────────────────────────────────────────
 
 fn spawn_play_child(tx: mpsc::Sender<ChildEvent>) -> anyhow::Result<()> {
     let current_exe = std::env::current_exe().context("failed to locate current executable")?;
@@ -897,65 +892,7 @@ fn map_external_runtime_line_to_status(line: &str) -> Option<String> {
     None
 }
 
-fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<FeedbackDecision> {
-    let title = if outcome.game_name.trim().is_empty() {
-        t(SplashTextKey::WindowTitle)
-    } else {
-        outcome.game_name.trim()
-    };
-    let mut window = create_window(title)?;
-    let mut buffer = vec![0u32; WIN_W * WIN_H];
-    let mut last_left_down = false;
-
-    let mut question = 1;
-
-    loop {
-        if !window.is_open() || window.is_key_down(Key::Escape) {
-            return Ok(FeedbackDecision::Close);
-        }
-
-        let mouse = read_mouse(&window, last_left_down);
-        last_left_down = mouse.left_down;
-
-        let left = Rect {
-            x: (WIN_W as i32 / 2) - 120,
-            y: WIN_H as i32 - 58,
-            w: 104,
-            h: 28,
-        };
-        let right = Rect {
-            x: (WIN_W as i32 / 2) + 16,
-            y: WIN_H as i32 - 58,
-            w: 104,
-            h: 28,
-        };
-
-        if mouse.left_pressed && left.contains(mouse.x, mouse.y) {
-            if question == 1 {
-                question = 2;
-            } else {
-                return Ok(FeedbackDecision::Close);
-            }
-        }
-        if mouse.left_pressed && right.contains(mouse.x, mouse.y) {
-            return Ok(FeedbackDecision::Close);
-        }
-
-        draw_feedback(
-            &mut buffer,
-            &window,
-            &outcome,
-            question,
-            left,
-            right,
-            &mouse,
-        );
-        window
-            .update_with_buffer(&buffer, WIN_W, WIN_H)
-            .context("failed to present post-game feedback splash")?;
-        thread::sleep(Duration::from_millis(1000 / FPS));
-    }
-}
+// ── Asset loading ─────────────────────────────────────────────────────────────
 
 fn decode_hero_background_from_config(
     config: &GameConfig,
@@ -990,232 +927,3 @@ fn decode_hero_background_from_config(
 
     Ok(Some(HeroBackground { pixels }))
 }
-
-fn create_window(title: &str) -> anyhow::Result<Window> {
-    let screen = detect_screen_size().unwrap_or((1280, 720));
-    let scale = choose_splash_window_scale(screen);
-    let mut window = Window::new(
-        title,
-        WIN_W,
-        WIN_H,
-        WindowOptions {
-            resize: false,
-            scale: scale.minifb_scale,
-            borderless: true,
-            topmost: true,
-            transparency: false,
-            none: false,
-            scale_mode: minifb::ScaleMode::Stretch,
-            title: false,
-        },
-    )
-    .map_err(|err| anyhow!("failed to create splash window: {err}"))?;
-
-    let _ = try_center_window(&mut window, scale.factor);
-    // Some X11 WMs only honor position after the window is mapped once.
-    window.update();
-    let _ = try_center_window(&mut window, scale.factor);
-    let _ = try_set_window_icon_from_sidecar(&mut window);
-    let _ = window.set_target_fps(FPS as usize);
-    Ok(window)
-}
-
-fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<()> {
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = window;
-        return Ok(());
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if is_wayland_session_for_splash() {
-            return Ok(());
-        }
-
-        let exe = std::env::current_exe().context("failed to resolve current executable")?;
-        let icon_path = exe.with_extension("png");
-        if !icon_path.exists() {
-            return Ok(());
-        }
-
-        let raw = std::fs::read(&icon_path).with_context(|| {
-            format!(
-                "failed to read splash icon sidecar at {}",
-                icon_path.display()
-            )
-        })?;
-        let icon_buffer = decode_png_icon_to_x11_buffer(&raw).with_context(|| {
-            format!(
-                "failed to decode splash icon sidecar {}",
-                icon_path.display()
-            )
-        })?;
-
-        if let Ok(icon) = Icon::try_from(icon_buffer.as_slice()) {
-            // minifb panics on Wayland if set_icon is called at runtime.
-            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                window.set_icon(icon);
-            }));
-        }
-        Ok(())
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn is_wayland_session_for_splash() -> bool {
-    if std::env::var_os("WAYLAND_DISPLAY").is_some() {
-        return true;
-    }
-
-    std::env::var("XDG_SESSION_TYPE")
-        .ok()
-        .map(|value| value.eq_ignore_ascii_case("wayland"))
-        .unwrap_or(false)
-}
-
-#[cfg(target_os = "linux")]
-fn decode_png_icon_to_x11_buffer(png_bytes: &[u8]) -> anyhow::Result<Vec<u64>> {
-    use png::{ColorType, Decoder, Transformations};
-
-    let mut decoder = Decoder::new(std::io::Cursor::new(png_bytes));
-    decoder.set_transformations(
-        Transformations::EXPAND | Transformations::STRIP_16 | Transformations::ALPHA,
-    );
-    let mut reader = decoder.read_info().context("png read_info failed")?;
-    let mut buf = vec![0u8; reader.output_buffer_size()];
-    let info = reader
-        .next_frame(&mut buf)
-        .context("png next_frame failed")?;
-    let bytes = &buf[..info.buffer_size()];
-    let width = info.width as usize;
-    let height = info.height as usize;
-
-    if width == 0 || height == 0 {
-        return Err(anyhow!("png icon has invalid size"));
-    }
-
-    let mut out = Vec::with_capacity(2 + (width * height));
-    out.push(width as u64);
-    out.push(height as u64);
-
-    match info.color_type {
-        ColorType::Rgba => {
-            for px in bytes.chunks_exact(4) {
-                let r = px[0] as u32;
-                let g = px[1] as u32;
-                let b = px[2] as u32;
-                let a = px[3] as u32;
-                out.push(((a << 24) | (r << 16) | (g << 8) | b) as u64);
-            }
-        }
-        ColorType::Rgb => {
-            for px in bytes.chunks_exact(3) {
-                let r = px[0] as u32;
-                let g = px[1] as u32;
-                let b = px[2] as u32;
-                out.push(((0xffu32 << 24) | (r << 16) | (g << 8) | b) as u64);
-            }
-        }
-        ColorType::Grayscale => {
-            for gray in bytes.iter().copied() {
-                let c = gray as u32;
-                out.push(((0xffu32 << 24) | (c << 16) | (c << 8) | c) as u64);
-            }
-        }
-        ColorType::GrayscaleAlpha => {
-            for px in bytes.chunks_exact(2) {
-                let c = px[0] as u32;
-                let a = px[1] as u32;
-                out.push(((a << 24) | (c << 16) | (c << 8) | c) as u64);
-            }
-        }
-        ColorType::Indexed => return Err(anyhow!("indexed png icon not expanded")),
-    }
-
-    Ok(out)
-}
-
-fn try_center_window(window: &mut Window, scale_factor: i32) -> anyhow::Result<()> {
-    let screen = detect_screen_size().unwrap_or((1280, 720));
-    let physical_w = (WIN_W as i32 * scale_factor.max(1)).max(1);
-    let physical_h = (WIN_H as i32 * scale_factor.max(1)).max(1);
-    let x = ((screen.0 as i32 - physical_w) / 2).max(0);
-    let y = ((screen.1 as i32 - physical_h) / 2).max(0);
-    window.set_position(x as isize, y as isize);
-    Ok(())
-}
-
-fn choose_splash_window_scale(screen: (usize, usize)) -> SplashWindowScale {
-    // Best practice here: keep a stable logical canvas (96:31) and scale in integer steps.
-    // This preserves layout/text metrics while making the splash proportional to the monitor.
-    let (sw, sh) = screen;
-    if sw >= 2200 && sh >= 900 {
-        SplashWindowScale {
-            minifb_scale: Scale::X2,
-            factor: 2,
-        }
-    } else {
-        SplashWindowScale {
-            minifb_scale: Scale::X1,
-            factor: 1,
-        }
-    }
-}
-
-fn detect_screen_size() -> Option<(usize, usize)> {
-    // Best-effort only. If unavailable, the window still opens with the WM default placement.
-    // On Wayland, many compositors ignore client positioning entirely even if we know the size.
-    if let Ok(out) = Command::new("xrandr").arg("--current").output() {
-        if out.status.success() {
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            for line in stdout.lines() {
-                if let Some(idx) = line.find(" current ") {
-                    let tail = &line[idx + " current ".len()..];
-                    if let Some((w, rest)) = tail.split_once(" x ") {
-                        let width = w.trim().parse::<usize>().ok()?;
-                        let height = rest
-                            .split(',')
-                            .next()
-                            .and_then(|v| v.trim().parse::<usize>().ok())?;
-                        return Some((width, height));
-                    }
-                }
-            }
-        }
-    }
-    if let Ok(out) = Command::new("xdpyinfo").output() {
-        if out.status.success() {
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            for line in stdout.lines() {
-                let line = line.trim();
-                if let Some(rest) = line.strip_prefix("dimensions:") {
-                    let dims = rest.trim();
-                    if let Some((w, h_rest)) = dims.split_once('x') {
-                        let width = w.trim().parse::<usize>().ok()?;
-                        let height = h_rest
-                            .split_whitespace()
-                            .next()
-                            .and_then(|v| v.parse::<usize>().ok())?;
-                        return Some((width, height));
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-fn read_mouse(window: &Window, last_left_down: bool) -> MouseSnapshot {
-    let (mx, my) = window
-        .get_mouse_pos(MouseMode::Clamp)
-        .unwrap_or((-1.0, -1.0));
-    let left_down = window.get_mouse_down(MouseButton::Left);
-    MouseSnapshot {
-        x: mx as i32,
-        y: my as i32,
-        left_down,
-        left_pressed: left_down && !last_left_down,
-    }
-}
-
