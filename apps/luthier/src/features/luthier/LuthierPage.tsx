@@ -769,7 +769,7 @@ export default function LuthierPage() {
       <div class="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div class="hidden h-fit lg:sticky lg:top-4 lg:block">
           <AppSidebar
-            appName="Game Orchestrator"
+            appName="Luthier"
             activeTab={activeTab()}
             onTabChange={handleSidebarTabChange}
             tabLabel={(tab) => tabLabel(tab, controller)}
@@ -788,7 +788,7 @@ export default function LuthierPage() {
           <div class="fixed inset-y-0 left-0 z-50 w-[min(88vw,320px)] p-3 lg:hidden">
             <AppSidebar
               class="h-full min-h-0 max-w-none"
-              appName="Game Orchestrator"
+              appName="Luthier"
               activeTab={activeTab()}
               onTabChange={handleSidebarTabChange}
               tabLabel={(tab) => tabLabel(tab, controller)}
