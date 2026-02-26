@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="$ROOT_DIR/apps/creator-tauri"
+APP_DIR="$ROOT_DIR/apps/luthier"
 
 run_npm() {
   if command -v mise >/dev/null 2>&1; then

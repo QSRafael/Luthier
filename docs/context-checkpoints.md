@@ -8,9 +8,9 @@ Este arquivo contem o historico completo de implementacao (checkpoints) que foi 
 Escopo implementado:
 - Bootstrap do workspace Rust:
   - `Cargo.toml` raiz com membros:
-    - `crates/orchestrator-core`
-    - `bins/orchestrator`
-- `orchestrator-core` criado com:
+    - `crates/luthier-orchestrator-core`
+    - `bins/luthier-orchestrator`
+- `luthier-orchestrator-core` criado com:
   - modelos base (`GameConfig`, `FeatureState`, runtime, winecfg, etc.);
   - parser/injetor de trailer (`GOCFGv1` + `json_len` + `sha256`);
   - observabilidade NDJSON (`event_code`, `trace_id`, `span_id`);
@@ -21,26 +21,26 @@ Escopo implementado:
 - Estrutura inicial de docs e CI:
   - `.github/workflows/ci.yml`
   - `docs/implementation-log.md`
-  - placeholder `apps/creator-tauri/README.md`.
+  - placeholder `apps/luthier/README.md`.
 
 Bloqueio observado no ambiente desta sessao:
 - `cargo test` nao concluiu por indisponibilidade de rede para baixar crates (`index.crates.io`).
 
 Proximo checkpoint planejado:
-- Implementar Fase 2 no App Criador (injeção de payload no binario base).
-- Adicionar comando de teste local no App Criador usando o mesmo pipeline do Orquestrador sem gerar arquivo final.
+- Implementar Fase 2 no App Luthier (injeção de payload no binario base).
+- Adicionar comando de teste local no App Luthier usando o mesmo pipeline do Luthier Orchestrator sem gerar arquivo final.
 
 ### 2026-02-24 - Checkpoint 02
 Escopo implementado:
 - Fase 2 (parcial) entregue via utilitario CLI e modulo core:
-  - novo modulo `injector` em `orchestrator-core`;
+  - novo modulo `injector` em `luthier-orchestrator-core`;
   - injeção de payload com:
     - validacao de `GameConfig` antes de embutir;
     - escrita atomica (tmp + rename);
     - backup `.bak` quando output ja existe;
     - marca de executavel (Unix);
     - verificacao pos-injecao comparando payload extraido.
-- Novo binario `orchestrator-injector` para uso pelo App Criador:
+- Novo binario `luthier-orchestrator-injector` para uso pelo App Luthier:
   - `--base`, `--config`, `--output`, `--no-backup`, `--no-exec-bit`.
 - Testes unitarios adicionados no modulo `injector` (roundtrip + backup).
 
@@ -52,7 +52,7 @@ Proximo checkpoint planejado:
 Escopo implementado:
 - Fase 4 (parcial) no `orchestrator`:
   - `--doctor` agora funcional, com relatorio JSON.
-- Novo modulo `doctor` em `orchestrator-core` com:
+- Novo modulo `doctor` em `luthier-orchestrator-core` com:
   - discovery de runtime por prioridade:
     - `PATH`
     - env vars (`PROTONPATH`, `STEAM_COMPAT_TOOL_PATHS`, `WINE`, `UMU_RUNTIME`)
@@ -69,11 +69,11 @@ Escopo implementado:
 
 Proximo checkpoint planejado:
 - Implementar setup inicial de prefix (fase 5), incluindo passos idempotentes e logs por etapa.
-- Integrar comando de injeção no backend Tauri do App Criador.
+- Integrar comando de injeção no backend Tauri do App Luthier.
 
 ### 2026-02-24 - Checkpoint 04
 Escopo implementado:
-- Fase 5 (parcial) no `orchestrator-core`:
+- Fase 5 (parcial) no `luthier-orchestrator-core`:
   - novo modulo `prefix` com:
     - `prefix_path_for_hash(exe_hash)`;
     - `build_prefix_setup_plan(config)` (wineboot/winetricks planejados);
@@ -87,32 +87,32 @@ Proximo checkpoint planejado:
 
 ### 2026-02-24 - Checkpoint 05
 Escopo implementado:
-- Novo crate `creator-core` para backend local do App Criador:
+- Novo crate `luthier-core` para backend local do App Luthier:
   - `create_orchestrator_binary(...)` usando `inject_from_parts(...)`;
   - `sha256_file(...)` para hash de executavel;
   - validacao de paths relativos no payload (`relative_exe_path`, `integrity_files`, `folder_mounts`);
   - helper para normalizar caminho relativo dentro da pasta do jogo.
-- `orchestrator-core::injector` atualizado com API de injeção por bytes (`inject_from_parts`) para evitar depender de arquivo temporario de config.
+- `luthier-orchestrator-core::injector` atualizado com API de injeção por bytes (`inject_from_parts`) para evitar depender de arquivo temporario de config.
 
 Proximo checkpoint planejado:
-- Integrar `creator-core` ao backend Tauri (`src-tauri`) com comandos de alto nivel para UI.
-- Executar `PrefixSetupPlan` de forma real no Orquestrador com logs por etapa.
+- Integrar `luthier-core` ao backend Tauri (`src-tauri`) com comandos de alto nivel para UI.
+- Executar `PrefixSetupPlan` de forma real no Luthier Orchestrator com logs por etapa.
 
 ### 2026-02-24 - Checkpoint 06
 Escopo implementado:
-- Backend inicial do App Criador em `apps/creator-tauri/src-tauri`:
+- Backend inicial do App Luthier em `apps/luthier/src-tauri`:
   - funcao `create_executable(...)`:
     - recebe JSON de config;
     - desserializa para `GameConfig`;
-    - chama `creator-core` para gerar o orquestrador.
+    - chama `luthier-core` para gerar o Luthier Orchestrator.
   - funcao `hash_executable(...)` para SHA-256 do executavel alvo.
 - Arquitetura isolada:
-  - regra de negocio continua em crates (`creator-core` + `orchestrator-core`);
+  - regra de negocio continua em crates (`luthier-core` + `luthier-orchestrator-core`);
   - `src-tauri` atua como camada de adaptacao para futura exposicao de `#[tauri::command]`.
 
 Proximo checkpoint planejado:
 - Adicionar comandos Tauri reais no backend (`#[tauri::command]`) e conectar ao frontend.
-- Implementar execucao real do `PrefixSetupPlan` no fluxo `--play` do Orquestrador.
+- Implementar execucao real do `PrefixSetupPlan` no fluxo `--play` do Luthier Orchestrator.
 
 ### 2026-02-24 - Checkpoint 07
 Escopo implementado:
@@ -144,7 +144,7 @@ Escopo implementado:
   - inclui `prefix_setup_execution` no JSON de preflight;
   - aborta em falha obrigatoria.
 - Modo de simulacao:
-  - `GAME_ORCH_DRY_RUN=1` executa fluxo sem spawn real.
+  - `LUTHIER_DRY_RUN=1` executa fluxo sem spawn real.
 
 Proximo checkpoint planejado:
 - Implementar montagem e spawn do launch command final (wrappers + runtime + exe).
@@ -173,11 +173,11 @@ Escopo implementado:
     - variaveis customizadas com bloqueio de chaves protegidas.
 - Execucao:
   - `wait()` no processo principal do jogo;
-  - dry-run global por `GAME_ORCH_DRY_RUN=1`.
+  - dry-run global por `LUTHIER_DRY_RUN=1`.
 - Logs adicionais por etapa para depuracao humana/IA.
 
 Proximo checkpoint planejado:
-- Expor comandos Tauri reais (`#[tauri::command]`) no backend do App Criador.
+- Expor comandos Tauri reais (`#[tauri::command]`) no backend do App Luthier.
 - Criar UI mínima do Criador para gerar e testar sem sair da janela.
 
 ### 2026-02-24 - Checkpoint 10
@@ -217,7 +217,7 @@ Proximo checkpoint planejado:
 
 ### 2026-02-24 - Checkpoint 12
 Escopo implementado:
-- Frontend mínimo do App Criador criado em `apps/creator-tauri`:
+- Frontend mínimo do App Luthier criado em `apps/luthier`:
   - stack: Vite + Solid;
   - abas iniciais:
     - Jogo
@@ -257,7 +257,7 @@ Proximo checkpoint planejado:
 
 ### 2026-02-24 - Checkpoint 14
 Escopo implementado:
-- Novo utilitario `creator-cli` para testes via terminal:
+- Novo utilitario `luthier-cli` para testes via terminal:
   - `hash`
   - `test`
   - `create`
@@ -285,13 +285,13 @@ Escopo implementado:
 - Revisao tecnica e hardening dos pontos criticos:
   - corrigidos erros de `clippy -D warnings` no workspace;
   - refatorada API de observabilidade para reduzir acoplamento de argumentos.
-- Orquestrador (`--play`) reforcado com validacao defensiva de paths:
+- Luthier Orchestrator (`--play`) reforcado com validacao defensiva de paths:
   - bloqueia path absoluto Linux/Windows e traversal (`..`) inclusive com `\`;
   - mesma regra aplicada em validacao de integridade e resolucao do exe.
 - `--config` deixou de ser placeholder:
   - agora gerencia overrides opcionais por jogo para `mangohud`, `gamescope`, `gamemode`;
   - suporte a `--set-mangohud`, `--set-gamescope`, `--set-gamemode`;
-  - overrides persistidos em `~/.local/share/GameOrchestrator/overrides/<exe_hash>.json`;
+  - overrides persistidos em `~/.local/share/Luthier/overrides/<exe_hash>.json`;
   - `--play` aplica automaticamente os overrides persistidos.
 - Wrappers customizados:
   - `MandatoryOn` ausente/invalido agora bloqueia com erro explicito;
@@ -314,7 +314,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 17
 Escopo implementado:
-- Integracao de `folder_mounts` no fluxo real do Orquestrador (`--play`), antes do pre-launch:
+- Integracao de `folder_mounts` no fluxo real do Luthier Orchestrator (`--play`), antes do pre-launch:
   - validacao estrita de origem relativa dentro da pasta do jogo;
   - validacao estrita de destino Windows (`X:\...`, sem `%VAR%`, sem UNC e sem traversal `..`);
   - suporte a `create_source_if_missing`;
@@ -330,23 +330,23 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `cargo fmt --all`
-- `cargo test -p orchestrator -- --nocapture`
+- `cargo test -p luthier-orchestrator -- --nocapture`
 - `cargo build --workspace`
-- `cargo clippy -p orchestrator --all-targets -- -D warnings`
+- `cargo clippy -p luthier-orchestrator --all-targets -- -D warnings`
 
 ### 2026-02-24 - Checkpoint 19
 Escopo implementado:
-- Hardening de validacao no `creator-core` (antes de gerar o binario):
+- Hardening de validacao no `luthier-core` (antes de gerar o binario):
   - paths relativos agora sao validados de forma lexical e cross-platform:
     - bloqueia vazio;
     - bloqueia absolutos Linux (`/`) e Windows (`C:\...`);
     - bloqueia traversal com `/..` e `\..`.
-  - validacao de `folder_mounts.target_windows_path` no App Criador:
+  - validacao de `folder_mounts.target_windows_path` no App Luthier:
     - exige formato `X:\...`;
     - bloqueia `%ENV%`, UNC (`\\server\share`) e traversal;
     - normaliza e detecta destinos duplicados (case-insensitive).
 - `to_relative_inside_game_root` agora retorna path normalizado em formato unix-like.
-- Novas variantes de erro em `CreatorError` para falhas de mount target e path invalido.
+- Novas variantes de erro em `LuthierError` para falhas de mount target e path invalido.
 - Testes adicionados para:
   - absoluto Windows em path relativo;
   - traversal com backslash;
@@ -356,14 +356,14 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `cargo fmt --all`
-- `cargo test -p creator-core -- --nocapture`
+- `cargo test -p luthier-core -- --nocapture`
 - `cargo build --workspace`
-- `cargo clippy -p creator-core --all-targets -- -D warnings`
+- `cargo clippy -p luthier-core --all-targets -- -D warnings`
 
 ### 2026-02-24 - Checkpoint 18
 Escopo implementado:
-- Lock de instancia por jogo (`exe_hash`) no Orquestrador:
-  - lock file em `~/.local/share/GameOrchestrator/locks/<exe_hash>.lock`;
+- Lock de instancia por jogo (`exe_hash`) no Luthier Orchestrator:
+  - lock file em `~/.local/share/Luthier/locks/<exe_hash>.lock`;
   - exclusao mutua por `create_new(true)` para evitar duas execucoes concorrentes;
   - metadata no lock (`pid`, `created_at`);
   - reclaim automatico de lock stale quando PID nao existe mais (`/proc/<pid>` ausente).
@@ -378,13 +378,13 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `cargo fmt --all`
-- `cargo test -p orchestrator -- --nocapture`
+- `cargo test -p luthier-orchestrator -- --nocapture`
 - `cargo build --workspace`
-- `cargo clippy -p orchestrator --all-targets -- -D warnings`
+- `cargo clippy -p luthier-orchestrator --all-targets -- -D warnings`
 
 ### 2026-02-24 - Checkpoint 20
 Escopo implementado:
-- App Criador (frontend Solid) recebeu refatoracao visual completa com componentes reutilizaveis:
+- App Luthier (frontend Solid) recebeu refatoracao visual completa com componentes reutilizaveis:
   - `TextInputField`, `TextAreaField`, `SelectField`, `ToggleField`;
   - `StringListField` (listas editaveis);
   - `KeyValueListField` (chave/valor);
@@ -421,11 +421,11 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 21
 Escopo implementado:
-- Correcoes de UX no App Criador (frontend):
+- Correcoes de UX no App Luthier (frontend):
   - campo de executavel com `file picker` real;
   - `Import .reg` com `file picker`;
   - `folder_mounts.source_relative_path` com `folder picker` (com validacao para pasta dentro de `game_root`);
-  - `Orchestrator base` tornou-se fixo/read-only (nao editavel pela UI).
+  - `Luthier Orchestrator base` tornou-se fixo/read-only (nao editavel pela UI).
 - Runtime/fallback:
   - fallback reorganizado para fluxo de adicionar/remover e mover ordem (`Subir`/`Descer`).
 - Toggles:
@@ -436,7 +436,7 @@ Escopo implementado:
 - Winetricks:
   - politica manual removida da UI; ativacao agora e automatica quando houver verbos;
   - lista de verbos via catalogo (modelo Heroic), sem entrada livre como fluxo principal.
-- Backend local App Criador:
+- Backend local App Luthier:
   - novo comando `cmd_winetricks_available`;
   - tenta ler verbos via `winetricks dlls list` + `fonts list`;
   - fallback para lista curada quando `winetricks` nao estiver disponivel.
@@ -448,7 +448,7 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
-- `cargo test -p creator-tauri-backend -- --nocapture`
+- `cargo test -p luthier-backend -- --nocapture`
 - `cargo build --workspace`
 
 ### 2026-02-24 - Checkpoint 22
@@ -459,11 +459,11 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
-- `cargo test -p creator-tauri-backend -- --nocapture`
+- `cargo test -p luthier-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 23
 Escopo implementado:
-- Pipeline de build desktop do App Criador consolidado:
+- Pipeline de build desktop do App Luthier consolidado:
   - `src-tauri/build.rs` adicionado com `tauri_build::build()`;
   - `tauri-build` em `build-dependencies`;
   - `tauri.conf.json` com `beforeDevCommand`/`beforeBuildCommand` e bundle ativo.
@@ -471,7 +471,7 @@ Escopo implementado:
   - wrappers `#[tauri::command]` movidos para `src-tauri/src/main.rs`;
   - `src-tauri/src/lib.rs` mantido como camada pura de logica.
 - Preparacao automatica de compatibilidade Linux para Tauri v1 em distros com WebKit 4.1:
-  - script `apps/creator-tauri/scripts/prepare-linux-compat.sh`;
+  - script `apps/luthier/scripts/prepare-linux-compat.sh`;
   - gera `pkgconfig/*-4.0.pc` apontando para libs 4.1;
   - gera `libshims/libwebkit2gtk-4.0.so` e `libshims/libjavascriptcoregtk-4.0.so`.
 - Scripts NPM atualizados:
@@ -482,16 +482,16 @@ Escopo implementado:
 - Observacao de ambiente (Arch/CachyOS): bundling AppImage falha por limitacao do `strip` do `linuxdeploy` com binarios RELR; build de binario nativo funciona.
 
 Resultado operacional:
-- Binario desktop do Creator gerado em:
-  - `target/release/game-orchestrator-creator`
+- Binario desktop do Luthier gerado em:
+  - `target/release/luthier`
 
 Validacao do checkpoint:
 - `npm run tauri:build` (com `mise`, gerando binario release)
-- `cargo test -p creator-tauri-backend -- --nocapture`
+- `cargo test -p luthier-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 24
 Escopo implementado:
-- Refatoracao completa de UX visual do App Criador (frontend):
+- Refatoracao completa de UX visual do App Luthier (frontend):
   - novo tema claro com contraste consistente e estilos globais para `input/select/textarea`;
   - componentes e cards com hierarquia visual mais limpa e legivel;
   - responsividade revisada para desktop/mobile.
@@ -509,11 +509,11 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
-- `cargo test -p creator-tauri-backend -- --nocapture`
+- `cargo test -p luthier-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 25
 Escopo implementado:
-- Redesign estrutural completo da interface do Creator:
+- Redesign estrutural completo da interface do Luthier:
   - novo layout com barra lateral de abas e area de edicao principal;
   - header simplificado com foco no fluxo de configuracao (sem depender de status no topo).
 - UX de controles binarios refeita:
@@ -530,14 +530,14 @@ Escopo implementado:
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise x node@lts -- npm run build` (frontend)
-- `cargo test -p creator-tauri-backend -- --nocapture`
+- `cargo test -p luthier-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 26
 Escopo implementado:
 - Reescrita do frontend para base shadcn com separacao de responsabilidades:
   - `App.tsx` virou entrypoint minimo;
-  - nova camada `features/creator/useCreatorController.ts` concentra estado, efeitos, comandos Tauri e regras de negocio da UI;
-  - `features/creator/CreatorPage.tsx` ficou focada em renderizacao.
+  - nova camada `features/luthier/useLuthierController.ts` concentra estado, efeitos, comandos Tauri e regras de negocio da UI;
+  - `features/luthier/LuthierPage.tsx` ficou focada em renderizacao.
 - Padronizacao visual com componentes shadcn/primitivos:
   - criados `ui/input.tsx`, `ui/textarea.tsx`, `ui/select.tsx`, `ui/badge.tsx`;
   - `FormControls.tsx` migrado para `Input/Select/Textarea/Switch/Button` com layout consistente.
@@ -559,7 +559,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 63
 Escopo implementado:
-- Revisao de cores/contraste (Creator UI):
+- Revisao de cores/contraste (Luthier UI):
   - `Alert` variante `warning` corrigida para contraste adequado em tema claro/escuro (antes usava texto claro demais no light theme);
   - `SwitchChoiceCard` (usado em varios itens, incluindo `Melhorias`) alinhado visualmente ao padrao dos outros cards de toggle (`accent` quando selecionado, `background/accent` quando inativo/hover);
   - botoes `.btn-test` e `.btn-danger` migrados de cores hardcoded (`sky/rose`) para semantica baseada em tokens (`primary`/`destructive`) para manter coerencia com o tema atual do shadcn.
@@ -569,7 +569,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 62
 Escopo implementado:
-- Tema visual do Creator alinhado aos tokens extraidos do site do shadcn/ui:
+- Tema visual do Luthier alinhado aos tokens extraidos do site do shadcn/ui:
   - variaveis CSS (`:root` e `.dark`) atualizadas com os valores enviados (light/dark);
   - tons de cinza/contraste do app passam a seguir a paleta real do site (via tokens).
 - Tailwind config ajustado:
@@ -612,7 +612,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 59
 Escopo implementado:
-- Layout geral do Creator (UI):
+- Layout geral do Luthier (UI):
   - header superior removido;
   - tela agora usa apenas `sidebar` + bloco principal de conteudo.
 - Sidebar:
@@ -637,7 +637,7 @@ Escopo implementado:
 - Aba `Jogo`:
   - `Prefix path final` reposicionado para ficar logo abaixo de `Hash SHA-256`.
 - Aba `Revisão e Gerar`:
-  - item `Orchestrator base` removido da UI;
+  - item `Luthier Orchestrator base` removido da UI;
   - item `Saída do executável` ocultado da UI;
   - `Resumo do payload` ajustado para mostrar os cards de contagem no rodape do item (`FieldShell.footer`);
   - botoes `Testar` e `Criar executável` movidos para abaixo do `Preview do Payload JSON`.
@@ -649,7 +649,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 57
 Escopo implementado:
-- Reorganizacao de abas (Creator UI):
+- Reorganizacao de abas (Luthier UI):
   - aba `Performance e Compatibilidade` renomeada para `Melhorias`;
   - aba `Prefixo e Dependências` renomeada para `Dependências`.
 - Aba `Jogo`:
@@ -671,7 +671,7 @@ Validacao do checkpoint:
 Escopo implementado:
 - Aba `Wrappers e Ambiente` renomeada para `Execução e Ambiente` e consolidada:
   - conteudo de `Scripts` foi movido para a mesma aba;
-  - aba `Scripts` removida da navegacao lateral e da ordem de tabs do Creator (compatibilidade visual mantida).
+  - aba `Scripts` removida da navegacao lateral e da ordem de tabs do Luthier (compatibilidade visual mantida).
 - `Wrapper commands`:
   - lista substituida por tabela com cabecalho (`Ativado`, `Obrigatório`, `Executável`, `Argumentos`);
   - dialog de adicao agora usa cards clicaveis para politica (`Ativado` / `Obrigatório`) em duas colunas;
@@ -754,20 +754,20 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 39
 Escopo implementado:
-- Revisao de textos (copy) no Creator com foco em linguagem de usuario final:
+- Revisao de textos (copy) no Luthier com foco em linguagem de usuario final:
   - removidos/ocultados termos internos de schema em labels visiveis (ex.: `integrity_files`, `folder_mounts`, `custom_vars`, `payload`);
   - textos da aba `Execucao e Ambiente` e `Revisao e Gerar` ajustados para nomes mais claros (`Comandos de wrapper`, `Resumo da configuracao`, `Resultado da ultima acao`, etc.);
   - textos de ajuda revisados para explicar impacto ao usuario em vez de nomenclatura interna.
 - Internacionalizacao dos componentes de formulario (`FormControls`):
   - criado `FormControlsI18nProvider` para evitar strings hardcoded em componentes reutilizaveis;
-  - labels/padroes de cards e dialogs (Ativado, Obrigatorio, Cancelar, Confirmar, Acoes, etc.) agora recebem traducao do `CreatorPage`.
+  - labels/padroes de cards e dialogs (Ativado, Obrigatorio, Cancelar, Confirmar, Acoes, etc.) agora recebem traducao do `LuthierPage`.
 - Dicionario `i18n.ts` revisado:
   - melhorias de copy (pt-BR/en-US), acentos e consistencia;
   - `statusReady` alinhado com o texto usado para suprimir toast de "pronto/ready".
 
 Observacao de arquitetura (i18n):
 - O projeto JA usa i18n (arquivo `src/i18n.ts`) + `tx(pt,en)` inline.
-- Ainda existe bastante texto inline com `tx(...)` dentro do `CreatorPage`, o que funciona bem para 2 idiomas, mas nao eh o ideal para escalar.
+- Ainda existe bastante texto inline com `tx(...)` dentro do `LuthierPage`, o que funciona bem para 2 idiomas, mas nao eh o ideal para escalar.
 - Para adicionar varios idiomas no futuro, o proximo passo recomendado eh migrar textos inline para chaves tipadas em dicionario (mantendo `tx` apenas para prototipagem).
 
 Validacao do checkpoint:
@@ -775,7 +775,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 37
 Escopo implementado:
-- Itens de listas do Creator migrados de "cards/linhas soltas" para tabelas simples com cabecalho (melhor legibilidade de colunas):
+- Itens de listas do Luthier migrados de "cards/linhas soltas" para tabelas simples com cabecalho (melhor legibilidade de colunas):
   - `Argumentos de launch`
   - `Arquivos obrigatorios (integrity_files)`
   - `Dependencias extras do sistema`
@@ -793,7 +793,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 38
 Escopo implementado:
-- Reestruturacao da aba `winecfg` (Creator):
+- Reestruturacao da aba `winecfg` (Luthier):
   - `Substituicao de DLL` agora usa tabela com cabecalho;
   - coluna `Modo` (builtin/native/etc.) passou a ser editavel diretamente na tabela;
   - adicionada configuracao de `Versao do Windows (winecfg)` como override opcional (select com "Padrao do runtime").
@@ -825,7 +825,7 @@ Escopo implementado:
   - metadados opcionais em `winecfg.drives[]` (`host_path`, `drive_type`, `label`, `serial`)
   - campos novos no Rust usam `serde(default)` para manter compatibilidade com payloads antigos.
 
-- Orquestrador CLI:
+- Luthier Orchestrator CLI:
   - adicionado parametro `--winecfg`;
   - fluxo executa `Doctor`, setup de prefixo (se necessario) e abre `winecfg` no runtime selecionado;
   - gera saida JSON com plano/comando/resultados (seguindo padrao dos outros comandos).
@@ -839,28 +839,28 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 40
 Escopo implementado:
-- Migracao estrutural de i18n no Creator (sem `tx(...)` inline na tela principal):
-  - `CreatorPage.tsx` e `useCreatorController.ts` agora usam chaves centralizadas (`ct(...)`) em vez de pares inline `tx('pt','en')`;
+- Migracao estrutural de i18n no Luthier (sem `tx(...)` inline na tela principal):
+  - `LuthierPage.tsx` e `useLuthierController.ts` agora usam chaves centralizadas (`ct(...)`) em vez de pares inline `tx('pt','en')`;
   - casos dinamicos (contagem/erro/interpolacao) migrados para `ctf(...)` com placeholders (`{count}`, `{error}`, etc.).
-- Novo dicionario dedicado do Creator:
-  - arquivo `apps/creator-tauri/src/features/creator/creator-copy.ts` com `creatorMessages`, `creatorTranslate` e `creatorFormat`;
-  - centraliza textos de interface da feature Creator em um unico lugar.
+- Novo dicionario dedicado do Luthier:
+  - arquivo `apps/luthier/src/features/luthier/luthier-copy.ts` com `creatorMessages`, `creatorTranslate` e `creatorFormat`;
+  - centraliza textos de interface da feature Luthier em um unico lugar.
 - Internacionalizacao pronta para escalar:
-  - para adicionar novo idioma do Creator, basta adicionar um novo bloco no dicionario da feature (e no `Locale` global), sem alterar componentes/tela;
+  - para adicionar novo idioma do Luthier, basta adicionar um novo bloco no dicionario da feature (e no `Locale` global), sem alterar componentes/tela;
   - `FormControls` continua usando provider de i18n local (`FormControlsI18nProvider`) alimentado por chaves centralizadas.
 
 Observacao de arquitetura:
 - `i18n.ts` permanece para textos globais/status existentes.
-- `creator-copy.ts` concentra a copy extensa da feature Creator para reduzir ruido e facilitar manutencao.
+- `luthier-copy.ts` concentra a copy extensa da feature Luthier para reduzir ruido e facilitar manutencao.
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
 
 ### 2026-02-24 - Checkpoint 41
 Escopo implementado:
-- Super refatoracao estrutural da tela principal do Creator (`CreatorPage`), sem mudar comportamento:
-  - extracao dos helpers/componentes locais para `apps/creator-tauri/src/features/creator/creator-page-shared.tsx`;
-  - extracao das abas em arquivos dedicados dentro de `apps/creator-tauri/src/features/creator/sections/`:
+- Super refatoracao estrutural da tela principal do Luthier (`LuthierPage`), sem mudar comportamento:
+  - extracao dos helpers/componentes locais para `apps/luthier/src/features/luthier/luthier-page-shared.tsx`;
+  - extracao das abas em arquivos dedicados dentro de `apps/luthier/src/features/luthier/sections/`:
     - `game-tab.tsx`
     - `runtime-tab.tsx`
     - `performance-tab.tsx`
@@ -868,14 +868,14 @@ Escopo implementado:
     - `winecfg-tab.tsx`
     - `launch-environment-tab.tsx`
     - `review-tab.tsx`
-- `CreatorPage.tsx` ficou focado em:
+- `LuthierPage.tsx` ficou focado em:
   - composicao de layout geral (sidebar + card principal);
   - estados locais/dialogos/sinais;
   - handlers de alto nivel;
   - montagem do `sectionView` compartilhado para as abas.
 - Reducao de complexidade do arquivo principal:
-  - `CreatorPage.tsx` caiu de ~3500 linhas para ~760 linhas (aprox.).
-- Limpeza de imports residuais no `CreatorPage` apos extracao, melhorando legibilidade humana.
+  - `LuthierPage.tsx` caiu de ~3500 linhas para ~760 linhas (aprox.).
+- Limpeza de imports residuais no `LuthierPage` apos extracao, melhorando legibilidade humana.
 
 Observacao de arquitetura:
 - As abas recebem um objeto `view` compartilhado (`sectionView`) para preservar comportamento sem reescrever toda a logica em hooks menores nesta etapa.
@@ -886,7 +886,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 36
 Escopo implementado:
-- Padronizacao visual de botoes secundarios no Creator UI:
+- Padronizacao visual de botoes secundarios no Luthier UI:
   - botoes de acoes auxiliares (`Selecionar executavel`, `Escolher outra`, `Calcular hash`, `Copiar`, `Extrair icone`, `Atualizar catalogo winetricks`) passaram a usar `Button variant="outline"` em vez de classe custom `btn-secondary`;
   - reduz discrepancia visual entre botoes pretos/cinza no tema escuro e alinha com o padrao shadcn.
 - Padronizacao dos botoes "Adicionar ..." em listas/dialogs:
@@ -900,7 +900,7 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 55
 Escopo implementado:
-- Feedback global da UI do Creator migrado de banner fixo para `Sonner`:
+- Feedback global da UI do Luthier migrado de banner fixo para `Sonner`:
   - mensagens de status agora disparam `toast.info`, `toast.success` e `toast.error`;
   - `Toaster` posicionado no canto inferior direito com `richColors` e botao de fechar;
   - mensagens `Pronto./Ready.` sao ignoradas para reduzir ruido.
@@ -939,7 +939,7 @@ Escopo implementado:
   - `Obrigatorio`
 - Regras de UX:
   - `Padrao do Wine = ligado` -> card `Ativado` fica desabilitado (nao editavel);
-  - `Obrigatorio` continua independente e preserva o papel de expor/bloquear edicao futura no launcher/config do orquestrador;
+  - `Obrigatorio` continua independente e preserva o papel de expor/bloquear edicao futura no launcher/config do Luthier Orchestrator;
   - somente itens da aba `winecfg` usam esse comportamento (nao afeta `FeatureStateField` generico).
 - Schema expandido para suportar isso explicitamente:
   - novo tipo `WinecfgFeaturePolicy` (`state` + `use_wine_default`) no frontend e no Rust;
@@ -1030,7 +1030,7 @@ Validacao do checkpoint:
 Escopo implementado:
 - Componente global `Switch` ajustado:
   - corrigido deslocamento da bolinha (`thumb`) para atingir corretamente o fim do trilho quando ativado.
-- Novo `FeatureStateField` (UI do App Criador):
+- Novo `FeatureStateField` (UI do App Luthier):
   - substitui selects de `FeatureState` por dois cards clicaveis (`Ativado` e `Obrigatorio`) no lado direito do item;
   - cada card alterna um bit da semantica (`enabled` e `mandatory`) e preserva o outro;
   - mapeamento bidirecional mantido para o enum de payload:
@@ -1038,7 +1038,7 @@ Escopo implementado:
 - Aplicado aos itens de `FeatureState` nas abas (Runtime, Performance/Compatibilidade e Winecfg) que usavam `SelectField<FeatureState>`.
 
 Observacao de backend:
-- Nao houve mudanca de schema/payload. A UI apenas passou a editar os mesmos 4 estados por meio de dois toggles (`Ativado` + `Obrigatorio`), preservando a logica de execucao do orquestrador.
+- Nao houve mudanca de schema/payload. A UI apenas passou a editar os mesmos 4 estados por meio de dois toggles (`Ativado` + `Obrigatorio`), preservando a logica de execucao do Luthier Orchestrator.
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
@@ -1114,12 +1114,12 @@ Escopo implementado:
   - corrigido rodape/divisor vazio quando `HDR` nao esta visivel.
 
 Compatibilidade de payload / backend:
-- `environment.prime_offload` em `orchestrator-core` mudou de `bool` para `FeatureState`.
+- `environment.prime_offload` em `luthier-orchestrator-core` mudou de `bool` para `FeatureState`.
 - Mantida compatibilidade com configs antigos:
   - o parser aceita tanto `bool` quanto `FeatureState` para `prime_offload`;
   - `true` antigo vira `OptionalOn`;
   - `false` antigo vira `OptionalOff`.
-- `launch` do orquestrador passou a aplicar variaveis de PRIME offload quando `prime_offload` estiver em estado ligado (`MandatoryOn`/`OptionalOn`).
+- `launch` do Luthier Orchestrator passou a aplicar variaveis de PRIME offload quando `prime_offload` estiver em estado ligado (`MandatoryOn`/`OptionalOn`).
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
@@ -1201,23 +1201,23 @@ Escopo implementado:
 - UI de importacao de `.reg`:
   - se houver avisos, abre dialog com resumo/lista dos warnings após a importação.
 
-Testes adicionados (creator-tauri-backend):
+Testes adicionados (luthier-backend):
 - parse de `hex(7)` multiline
 - parse de `DWORD:` case-insensitive
 - warning em hex inválido com manutenção da entrada
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
-- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
+- `/home/rafael/.cargo/bin/cargo test -p luthier-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 54
 Escopo implementado:
 - Adicionados scripts de conveniencia na raiz do repositorio para evitar comandos manuais repetitivos:
-  - `build-creator-e-abrir.sh`
-    - compila o Creator via `npm run tauri:build`;
-    - ao final abre a pasta `apps/creator-tauri/src-tauri/target/release` no gerenciador de arquivos;
+  - `build-luthier-e-abrir.sh`
+    - compila o Luthier via `npm run tauri:build`;
+    - ao final abre a pasta `apps/luthier/src-tauri/target/release` no gerenciador de arquivos;
     - lista executaveis encontrados na pasta `release`.
-  - `rodar-frontend-lan.sh`
+  - `rodar-luthier-lan.sh`
     - sobe o frontend Vite exposto na rede (`0.0.0.0`, porta padrao `1420`);
     - imprime URL local e URL LAN (IP da maquina);
     - verifica conflito de porta e informa processo ocupando a porta quando possivel.
@@ -1227,12 +1227,12 @@ Escopo implementado:
   - executam `npm install` automaticamente se `node_modules` nao existir.
 
 Validacao do checkpoint:
-- `bash -n ./build-creator-e-abrir.sh ./rodar-frontend-lan.sh`
-- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
+- `bash -n ./build-luthier-e-abrir.sh ./rodar-luthier-lan.sh`
+- `/home/rafael/.cargo/bin/cargo test -p luthier-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 27
 Escopo implementado:
-- Tema visual do Creator migrado para dark mode inspirado no shadcn:
+- Tema visual do Luthier migrado para dark mode inspirado no shadcn:
   - tokens globais (`--background`, `--foreground`, `--card`, `--input`, `--border`, etc.) alterados para paleta escura;
   - `color-scheme: dark` habilitado no `:root`;
   - gradientes de fundo ajustados para contraste em ambiente escuro.
@@ -1250,8 +1250,8 @@ Escopo implementado:
   - novo `ui/sidebar.tsx` com `Sidebar`, `SidebarHeader`, `SidebarContent`, `SidebarFooter`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`;
   - novo `ui/item.tsx` com composicao de `Item`, `ItemMain`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemFooter`;
   - novo `ui/dialog.tsx` para fluxo de criacao via modal.
-- Sidebar do Creator atualizada para estilo semelhante ao exemplo shadcn:
-  - novo `features/creator/AppSidebar.tsx` com icones Tabler e navegacao por abas.
+- Sidebar do Luthier atualizada para estilo semelhante ao exemplo shadcn:
+  - novo `features/luthier/AppSidebar.tsx` com icones Tabler e navegacao por abas.
 - `FormControls` refatorado para layout em 3 partes:
   - esquerda (titulo/descricao), direita (controle/acao), baixo (linhas, quando aplicavel);
   - `StringListField` e `KeyValueListField` migrados para fluxo “botao -> dialog -> linha adicionada abaixo com remover”.
@@ -1261,11 +1261,11 @@ Escopo implementado:
   - `registry_keys`, `folder_mounts`, `dll_overrides`, `wrapper_commands` agora adicionados via `Dialog` e renderizados em linhas no rodape do item com icone de exclusao.
 - Suporte adicional:
   - `@tabler/icons-solidjs` adicionado para icones de sidebar e acoes de lista;
-  - `useCreatorController` ganhou helper `pickMountSourceRelative` para uso em dialog de montagem.
+  - `useLuthierController` ganhou helper `pickMountSourceRelative` para uso em dialog de montagem.
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
-- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
+- `/home/rafael/.cargo/bin/cargo test -p luthier-backend -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 29
 Escopo implementado:
@@ -1278,7 +1278,7 @@ Escopo implementado:
   - fundo e superfícies ajustados para visual neutro, sem viés teal/cyan.
 - Suporte real a troca de tema no frontend:
   - novo `ThemeProvider` em Solid com persistência (`localStorage`) e suporte `light` / `dark` / `system`;
-  - toggle de tema adicionado ao lado do seletor de idioma no header do Creator;
+  - toggle de tema adicionado ao lado do seletor de idioma no header do Luthier;
   - `App.tsx` agora envolve a aplicação com `ThemeProvider`.
 - Tailwind ajustado para tokens `oklch` com alpha:
   - `tailwind.config.ts` usa `oklch(var(--token) / <alpha-value>)` para manter suporte a classes como `bg-muted/40`, `ring-ring/50`, etc.
@@ -1329,7 +1329,7 @@ Escopo implementado:
   - valor salvo no payload como caminho relativo (`./...`).
 - Infraestrutura:
   - `StringListField` passou a aceitar ação opcional de picker (`onPickValue`) para fluxos híbridos texto + seleção.
-  - `useCreatorController` ganhou helpers para override de pasta raiz e seleção de arquivo obrigatório relativo.
+  - `useLuthierController` ganhou helpers para override de pasta raiz e seleção de arquivo obrigatório relativo.
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
@@ -1342,7 +1342,7 @@ Escopo implementado:
 - Aplicado diretamente ao caso de `Arquivos obrigatórios (integrity_files)`.
 
 Observacao de arquitetura:
-- `input type=file` nativo nao foi adotado como fonte principal nesses casos porque o Creator precisa de caminho real/absoluto (Tauri dialog) para calcular/validar caminhos relativos com confianca. O fallback web continua existindo via `pickFile`.
+- `input type=file` nativo nao foi adotado como fonte principal nesses casos porque o Luthier precisa de caminho real/absoluto (Tauri dialog) para calcular/validar caminhos relativos com confianca. O fallback web continua existindo via `pickFile`.
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
@@ -1399,19 +1399,19 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 42
 Escopo implementado:
-- Super refatoracao estrutural do Creator UI (sem mudanca funcional):
-  - `CreatorPage.tsx` foi reduzido e dividido por abas em `src/features/creator/sections/` (`game`, `runtime`, `performance`, `dependencies`, `winecfg`, `launch-environment`, `review`);
-  - helpers/estruturas compartilhadas da tela foram extraidos para `creator-page-shared.tsx`.
+- Super refatoracao estrutural do Luthier UI (sem mudanca funcional):
+  - `LuthierPage.tsx` foi reduzido e dividido por abas em `src/features/luthier/sections/` (`game`, `runtime`, `performance`, `dependencies`, `winecfg`, `launch-environment`, `review`);
+  - helpers/estruturas compartilhadas da tela foram extraidos para `luthier-page-shared.tsx`.
 - Refatoracao de componentes de formulario:
   - `FormControls.tsx` virou um barrel pequeno que reexporta modulos menores;
   - componentes foram divididos em `form-controls-core.tsx`, `form-controls-feature-state.tsx` e `form-controls-lists.tsx`.
-- Refatoracao do controller do Creator:
-  - constantes e utilitarios de path/lista/runtime foram extraidos de `useCreatorController.ts` para `creator-controller-utils.ts`.
+- Refatoracao do controller do Luthier:
+  - constantes e utilitarios de path/lista/runtime foram extraidos de `useLuthierController.ts` para `luthier-controller-utils.ts`.
   - objetivo: reduzir ruido no hook e deixar a logica principal mais legivel.
 
 Observacoes de arquitetura:
-- A API publica dos componentes de formulario e do `useCreatorController` foi preservada para evitar regressao nas abas ja existentes.
-- Ainda existem alvos de refatoracao para uma proxima rodada (`winecfg-tab.tsx` e `creator-copy.ts`, ambos grandes), mas a leitura humana do fluxo principal melhorou significativamente nesta etapa.
+- A API publica dos componentes de formulario e do `useLuthierController` foi preservada para evitar regressao nas abas ja existentes.
+- Ainda existem alvos de refatoracao para uma proxima rodada (`winecfg-tab.tsx` e `luthier-copy.ts`, ambos grandes), mas a leitura humana do fluxo principal melhorou significativamente nesta etapa.
 
 Validacao do checkpoint:
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
@@ -1421,10 +1421,10 @@ Escopo implementado:
 - Refatoracao do `winecfg-tab` em subcomponentes por responsabilidade:
   - itens base (`DLL overrides`, `Versão do Windows`);
   - secoes do acordeao (`Graphics`, `Desktop Integration`, `Drives`, `Audio`) em arquivos dedicados dentro de `sections/winecfg/`.
-- `winecfg-tab.tsx` virou arquivo orquestrador pequeno, com composicao das secoes e controle de abertura/fechamento.
-- Refatoracao do catalogo de i18n da feature Creator:
-  - `creator-copy.ts` agora eh apenas compositor/lookup/format;
-  - mensagens foram separadas por idioma em `creator-copy.pt-BR.ts` e `creator-copy.en-US.ts`.
+- `winecfg-tab.tsx` virou arquivo Luthier Orchestrator pequeno, com composicao das secoes e controle de abertura/fechamento.
+- Refatoracao do catalogo de i18n da feature Luthier:
+  - `luthier-copy.ts` agora eh apenas compositor/lookup/format;
+  - mensagens foram separadas por idioma em `luthier-copy.pt-BR.ts` e `luthier-copy.en-US.ts`.
 
 Boas praticas aplicadas nesta etapa:
 - separacao por responsabilidade (componentes por secao visual e dados por idioma);
@@ -1441,12 +1441,12 @@ Escopo implementado:
   - Rust: `cargo clippy --workspace --all-targets -- -D warnings` passou;
   - Rust: `cargo fmt --all` aplicado (ajustes de formatacao em arquivos Rust).
 - Ajustes de infraestrutura para typecheck frontend:
-  - adicionado `@types/node` em `devDependencies` do Creator;
+  - adicionado `@types/node` em `devDependencies` do Luthier;
   - `tsconfig.json` atualizado com `types: ["vite/client", "node"]` e `skipLibCheck: true` (para evitar ruido de typings de terceiros como Kobalte/Vite e focar no codigo da app).
 - Correcoes de tipagem/codigo apos a grande refatoracao:
-  - `CreatorPageSectionView` agora tipado como `CreatorController & Record<string, any>` (reduzindo `implicit any` nas abas);
+  - `LuthierPageSectionView` agora tipado como `LuthierController & Record<string, any>` (reduzindo `implicit any` nas abas);
   - imports faltantes corrigidos nas abas (`runtime` e `performance`);
-  - `Button` recebeu suporte a `size=\"icon\"` (uso existente no Creator);
+  - `Button` recebeu suporte a `size=\"icon\"` (uso existente no Luthier);
   - typing do wrapper `Dialog` ajustado para evitar erro de generic com Kobalte root.
 
 Observacao:
@@ -1460,14 +1460,14 @@ Validacao do checkpoint:
 ### 2026-02-24 - Checkpoint 45
 Escopo implementado:
 - Scripts locais de qualidade adicionados na raiz do projeto (`scripts/`):
-  - `scripts/check-frontend-quality.sh` -> `typecheck + build` do Creator frontend;
+  - `scripts/check-frontend-quality.sh` -> `typecheck + build` do Luthier frontend;
   - `scripts/check-rust-quality.sh` -> `cargo fmt --check + cargo clippy -D warnings` (com flags opcionais `--exclude-tauri` e `--with-tests`);
   - `scripts/check-quality.sh` -> agregador frontend + Rust (usa `--exclude-tauri` por padrao para estabilidade).
-- Scripts do frontend (`apps/creator-tauri/package.json`):
+- Scripts do frontend (`apps/luthier/package.json`):
   - `typecheck`, `lint` (alias para typecheck) e `quality`.
 - CI do GitHub (`.github/workflows/ci.yml`) reestruturado:
   - job `frontend` com `npm ci`, `npm run typecheck`, `npm run build`;
-  - job `rust-core` com `fmt`, `test` e `clippy` excluindo `creator-tauri-backend` (evita instabilidade por dependencias de sistema/GTK/WebKit do Tauri em runners padrao).
+  - job `rust-core` com `fmt`, `test` e `clippy` excluindo `luthier-backend` (evita instabilidade por dependencias de sistema/GTK/WebKit do Tauri em runners padrao).
 - Scripts locais ficaram robustos ao ambiente do usuario:
   - `check-frontend-quality.sh` detecta `mise` no PATH ou em `~/.local/bin/mise` automaticamente.
 
@@ -1478,43 +1478,43 @@ Validacao do checkpoint:
 
 ### 2026-02-24 - Checkpoint 46
 Escopo implementado:
-- Fluxo de geracao do Creator reforcado para uso real (Tauri app / build empacotado):
-  - backend Tauri (`apps/creator-tauri/src-tauri/src/lib.rs`) ganhou resolucao robusta do binario base do orquestrador com busca por:
-    - `GAME_ORCH_BASE_ORCHESTRATOR` (env var),
+- Fluxo de geracao do Luthier reforcado para uso real (Tauri app / build empacotado):
+  - backend Tauri (`apps/luthier/src-tauri/src/lib.rs`) ganhou resolucao robusta do binario base do Luthier Orchestrator com busca por:
+    - `LUTHIER_BASE_ORCHESTRATOR` (env var),
     - caminho solicitado pelo frontend,
     - candidatos comuns (`target/debug`, `target/release`),
-    - recurso empacotado do Tauri (`resources/orchestrator-base/orchestrator`);
-  - comandos do backend passaram a emitir logs estruturados JSON (`creator-tauri-backend`, `event_code`, `context`) para debug humano/IA.
-- Wrapper Tauri (`apps/creator-tauri/src-tauri/src/main.rs`) atualizado:
+    - recurso empacotado do Tauri (`resources/luthier-orchestrator-base/luthier-orchestrator`);
+  - comandos do backend passaram a emitir logs estruturados JSON (`luthier-backend`, `event_code`, `context`) para debug humano/IA.
+- Wrapper Tauri (`apps/luthier/src-tauri/src/main.rs`) atualizado:
   - `cmd_create_executable` agora injeta hints reais de path (`resolve_resource`, `resource_dir`, `app_data_dir`) ao backend na hora da geracao.
 - Empacotamento Tauri preparado para distribuir o binario base:
-  - `tauri.conf.json` inclui `bundle.resources = ["resources/orchestrator-base/orchestrator"]`.
-- Scripts de build/dev do Creator agora preparam automaticamente o orquestrador base:
-  - novo script `apps/creator-tauri/scripts/prepare-orchestrator-base.sh` (debug/release);
+  - `tauri.conf.json` inclui `bundle.resources = ["resources/luthier-orchestrator-base/luthier-orchestrator"]`.
+- Scripts de build/dev do Luthier agora preparam automaticamente o Luthier Orchestrator base:
+  - novo script `apps/luthier/scripts/prepare-luthier-orchestrator-base.sh` (debug/release);
   - `package.json` (`tauri:dev`, `tauri:build`, `tauri:bundle`) executa esse script antes do Tauri;
-  - `build-creator-e-abrir.sh` tambem compila/copia o orquestrador base para recursos.
+  - `build-luthier-e-abrir.sh` tambem compila/copia o Luthier Orchestrator base para recursos.
 - Validacao pratica da injecao de payload:
-  - `creator-cli create` gerou um executavel ELF do orquestrador com payload embutido;
+  - `luthier-cli create` gerou um executavel ELF do Luthier Orchestrator com payload embutido;
   - o binario gerado respondeu corretamente a `--show-config`, confirmando leitura do trailer/config embutida.
 
 Observacoes:
-- A validacao acima prova o pipeline de `copy + inject JSON` mesmo antes de concluir a UX final do orquestrador (splash/config nativa).
-- O Creator UI continua usando um `base_binary_path` legado na requisicao, mas o backend agora resolve esse valor de forma tolerante e registra o caminho final usado (`resolved_base_binary_path`).
+- A validacao acima prova o pipeline de `copy + inject JSON` mesmo antes de concluir a UX final do Luthier Orchestrator (splash/config nativa).
+- O Luthier UI continua usando um `base_binary_path` legado na requisicao, mas o backend agora resolve esse valor de forma tolerante e registra o caminho final usado (`resolved_base_binary_path`).
 
 Validacao do checkpoint:
 - `/home/rafael/.cargo/bin/cargo build -p orchestrator`
-- `./apps/creator-tauri/scripts/prepare-orchestrator-base.sh debug`
-- `/home/rafael/.cargo/bin/cargo build -p creator-tauri-backend`
-- `cargo check` do `creator-tauri-backend` com `--features tauri-commands` (via compat shims)
+- `./apps/luthier/scripts/prepare-luthier-orchestrator-base.sh debug`
+- `/home/rafael/.cargo/bin/cargo build -p luthier-backend`
+- `cargo check` do `luthier-backend` com `--features tauri-commands` (via compat shims)
 - `/home/rafael/.local/bin/mise exec -- npm run build` (frontend)
-- `/home/rafael/.cargo/bin/cargo test -p creator-tauri-backend -- --nocapture`
-- `creator-cli create ...` + `orchestrator-generated --show-config`
+- `/home/rafael/.cargo/bin/cargo test -p luthier-backend -- --nocapture`
+- `luthier-cli create ...` + `orchestrator-generated --show-config`
 
 ### 2026-02-24 - Checkpoint 47
 Escopo implementado:
-- Correcao de bug no fluxo real do orquestrador (`--play` / `--winecfg`) durante setup inicial do prefixo:
-  - antes de executar o plano de setup (`wineboot`, `winetricks`), o executor agora garante a criacao do diretorio do prefixo (`~/.local/share/GameOrchestrator/prefixes/<exe_hash>`).
-- A correcao foi aplicada no `orchestrator-core` (`process.rs`), de forma generica para todos os comandos que reutilizam `execute_prefix_setup_plan`, evitando duplicar logica em `play.rs` e `winecfg.rs`.
+- Correcao de bug no fluxo real do Luthier Orchestrator (`--play` / `--winecfg`) durante setup inicial do prefixo:
+  - antes de executar o plano de setup (`wineboot`, `winetricks`), o executor agora garante a criacao do diretorio do prefixo (`~/.local/share/Luthier/prefixes/<exe_hash>`).
+- A correcao foi aplicada no `luthier-orchestrator-core` (`process.rs`), de forma generica para todos os comandos que reutilizam `execute_prefix_setup_plan`, evitando duplicar logica em `play.rs` e `winecfg.rs`.
 
 Sintoma que foi corrigido:
 - `wine: chdir to .../prefixes/<hash> : Arquivo ou diretório inexistente`
@@ -1522,7 +1522,7 @@ Sintoma que foi corrigido:
 
 Validacao do checkpoint:
 - `/home/rafael/.cargo/bin/cargo build -p orchestrator`
-- `/home/rafael/.cargo/bin/cargo test -p orchestrator-core process:: -- --nocapture`
+- `/home/rafael/.cargo/bin/cargo test -p luthier-orchestrator-core process:: -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 48
 Escopo implementado:
@@ -1542,12 +1542,12 @@ Observacao:
 
 Validacao do checkpoint:
 - `/home/rafael/.cargo/bin/cargo build -p orchestrator`
-- `/home/rafael/.cargo/bin/cargo test -p orchestrator -- --nocapture`
+- `/home/rafael/.cargo/bin/cargo test -p luthier-orchestrator -- --nocapture`
 
 ### 2026-02-24 - Checkpoint 49
 Escopo implementado:
-- Aplicacao de `registry_keys` no orquestrador (pendencia funcional fechada para fluxo basico):
-  - apos o setup do prefixo, o orquestrador gera um `.reg` temporario dentro do prefixo (`drive_c/windows/temp`) e executa import via `regedit` com o runtime selecionado (Wine/Proton/UMU);
+- Aplicacao de `registry_keys` no Luthier Orchestrator (pendencia funcional fechada para fluxo basico):
+  - apos o setup do prefixo, o Luthier Orchestrator gera um `.reg` temporario dentro do prefixo (`drive_c/windows/temp`) e executa import via `regedit` com o runtime selecionado (Wine/Proton/UMU);
   - suporta tipos principais usados no MVP/imports atuais (`REG_SZ`, `REG_DWORD`, `REG_BINARY`, `REG_MULTI_SZ`, `REG_EXPAND_SZ`, `REG_QWORD`);
   - falha de import passa a abortar `--play`/`--winecfg` com saida estruturada (`registry_apply`).
 - Prefix setup mais inteligente / idempotente:
@@ -1563,4 +1563,4 @@ Observacoes:
 
 Validacao do checkpoint:
 - `/home/rafael/.cargo/bin/cargo build -p orchestrator`
-- `/home/rafael/.cargo/bin/cargo test -p orchestrator -- --nocapture`
+- `/home/rafael/.cargo/bin/cargo test -p luthier-orchestrator -- --nocapture`

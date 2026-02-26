@@ -2,9 +2,9 @@
 
 ## 2026-02-24
 - Bootstrap inicial do workspace Rust.
-- Definição de crate `orchestrator-core` e binário `orchestrator`.
+- Definição de crate `luthier-orchestrator-core` e binário `orchestrator`.
 - Implementado:
-  - modelos base (`GameConfig`, `FeatureState`, etc.) em `orchestrator-core`;
+  - modelos base (`GameConfig`, `FeatureState`, etc.) em `luthier-orchestrator-core`;
   - parser/injetor de trailer (`GOCFGv1 + len + sha256`) com testes unitários;
   - observabilidade NDJSON (`event_code`, `trace_id`, `span_id`) com teste;
   - CLI inicial do `orchestrator` com flags:
@@ -18,14 +18,14 @@
 - Bloqueio no ambiente desta sessão:
   - `cargo test` não completou por falha de acesso à `index.crates.io`.
 - Próximo passo técnico:
-- Fase 2 (Injector no App Criador): copiar binário base e embutir payload;
+- Fase 2 (Injector no App Luthier): copiar binário base e embutir payload;
 - adicionar export de bundle de diagnóstico inicial.
 
 ## 2026-02-24 (checkpoint 02)
-- Implementado `injector` no `orchestrator-core`:
+- Implementado `injector` no `luthier-orchestrator-core`:
   - `inject_from_files(...)` com validação de schema, injeção de trailer, escrita atômica, backup `.bak` e verificação pós-escrita.
   - `extract_config_from_file(...)` para leitura/verificação de payload embutido.
-- Criado binário `orchestrator-injector` (CLI) com opções:
+- Criado binário `luthier-orchestrator-injector` (CLI) com opções:
   - `--base`
   - `--config`
   - `--output`
@@ -33,11 +33,11 @@
   - `--no-exec-bit`
 - Mantido padrão de log estruturado NDJSON com `event_code`, `trace_id`, `span_id`.
 - Próximo passo técnico:
-- integrar chamada do injector no backend do App Criador (Tauri command);
+- integrar chamada do injector no backend do App Luthier (Tauri command);
 - iniciar `doctor/discovery` no binário `orchestrator`.
 
 ## 2026-02-24 (checkpoint 03)
-- Implementado `doctor` inicial em `orchestrator-core`:
+- Implementado `doctor` inicial em `luthier-orchestrator-core`:
   - discovery de runtime por ordem:
     - `PATH`
     - env vars (`PROTONPATH`, `STEAM_COMPAT_TOOL_PATHS`, `WINE`, `UMU_RUNTIME`)
@@ -53,8 +53,8 @@
 - iniciar setup de prefix (fase 5) e wiring do fluxo `--play`.
 
 ## 2026-02-24 (checkpoint 04)
-- Implementado módulo `prefix` em `orchestrator-core`:
-  - `prefix_path_for_hash(exe_hash)` -> `~/.local/share/GameOrchestrator/prefixes/<hash>`
+- Implementado módulo `prefix` em `luthier-orchestrator-core`:
+  - `prefix_path_for_hash(exe_hash)` -> `~/.local/share/Luthier/prefixes/<hash>`
   - `build_prefix_setup_plan(config)` com comandos planejados e idempotência
   - `base_env_for_prefix(...)` com `WINEPREFIX` + `PROTON_VERB=run`
 - `--doctor` atualizado:
@@ -66,19 +66,19 @@
 - começar montagem de launch command (wrappers + runtime).
 
 ## 2026-02-24 (checkpoint 05)
-- Criado crate `creator-core` para backend do App Criador:
-  - `create_orchestrator_binary(...)` (injeção usando `orchestrator-core::injector`);
+- Criado crate `luthier-core` para backend do App Luthier:
+  - `create_orchestrator_binary(...)` (injeção usando `luthier-orchestrator-core::injector`);
   - `sha256_file(...)`;
   - validações de paths relativos no payload;
   - utilitário `to_relative_inside_game_root(...)`.
-- `orchestrator-core::injector` ganhou `inject_from_parts(...)` para uso direto do backend sem arquivo intermediário.
+- `luthier-orchestrator-core::injector` ganhou `inject_from_parts(...)` para uso direto do backend sem arquivo intermediário.
 - Próximo passo técnico:
-- ligar `creator-core` ao `src-tauri` com comandos invocáveis pela UI;
-- iniciar execução real do `PrefixSetupPlan` no Orquestrador.
+- ligar `luthier-core` ao `src-tauri` com comandos invocáveis pela UI;
+- iniciar execução real do `PrefixSetupPlan` no Luthier Orchestrator.
 
 ## 2026-02-24 (checkpoint 06)
-- Criado backend inicial do App Criador em `apps/creator-tauri/src-tauri`:
-  - `create_executable(...)` (parse JSON -> `creator-core` -> gera binário);
+- Criado backend inicial do App Luthier em `apps/luthier/src-tauri`:
+  - `create_executable(...)` (parse JSON -> `luthier-core` -> gera binário);
   - `hash_executable(...)` (SHA-256 do `.exe`).
 - Estrutura preparada para virar `#[tauri::command]` sem reescrever regra de negócio.
 - Próximo passo técnico:
@@ -97,13 +97,13 @@
 - montagem do comando final de launch do jogo.
 
 ## 2026-02-24 (checkpoint 08)
-- Implementado executor de `PrefixSetupPlan` em `orchestrator-core::process`:
+- Implementado executor de `PrefixSetupPlan` em `luthier-orchestrator-core::process`:
   - execução por comando com timeout;
   - status por etapa (`Skipped|Success|Failed|TimedOut`);
   - parada após falha obrigatória;
   - helper `has_mandatory_failures(...)`.
 - `--play` atualizado:
-  - executa plano de setup de prefix (ou dry-run com `GAME_ORCH_DRY_RUN=1`);
+  - executa plano de setup de prefix (ou dry-run com `LUTHIER_DRY_RUN=1`);
   - inclui resultado das etapas no JSON de saída;
   - aborta quando etapa obrigatória falha.
 - Próximo passo técnico:
@@ -122,7 +122,7 @@
   - seleção de runtime (`ProtonUmu`, `ProtonNative`, `Wine`);
   - wrappers: `gamescope`, `gamemoderun`, `mangohud`, wrappers customizados;
   - env protegido: `WINEPREFIX`, `PROTON_VERB` + custom vars com proteção de chave;
-  - suporte a dry-run global com `GAME_ORCH_DRY_RUN=1`.
+  - suporte a dry-run global com `LUTHIER_DRY_RUN=1`.
 - Observabilidade:
   - eventos adicionais `GO-CFG-020`, `GO-PF-020`, `GO-SC-020`, `GO-SC-021`, `GO-LN-020`.
 - Próximo passo técnico:
@@ -146,7 +146,7 @@
 - iniciar frontend mínimo do Criador (estrutura de abas + formulário + revisão/gerar/testar).
 
 ## 2026-02-24 (checkpoint 12)
-- Frontend mínimo do App Criador implementado (`apps/creator-tauri`):
+- Frontend mínimo do App Luthier implementado (`apps/luthier`):
   - Vite + Solid com abas:
     - Jogo
     - Runtime
@@ -163,7 +163,7 @@
 - integrar i18n na UI e backend.
 
 ## 2026-02-24 (checkpoint 13)
-- i18n inicial implementado no frontend (`apps/creator-tauri/src/App.tsx`):
+- i18n inicial implementado no frontend (`apps/luthier/src/App.tsx`):
   - idiomas suportados:
     - `pt-BR`
     - `en-US`
@@ -178,10 +178,10 @@
 - aplicar i18n no backend para mensagens retornadas por comandos.
 
 ## 2026-02-24 (checkpoint 14)
-- Novo binário `creator-cli` adicionado para testes por terminal:
-  - `creator-cli hash --exe <path>`
-  - `creator-cli test --config <config.json> --game-root <path>`
-  - `creator-cli create --base <orchestrator-base> --config <config.json> --output <path>`
+- Novo binário `luthier-cli` adicionado para testes por terminal:
+  - `luthier-cli hash --exe <path>`
+  - `luthier-cli test --config <config.json> --game-root <path>`
+  - `luthier-cli create --base <orchestrator-base> --config <config.json> --output <path>`
 - Com isso, o fluxo de validação/geração pode ser testado sem frontend e sem runtime Tauri.
 - Próximo passo técnico:
 - internacionalizar mensagens de erro/sucesso no backend (`src-tauri`).
@@ -199,13 +199,13 @@
   - API de log refatorada com `LogIdentity`.
 - Hardening de segurança em paths:
   - validação defensiva no `orchestrator` para impedir path absoluto/traversal em payload;
-  - mesma normalização aplicada em `creator-cli` e backend `src-tauri` no comando de teste.
-- `--config` implementado no orquestrador:
+  - mesma normalização aplicada em `luthier-cli` e backend `src-tauri` no comando de teste.
+- `--config` implementado no Luthier Orchestrator:
   - suporte a overrides opcionais por jogo:
     - `--set-mangohud on|off|default`
     - `--set-gamescope on|off|default`
     - `--set-gamemode on|off|default`
-  - persistência em `~/.local/share/GameOrchestrator/overrides/<exe_hash>.json`;
+  - persistência em `~/.local/share/Luthier/overrides/<exe_hash>.json`;
   - aplicação automática dos overrides no `--play`.
 - Wrappers e prefix:
   - wrapper custom `MandatoryOn` ausente agora bloqueia com erro explícito;

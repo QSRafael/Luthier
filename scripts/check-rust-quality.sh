@@ -34,7 +34,7 @@ done
 
 RUST_ARGS=(--workspace --all-targets)
 if [[ "$EXCLUDE_TAURI" == true ]]; then
-  RUST_ARGS+=(--exclude creator-tauri-backend)
+  RUST_ARGS+=(--exclude luthier-backend)
 fi
 
 echo "[rust] fmt --check"

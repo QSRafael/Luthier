@@ -1,8 +1,8 @@
 /target
 node_modules
 /dist
-/apps/creator-tauri/dist
-/apps/creator-tauri/src-tauri/resources/orchestrator-base/orchestrator
+/apps/luthier/dist
+/apps/luthier/src-tauri/resources/luthier-orchestrator-base/luthier-orchestrator
 /pkgconfig
 /libshims
 .DS_Store

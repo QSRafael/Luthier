@@ -1,14 +1,14 @@
-# Projeto: Empacotador/Orquestrador de Jogos Windows no Linux
+# Projeto: Empacotador/Luthier Orchestrator de Jogos Windows no Linux
 
 ## 1) Objetivo
-Construir uma aplicacao desktop Linux (App Criador em Tauri) que gera um binario nativo portatil (Orquestrador) ao lado do `.exe` do jogo.  
-O Orquestrador deve ler configuracao embutida no proprio executavel, validar ambiente, preparar prefix/runtime e iniciar o jogo com wrappers de performance.
+Construir uma aplicacao desktop Linux (App Luthier em Tauri) que gera um binario nativo portatil (Luthier Orchestrator) ao lado do `.exe` do jogo.  
+O Luthier Orchestrator deve ler configuracao embutida no proprio executavel, validar ambiente, preparar prefix/runtime e iniciar o jogo com wrappers de performance.
 
 ---
 
 ## 2) Escopo e Componentes
 
-### 2.1 App Criador (Tauri)
+### 2.1 App Luthier (Tauri)
 - Coleta parametros do usuario.
 - Sanitiza paths e gera `GameConfig`.
 - Permite configurar "Pastas Montadas" (origem na pasta do jogo -> destino Windows no prefixo).
@@ -16,10 +16,10 @@ O Orquestrador deve ler configuracao embutida no proprio executavel, validar amb
 - Permite definir estrategia de runtime: estrito ou com fallback.
 - Extrai icone de `.exe` para preview.
 - Persiste perfis em banco local (MVP).
-- Copia binario base do Orquestrador e injeta configuracao JSON.
+- Copia binario base do Luthier Orchestrator e injeta configuracao JSON.
 - Prepara contrato de API comunitaria para fase posterior.
 
-### 2.2 Orquestrador (binario gerado)
+### 2.2 Luthier Orchestrator (binario gerado)
 - Abre splash screen minimalista ao iniciar por duplo clique.
 - Le configuracao embutida no proprio binario.
 - Roda `doctor`, aplica politica de requisitos e monta plano de execucao.
@@ -38,8 +38,8 @@ O Orquestrador deve ler configuracao embutida no proprio executavel, validar amb
 
 ## 3) Stack Tecnologica
 - Frontend: Tauri + Rust + SolidJS (escolha de simplicidade/manutencao/leveza).
-- Backend local App Criador: `std::process::Command`, `tauri-plugin-fs`, `reqwest`, `image`.
-- Orquestrador: `serde`, `serde_json`, `tokio`, `sysinfo`, `rfd` ou `zenity`.
+- Backend local App Luthier: `std::process::Command`, `tauri-plugin-fs`, `reqwest`, `image`.
+- Luthier Orchestrator: `serde`, `serde_json`, `tokio`, `sysinfo`, `rfd` ou `zenity`.
 - Banco local MVP: SQLite (`rusqlite` ou `sqlx` com SQLite).
 - Ferramenta externa permitida para icone: `wrestool`/`icotool`.
 - i18n frontend: `@solid-primitives/i18n` (ou `i18next`) com dicionarios por namespace.
@@ -242,7 +242,7 @@ pub struct FolderMount {
   - `OptionalOff`: desligado por padrao, mas pode ser ligado.
 - `runtime.strict=true`: usa apenas `runtime.primary`; se faltar, bloqueia.
 - `runtime.strict=false`: tenta `runtime.primary` e depois `fallback_order` ate achar um disponivel.
-- Coerencia obrigatoria no App Criador:
+- Coerencia obrigatoria no App Luthier:
   - se `FeatureState` for `MandatoryOn`, o componente externo correspondente nao pode ficar desligado.
   - se `FeatureState` for `MandatoryOff`, o componente externo correspondente deve ser considerado desativado no plano.
 - Regra especial de dependencias Winetricks:
@@ -284,7 +284,7 @@ pub struct FolderMount {
   - validar `executable` como binario resolvivel.
   - sem expansao shell implicita; montar argumentos como vetor.
 - `environment.custom_vars`:
-  - Chaves definidas pelo usuario sao aplicadas por ultimo, exceto chaves protegidas do orquestrador.
+  - Chaves definidas pelo usuario sao aplicadas por ultimo, exceto chaves protegidas do Luthier Orchestrator.
   - Chaves protegidas (nao sobrescreviveis): `WINEPREFIX`, `PROTON_VERB`.
   - Tentativa de sobrescrever chave protegida gera `WARN` e e ignorada.
 
@@ -332,17 +332,17 @@ pub struct AppSettings {
 ```
 
 Regras:
-- `preferred_locale` e configuracao global da App Criador.
+- `preferred_locale` e configuracao global da App Luthier.
 - Nao gravar preferencia de idioma dentro de `GameConfig`.
 - `telemetry_opt_in` global pode ser sobrescrito por jogo apenas se houver toggle explicito na UI.
 
 ---
 
-## 5) Estrategia de Geracao do Orquestrador
+## 5) Estrategia de Geracao do Luthier Orchestrator
 
 ### 5.1 Regra principal
 Nao compilar Rust no host final.  
-Usar binario base pre-compilado em assets da App Criador.
+Usar binario base pre-compilado em assets da App Luthier.
 
 ### 5.2 Fluxo de geracao
 1. Usuario clica em "Criar Executavel".
@@ -366,8 +366,8 @@ Beneficios:
 ---
 
 ## 6) Portabilidade e Paths
-- Todos os paths de jogo no payload devem ser relativos ao diretorio do Orquestrador.
-- Prefix por hash: `~/.local/share/GameOrchestrator/prefixes/<exe_hash>/`.
+- Todos os paths de jogo no payload devem ser relativos ao diretorio do Luthier Orchestrator.
+- Prefix por hash: `~/.local/share/Luthier/prefixes/<exe_hash>/`.
 - Resolver base em runtime com `current_exe().parent()`.
 - Runtime deve validar paths do payload novamente (defesa em profundidade):
   - recusar path absoluto Linux (`/`), absoluto Windows (`C:\...`) e traversal (`..`) inclusive com separador `\`.
@@ -377,7 +377,7 @@ Beneficios:
 
 ---
 
-## 7) Fluxo de Execucao do Orquestrador (ordem obrigatoria)
+## 7) Fluxo de Execucao do Luthier Orchestrator (ordem obrigatoria)
 
 ### 7.1 Regra de interface na abertura
 - Ao iniciar por duplo clique, abrir splash screen pequena e minimalista.
@@ -399,7 +399,7 @@ Beneficios:
   - `--set-gamescope on|off|default`
   - `--set-gamemode on|off|default`
 - Overrides sao persistidos por jogo em:
-  - `~/.local/share/GameOrchestrator/overrides/<exe_hash>.json`
+  - `~/.local/share/Luthier/overrides/<exe_hash>.json`
 - `--doctor`: valida ambiente sem launch.
 - `--verbose`: logs detalhados.
 - `--show-config`: imprime configuracao embutida.
@@ -568,7 +568,7 @@ Beneficios:
 
 ---
 
-## 8) CLI do Orquestrador (MVP)
+## 8) CLI do Luthier Orchestrator (MVP)
 - `--play`
 - `--config`
 - `--set-mangohud on|off|default` (com `--config`)
@@ -628,9 +628,9 @@ Regras:
 
 ### Fase 0 - Bootstrap
 1. Criar workspace:
-- `apps/creator-tauri`
-- `crates/orchestrator-core`
-- `bins/orchestrator`
+- `apps/luthier`
+- `crates/luthier-orchestrator-core`
+- `bins/luthier-orchestrator`
 2. Configurar frontend SolidJS + Vite.
 3. Configurar CI basica (build/test).
 
@@ -643,7 +643,7 @@ Regras:
 1. Copiar binario base.
 2. Injetar JSON + trailer.
 3. Garantir permissao executavel.
-4. Testar extracao real no Orquestrador.
+4. Testar extracao real no Luthier Orchestrator.
 
 ### Fase 3 - Parser self-read
 1. Ler `current_exe`.
@@ -676,7 +676,7 @@ Regras:
 8. Executar `post_launch`.
 9. Lock de instancia.
 
-### Fase 7 - UI App Criador (MVP local-first)
+### Fase 7 - UI App Luthier (MVP local-first)
 1. Wizard:
 - selecionar `.exe`
 - calcular hash
@@ -697,7 +697,7 @@ Regras:
 3. Botao `Testar` para executar pipeline sem gerar binario e sem fechar janela.
 4. Botao "Criar Executavel" com progresso e erros acionaveis.
 
-### Fase 8 - Config UI do Orquestrador
+### Fase 8 - Config UI do Luthier Orchestrator
 1. `--config` com modal nativo leve.
 2. Expor toggles apenas quando state for `OptionalOn` ou `OptionalOff`.
 3. Reutilizar mesma UI no botao `Configurar` da splash pre-launch.
@@ -719,7 +719,7 @@ Regras:
 2. Suporte dedicado a Steam Runtime/Flatpak.
 
 ### Fase 12 - Cross-cutting hardening
-1. Implementar i18n ponta a ponta (App Criador + splash/CLI do Orquestrador).
+1. Implementar i18n ponta a ponta (App Luthier + splash/CLI do Luthier Orchestrator).
 2. Adicionar migracoes de schema/versionamento para perfis locais.
 3. Implementar lock transacional por `exe_hash` para evitar setup concorrente de prefix.
 4. Padronizar codigos de erro e export de bundle de diagnostico.
@@ -739,20 +739,20 @@ Regras:
 ---
 
 ## 12) Criterios de Aceite (MVP)
-- Gera Orquestrador sem toolchain Rust no host final.
-- Orquestrador le config embutida e inicia jogo corretamente.
+- Gera Luthier Orchestrator sem toolchain Rust no host final.
+- Luthier Orchestrator le config embutida e inicia jogo corretamente.
 - Splash minimalista exibe status de validacao, setup de prefix e launch.
 - Prefix por hash funcional.
 - `folder_mounts` funciona com multiplos mapeamentos.
 - Origens fora da pasta do jogo sao bloqueadas com erro claro.
-- App Criador permite definir politica de 4 estados por componente.
+- App Luthier permite definir politica de 4 estados por componente.
 - `Doctor` produz `OK/WARN/BLOCKER` e respeita a politica salva.
 - Itens em `OptionalOn`/`OptionalOff` ausentes degradam com fallback/desativacao sem quebrar launch.
 - Violacoes de `MandatoryOn` bloqueiam launch com mensagem acionavel.
 - Opcoes de compatibilidade (`wine_wayland`, `hdr`, `auto_dxvk_nvapi`, `EAC`, `BattleEye`, `staging`) respeitam a politica salva.
 - Opcoes de `winecfg` sao aplicadas conforme politica salva.
 - `--doctor`, `--verbose` e `--show-config` funcionais.
-- `--lang` funcional no Orquestrador para override de idioma.
+- `--lang` funcional no Luthier Orchestrator para override de idioma.
 - Fallback Proton/Wine com descoberta por `PATH`/env vars/paths padrao.
 - Se houver override permitido, splash mostra botao `Configurar` e contagem `3...2...1`.
 - Se tudo estiver em `MandatoryOn`/`MandatoryOff`, launch ocorre sem botao `Configurar` e sem contagem.
@@ -781,7 +781,7 @@ Regras:
 11. Recurso de "Pastas Montadas" entra no MVP com restricao de origem dentro da pasta do jogo.
 12. Cada componente pode ser configurado com 4 estados (`MandatoryOn`, `MandatoryOff`, `OptionalOn`, `OptionalOff`).
 13. Runtime suporta modo `estrito` ou `com fallback`.
-14. App Criador inclui configuracoes de compatibilidade e `winecfg` no MVP.
+14. App Luthier inclui configuracoes de compatibilidade e `winecfg` no MVP.
 15. MVP tera i18n com idiomas iniciais `pt-BR` e `en-US`.
 16. Fallback de idioma sera automatico por: override CLI -> preferencia salva -> locale do sistema -> `en-US`.
 
@@ -834,7 +834,7 @@ Arquivos de referencia consultados:
 
 ## 16) Regras de Negocio (4 Estados por Componente)
 
-No App Criador, cada jogo salva sua propria politica:
+No App Luthier, cada jogo salva sua propria politica:
 - `MandatoryOn`: o item deve estar ativo; ausencia bloqueia.
 - `MandatoryOff`: o item deve ficar desativado; override nao permitido.
 - `OptionalOn`: item ativo por padrao; usuario pode desligar.
@@ -888,7 +888,7 @@ Regras de UX:
 
 ---
 
-## 17) Abas do App Criador (UI limpa)
+## 17) Abas do App Luthier (UI limpa)
 
 Regra de layout:
 - Itens em lista vertical (um abaixo do outro).
@@ -959,7 +959,7 @@ Regra de layout:
 - Pre-doctor (OK/WARN/BLOCKER)
 - Preview do JSON final
 - Destino de saida
-- Botao `Testar` (executa fluxo do Orquestrador sem gerar binario e sem fechar a janela)
+- Botao `Testar` (executa fluxo do Luthier Orchestrator sem gerar binario e sem fechar a janela)
 - Botao `Criar Executavel`
 
 ---
@@ -967,7 +967,7 @@ Regra de layout:
 ## 18) Tabela de Configuracoes da UI (com ajuda)
 
 Legenda:
-- "Obrigatorio?" = obrigatorio para salvar perfil no App Criador.
+- "Obrigatorio?" = obrigatorio para salvar perfil no App Luthier.
 - "Expert?" = se a opcao e voltada para usuario avancado.
 
 ### Aba 1 - Jogo
@@ -1012,7 +1012,7 @@ Legenda:
 ### Aba 4 - Prefixo e Dependencias
 | Item | Tipo de componente do item | Texto de ajuda (tooltip) | Valor padrao (MVP) | Obrigatorio? | Expert? |
 |---|---|---|---|---|---|
-| Prefix path final | `ReadOnlyPath` | Caminho final calculado por hash (`~/.local/share/GameOrchestrator/prefixes/<exe_hash>`). | auto | Sim | Nao |
+| Prefix path final | `ReadOnlyPath` | Caminho final calculado por hash (`~/.local/share/Luthier/prefixes/<exe_hash>`). | auto | Sim | Nao |
 | Winetricks | `FeatureStateSelect` | Define se verbos winetricks sao obrigatorios/opcionais/desativados. | `OptionalOn` quando ha verbos, senao `OptionalOff` | Sim | Nao |
 | Lista de verbos winetricks (`dependencies`) | `TagListEditor` | Verbos aplicados no setup inicial do prefixo (ex.: `corefonts`, `vcrun2005`). | lista vazia | Nao | Sim |
 | Chaves de registro | `TableEditor` | Entradas de registro aplicadas no prefixo apos boot inicial. | lista vazia | Nao | Sim |
@@ -1051,8 +1051,8 @@ Legenda:
 | Resumo de politicas | `ReadOnlySummary` | Consolida todos os componentes e seus 4 estados antes da execucao/geracao. | auto | Sim | Nao |
 | Pre-doctor | `ActionButton + ResultPanel` | Executa validacao rapida de dependencias e mostra `OK/WARN/BLOCKER` sem gerar arquivo. | manual | Nao | Nao |
 | Preview do JSON final | `ReadOnlyJsonViewer` | Exibe payload final que sera embutido no binario. | auto | Sim | Sim |
-| Destino de saida | `PathPicker` | Define onde salvar o orquestrador gerado (default: pasta do jogo). | pasta do jogo | Sim | Nao |
-| Botao `Testar` | `ActionButton` | Executa o mesmo pipeline do Orquestrador (doctor/setup/launch dry-run controlado) sem gerar binario e sem fechar a App Criador. | disponivel | Nao | Nao |
+| Destino de saida | `PathPicker` | Define onde salvar o Luthier Orchestrator gerado (default: pasta do jogo). | pasta do jogo | Sim | Nao |
+| Botao `Testar` | `ActionButton` | Executa o mesmo pipeline do Luthier Orchestrator (doctor/setup/launch dry-run controlado) sem gerar binario e sem fechar a App Luthier. | disponivel | Nao | Nao |
 | Botao `Criar Executavel` | `PrimaryActionButton` | Copia binario base, injeta payload versionado e marca permissao de execucao. | disponivel | Sim | Nao |
 
 ---
@@ -1061,14 +1061,14 @@ Legenda:
 
 ### 19.1 Escopo
 - Aplicar i18n em:
-  - App Criador (todas as abas, tooltips, validacoes e mensagens de erro).
-  - Splash/menus nativos do Orquestrador.
+  - App Luthier (todas as abas, tooltips, validacoes e mensagens de erro).
+  - Splash/menus nativos do Luthier Orchestrator.
   - CLI (`--help`, `--doctor`, `--show-config` quando exibicao amigavel for usada).
 - Idiomas iniciais do MVP: `pt-BR` e `en-US`.
 
 ### 19.2 Politica de resolucao de idioma
 Ordem de resolucao:
-1. `--lang <locale>` (sessao atual, Orquestrador/CLI).
+1. `--lang <locale>` (sessao atual, Luthier Orchestrator/CLI).
 2. Preferencia salva em `AppSettings.preferred_locale`.
 3. Locale do sistema (`LANG`, `LC_ALL`, `LC_MESSAGES`).
 4. Fallback final: `en-US`.
@@ -1106,8 +1106,8 @@ Ordem de resolucao:
 - Scripts bash rodam no contexto do usuario (sem root), com timeout e log dedicado.
 
 ### 20.2 Integridade e recuperacao
-- Escrita atomica ao gerar Orquestrador (arquivo temporario + rename).
-- Backup `.bak` do orquestrador anterior antes de sobrescrever.
+- Escrita atomica ao gerar Luthier Orchestrator (arquivo temporario + rename).
+- Backup `.bak` do Luthier Orchestrator anterior antes de sobrescrever.
 - Migracoes versionadas para banco local e perfis.
 - Checkpoints de setup do prefix para retomar fluxo apos falha sem corromper estado.
 
@@ -1119,14 +1119,14 @@ Ordem de resolucao:
 ### 20.4 Diagnostico e suporte
 - Catalogo de erros com `error_code` estavel + mensagem traduzida.
 - Export de bundle de diagnostico com:
-  - versao app/orquestrador
+  - versao app/Luthier Orchestrator
   - distro/kernel
   - runtime detectado
   - ultimos logs da sessao
 - Redacao automatica de dados sensiveis em logs (`HOME`, usuario, paths privados quando possivel).
 
 ### 20.5 Acessibilidade (A11y)
-- Navegacao completa por teclado nas abas/formularios da App Criador.
+- Navegacao completa por teclado nas abas/formularios da App Luthier.
 - Tooltips com alternativa acessivel (focus + leitura por screen reader).
 - Contraste minimo AA para textos de status da splash.
 - Nao depender apenas de cor para estados `OK/WARN/BLOCKER`.
@@ -1154,7 +1154,7 @@ Objetivo:
   - `trace_id` (id da sessao)
   - `span_id` (id da etapa)
   - `exe_hash`
-  - `component` (`creator|orchestrator|doctor|launcher|prefix|ui`)
+  - `component` (`luthier|orchestrator|doctor|launcher|prefix|ui`)
   - `context` (objeto JSON com chaves estaveis)
 
 Exemplo:
@@ -1243,7 +1243,7 @@ Observacao:
 - F2: doctor/discovery + `ExecutionPlan`
 - F3: prefix setup idempotente + mounts
 - F4: launch pipeline + splash + `--config`
-- F5: App Criador por abas + validacoes + botao `Testar`
+- F5: App Luthier por abas + validacoes + botao `Testar`
 - F6: observabilidade completa + bundle de diagnostico
 
 4. Hardening:
@@ -1278,10 +1278,10 @@ Regras desta separacao:
 - Novos checkpoints devem ser adicionados em `docs/context-checkpoints.md` e resumidos aqui apenas quando afetarem escopo/regras do produto.
 
 Resumo do estado atual (alto nivel):
-- Creator UI: robusto, multiaba, i18n (`pt-BR`/`en-US`), tabelas/dialogs, selectors guiados de pasta, import `.reg`, testes locais, geracao de payload e UX refinada.
-- Creator backend: hash, teste de configuracao, import `.reg`, listagem de subpastas e injecao de payload no binario base funcionando.
-- Creator build/runtime: resolucao robusta do binario base do orquestrador (env var, path solicitado, candidatos comuns, recurso empacotado no Tauri) + logs estruturados JSON no backend para debug AI-first.
-- Empacotamento do Creator: `tauri.conf` preparado para incluir `resources/orchestrator-base/orchestrator` e scripts de build/dev preparam automaticamente esse binario base antes de subir/compilar o app.
-- Validacao pratica: pipeline de injecao foi validado localmente via `creator-cli create` gerando um ELF do orquestrador com payload embutido, confirmado por `--show-config`.
-- Orquestrador CLI: `--show-config`, `--doctor`, `--config`, `--winecfg`, `--play` com pipeline basico (doctor -> prefix -> mounts -> scripts -> launch) e logs NDJSON.
+- Luthier UI: robusto, multiaba, i18n (`pt-BR`/`en-US`), tabelas/dialogs, selectors guiados de pasta, import `.reg`, testes locais, geracao de payload e UX refinada.
+- Luthier backend: hash, teste de configuracao, import `.reg`, listagem de subpastas e injecao de payload no binario base funcionando.
+- Luthier build/runtime: resolucao robusta do binario base do Luthier Orchestrator (env var, path solicitado, candidatos comuns, recurso empacotado no Tauri) + logs estruturados JSON no backend para debug AI-first.
+- Empacotamento do Luthier: `tauri.conf` preparado para incluir `resources/luthier-orchestrator-base/luthier-orchestrator` e scripts de build/dev preparam automaticamente esse binario base antes de subir/compilar o app.
+- Validacao pratica: pipeline de injecao foi validado localmente via `luthier-cli create` gerando um ELF do Luthier Orchestrator com payload embutido, confirmado por `--show-config`.
+- Luthier Orchestrator CLI: `--show-config`, `--doctor`, `--config`, `--winecfg`, `--play` com pipeline basico (doctor -> prefix -> mounts -> scripts -> launch) e logs NDJSON.
 - Qualidade: scripts locais de qualidade + CI com checks separados de frontend e Rust core.

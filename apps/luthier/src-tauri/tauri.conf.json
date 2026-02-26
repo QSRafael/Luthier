@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/1",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "Luthier",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "dialog": {
+        "open": true
+      }
+    },
+    "windows": [
+      {
+        "title": "Luthier",
+        "width": 1280,
+        "height": 820,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "bundle": {
+      "active": true,
+      "targets": ["appimage", "deb", "rpm"],
+      "icon": ["icons/icon.png"],
+      "resources": ["resources/luthier-orchestrator-base/luthier-orchestrator"],
+      "identifier": "com.luthier.app"
+    }
+  }
+}

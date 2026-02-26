@@ -1,12 +1,12 @@
 [workspace]
 resolver = "2"
 members = [
-  "apps/creator-tauri/src-tauri",
-  "bins/creator-cli",
-  "crates/orchestrator-core",
-  "crates/creator-core",
-  "bins/orchestrator",
-  "bins/orchestrator-injector",
+  "apps/luthier/src-tauri",
+  "bins/luthier-cli",
+  "crates/luthier-orchestrator-core",
+  "crates/luthier-core",
+  "bins/luthier-orchestrator",
+  "bins/luthier-orchestrator-injector",
 ]
 
 [workspace.package]

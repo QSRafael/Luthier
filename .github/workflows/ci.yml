@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: apps/creator-tauri
+        working-directory: apps/luthier
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: apps/creator-tauri/package-lock.json
+          cache-dependency-path: apps/luthier/package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: Typecheck
@@ -36,6 +36,6 @@ jobs:
       - name: Cargo fmt (check)
         run: cargo fmt --all -- --check
       - name: Cargo test (workspace sem Tauri backend)
-        run: cargo test --workspace --all-targets --exclude creator-tauri-backend
+        run: cargo test --workspace --all-targets --exclude luthier-backend
       - name: Cargo clippy
-        run: cargo clippy --workspace --all-targets --exclude creator-tauri-backend -- -D warnings
+        run: cargo clippy --workspace --all-targets --exclude luthier-backend -- -D warnings
