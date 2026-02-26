@@ -7,7 +7,9 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::{engine::general_purpose, Engine as _};
-use creator_core::{create_orchestrator_binary, sha256_file, CreateOrchestratorRequest};
+use creator_core::{
+    create_orchestrator_binary, sha256_file, validate_game_config, CreateOrchestratorRequest,
+};
 use image::{imageops::FilterType, DynamicImage, GenericImageView, ImageFormat};
 use orchestrator_core::{
     doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig, RegistryKey,
@@ -210,6 +212,18 @@ pub fn create_executable_with_base_hints(
 
     let result = create_orchestrator_binary(&request).map_err(|err| {
         let message = err.to_string();
+        let validation_issues = err.validation_issues().map(|issues| {
+            issues
+                .iter()
+                .map(|issue| {
+                    serde_json::json!({
+                        "code": issue.code,
+                        "field": issue.field,
+                        "message": issue.message,
+                    })
+                })
+                .collect::<Vec<serde_json::Value>>()
+        });
         log_backend_event(
             "ERROR",
             "GO-CR-090",
@@ -218,6 +232,7 @@ pub fn create_executable_with_base_hints(
                 "error": message,
                 "base_binary_path": request.base_binary_path,
                 "output_path": request.output_path,
+                "validation_issues": validation_issues,
             }),
         );
         message
@@ -486,7 +501,26 @@ pub fn test_configuration(
     let config: GameConfig = serde_json::from_str(&input.config_json)
         .map_err(|err| format!("invalid config JSON: {err}"))?;
 
-    creator_core::validate_game_config_relative_paths(&config).map_err(|err| err.to_string())?;
+    validate_game_config(&config).map_err(|err| {
+        log_backend_event(
+            "ERROR",
+            "GO-CR-291",
+            "test_configuration_payload_validation_failed",
+            serde_json::json!({
+                "error": err.to_string(),
+                "validation_issues": err.validation_issues().map(|issues| {
+                    issues.iter().map(|issue| {
+                        serde_json::json!({
+                            "code": issue.code,
+                            "field": issue.field,
+                            "message": issue.message,
+                        })
+                    }).collect::<Vec<serde_json::Value>>()
+                }),
+            }),
+        );
+        err.to_string()
+    })?;
 
     let game_root = PathBuf::from(&input.game_root);
     let missing_files = collect_missing_files(&config, &game_root)?;

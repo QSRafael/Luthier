@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Context;
 use clap::{Parser, Subcommand};
 use creator_core::{
-    create_orchestrator_binary, sha256_file, validate_game_config_relative_paths,
-    CreateOrchestratorRequest,
+    create_orchestrator_binary, sha256_file, validate_game_config, CreateOrchestratorRequest,
 };
 use orchestrator_core::{doctor::run_doctor, prefix::build_prefix_setup_plan, GameConfig};
 
@@ -61,7 +60,7 @@ fn run_hash(exe: PathBuf) -> anyhow::Result<()> {
 
 fn run_test(config_path: PathBuf, game_root: PathBuf) -> anyhow::Result<()> {
     let config: GameConfig = load_config(&config_path)?;
-    validate_game_config_relative_paths(&config)?;
+    validate_game_config(&config)?;
 
     let missing_files = collect_missing_files(&config, &game_root)?;
     let doctor = run_doctor(Some(&config));
