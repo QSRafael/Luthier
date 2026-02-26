@@ -16,6 +16,12 @@ export type ListChildDirectoriesOutput = {
   directories: string[]
 }
 
+export type ListDirectoryEntriesOutput = {
+  path: string
+  directories: string[]
+  files: string[]
+}
+
 export type CreatorPageSectionView = CreatorController & Record<string, any>
 
 export type CreatorPageSectionProps = {

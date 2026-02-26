@@ -5,11 +5,12 @@ fn main() {
 
     use creator_tauri_backend::{
         create_executable_with_base_hints, extract_executable_icon, hash_executable,
-        import_registry_file, list_child_directories, prepare_hero_image, search_hero_image,
-        test_configuration, winetricks_available, CreateExecutableInput, CreateExecutableOutput,
-        ExtractExecutableIconInput, ExtractExecutableIconOutput, HashExeInput, HashExeOutput,
-        ImportRegistryFileInput, ImportRegistryFileOutput, ListChildDirectoriesInput,
-        ListChildDirectoriesOutput, PrepareHeroImageInput, PrepareHeroImageOutput,
+        import_registry_file, list_child_directories, list_directory_entries, prepare_hero_image,
+        search_hero_image, test_configuration, winetricks_available, CreateExecutableInput,
+        CreateExecutableOutput, ExtractExecutableIconInput, ExtractExecutableIconOutput,
+        HashExeInput, HashExeOutput, ImportRegistryFileInput, ImportRegistryFileOutput,
+        ListChildDirectoriesInput, ListChildDirectoriesOutput, ListDirectoryEntriesInput,
+        ListDirectoryEntriesOutput, PrepareHeroImageInput, PrepareHeroImageOutput,
         SearchHeroImageInput, SearchHeroImageOutput, TestConfigurationInput,
         TestConfigurationOutput, WinetricksAvailableOutput,
     };
@@ -85,6 +86,13 @@ fn main() {
     }
 
     #[tauri::command]
+    fn cmd_list_directory_entries(
+        input: ListDirectoryEntriesInput,
+    ) -> Result<ListDirectoryEntriesOutput, String> {
+        list_directory_entries(input)
+    }
+
+    #[tauri::command]
     async fn cmd_search_hero_image(
         input: SearchHeroImageInput,
     ) -> Result<SearchHeroImageOutput, String> {
@@ -111,6 +119,7 @@ fn main() {
             cmd_winetricks_available,
             cmd_import_registry_file,
             cmd_list_child_directories,
+            cmd_list_directory_entries,
             cmd_search_hero_image,
             cmd_prepare_hero_image
         ])

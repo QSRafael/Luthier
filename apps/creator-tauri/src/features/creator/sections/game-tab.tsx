@@ -57,6 +57,7 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
     pickExecutable,
     pickGameRootOverride,
     pickIntegrityFileRelative,
+    pickIntegrityFileRelativeWithBrowser,
     pickMountFolder,
     extractExecutableIcon,
     hashingExecutable,
@@ -73,6 +74,12 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
     setMountSourceBrowserOpen,
     mountBrowserDirs,
     mountBrowserLoading,
+    integrityFileBrowserOpen,
+    setIntegrityFileBrowserOpen,
+    integrityBrowserPath,
+    integrityBrowserDirs,
+    integrityBrowserFiles,
+    integrityBrowserLoading,
     mountDialogOpen,
     setMountDialogOpen,
     mountDraft,
@@ -85,8 +92,12 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
     openGameRootChooser,
     loadMountBrowserDirs,
     openMountSourceBrowser,
+    loadIntegrityBrowserEntries,
     mountSourceBrowserSegments,
     mountSourceBrowserCurrentRelative,
+    resolveIntegrityFileBrowser,
+    integrityFileBrowserSegments,
+    integrityFileBrowserCurrentRelative,
   } = props.view
 
   return (
@@ -416,11 +427,161 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
               placeholder={ct('creator_data_core_dll')}
               addLabel={ct('creator_add_file')}
               pickerLabel={ct('creator_pick_file_from_game_folder')}
-              onPickValue={pickIntegrityFileRelative}
+              onPickValue={pickIntegrityFileRelativeWithBrowser ?? pickIntegrityFileRelative}
               pickerDisabled={!canPickIntegrityFromGameRoot()}
               emptyMessage={ct('creator_no_file_added')}
               tableValueHeader={ct('creator_relative_file')}
             />
+
+            <Dialog
+              open={integrityFileBrowserOpen?.() ?? false}
+              onOpenChange={(open) => {
+                setIntegrityFileBrowserOpen?.(open)
+                if (!open) {
+                  resolveIntegrityFileBrowser?.(null)
+                }
+              }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{ct('creator_select_file_inside_game')}</DialogTitle>
+                  <DialogDescription>
+                    {ct('creator_mini_file_browser_restricted_to_the_game_root_to_prevent')}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div class="grid gap-3">
+                  <div class="rounded-md border border-border/60 bg-muted/25 p-3">
+                    <p class="mb-2 text-xs font-medium text-muted-foreground">
+                      {ct('creator_current_path')}
+                    </p>
+                    <nav class="overflow-x-auto" aria-label={ct('creator_folder_breadcrumb')}>
+                      <ol class="flex min-w-max items-center gap-1 text-xs">
+                        <Show when={gameRoot().trim()}>
+                          <li>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              class="h-7 px-2"
+                              onClick={() => void loadIntegrityBrowserEntries?.(gameRoot())}
+                            >
+                              {basenamePath(gameRoot()) || '/'}
+                            </Button>
+                          </li>
+                        </Show>
+                        <For each={integrityFileBrowserSegments?.() ?? []}>
+                          {(segment) => (
+                            <>
+                              <li class="text-muted-foreground">/</li>
+                              <li>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  class="h-7 px-2"
+                                  onClick={() => void loadIntegrityBrowserEntries?.(segment.path)}
+                                >
+                                  {segment.label}
+                                </Button>
+                              </li>
+                            </>
+                          )}
+                        </For>
+                      </ol>
+                    </nav>
+                  </div>
+
+                  <div class="rounded-md border border-border/60 bg-background/40">
+                    <Show
+                      when={!(integrityBrowserLoading?.() ?? false)}
+                      fallback={
+                        <div class="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                          <Spinner class="size-3" />
+                          {ct('creator_loading_files')}
+                        </div>
+                      }
+                    >
+                      <div class="grid gap-2 p-2">
+                        <div class="grid gap-1">
+                          <p class="px-1 text-xs font-medium text-muted-foreground">{ct('creator_folders')}</p>
+                          <Show
+                            when={(integrityBrowserDirs?.() ?? []).length > 0}
+                            fallback={
+                              <div class="px-2 py-1 text-xs text-muted-foreground">
+                                {ct('creator_no_subfolder_found')}
+                              </div>
+                            }
+                          >
+                            <For each={integrityBrowserDirs?.() ?? []}>
+                              {(dir) => (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  class="justify-start text-left"
+                                  onClick={() => void loadIntegrityBrowserEntries?.(dir)}
+                                >
+                                  {basenamePath(dir)}
+                                </Button>
+                              )}
+                            </For>
+                          </Show>
+                        </div>
+
+                        <div class="grid gap-1 border-t border-border/60 pt-2">
+                          <p class="px-1 text-xs font-medium text-muted-foreground">{ct('creator_files')}</p>
+                          <Show
+                            when={(integrityBrowserFiles?.() ?? []).length > 0}
+                            fallback={
+                              <div class="px-2 py-1 text-xs text-muted-foreground">
+                                {ct('creator_no_file_found_in_current_folder')}
+                              </div>
+                            }
+                          >
+                            <For each={integrityBrowserFiles?.() ?? []}>
+                              {(file) => {
+                                const relative = relativeInsideBase(gameRoot().trim(), file)
+                                return (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    class="justify-start text-left"
+                                    onClick={() => {
+                                      if (!relative) return
+                                      resolveIntegrityFileBrowser?.(`./${relative}`)
+                                      setIntegrityFileBrowserOpen?.(false)
+                                    }}
+                                  >
+                                    {basenamePath(file)}
+                                  </Button>
+                                )
+                              }}
+                            </For>
+                          </Show>
+                        </div>
+                      </div>
+                    </Show>
+                  </div>
+
+                  <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                    {ct('creator_select_a_file_to_fill_this_field_automatically')}
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIntegrityFileBrowserOpen?.(false)
+                      resolveIntegrityFileBrowser?.(null)
+                    }}
+                  >
+                    {ct('creator_close')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <FieldShell
               label={ct('creator_mounted_folders')}

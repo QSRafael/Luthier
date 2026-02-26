@@ -152,6 +152,18 @@ pub struct ListChildDirectoriesOutput {
     pub directories: Vec<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ListDirectoryEntriesInput {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ListDirectoryEntriesOutput {
+    pub path: String,
+    pub directories: Vec<String>,
+    pub files: Vec<String>,
+}
+
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
     create_executable_with_base_hints(input, &[])
 }
@@ -1209,6 +1221,51 @@ pub fn list_child_directories(
         serde_json::json!({
             "path": out.path,
             "directories_count": out.directories.len(),
+        }),
+    );
+    Ok(out)
+}
+
+pub fn list_directory_entries(
+    input: ListDirectoryEntriesInput,
+) -> Result<ListDirectoryEntriesOutput, String> {
+    log_backend_event(
+        "INFO",
+        "GO-CR-503",
+        "list_directory_entries_requested",
+        serde_json::json!({ "path": input.path }),
+    );
+    let root = PathBuf::from(&input.path);
+    let entries = fs::read_dir(&root).map_err(|err| format!("failed to list directory: {err}"))?;
+
+    let mut directories = Vec::new();
+    let mut files = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|err| format!("failed to read directory entry: {err}"))?;
+        let path = entry.path();
+        if path.is_dir() {
+            directories.push(path.to_string_lossy().into_owned());
+        } else if path.is_file() {
+            files.push(path.to_string_lossy().into_owned());
+        }
+    }
+
+    directories.sort_by_key(|value| value.to_ascii_lowercase());
+    files.sort_by_key(|value| value.to_ascii_lowercase());
+
+    let out = ListDirectoryEntriesOutput {
+        path: input.path,
+        directories,
+        files,
+    };
+    log_backend_event(
+        "INFO",
+        "GO-CR-504",
+        "list_directory_entries_completed",
+        serde_json::json!({
+            "path": out.path,
+            "directories_count": out.directories.len(),
+            "files_count": out.files.len(),
         }),
     );
     Ok(out)

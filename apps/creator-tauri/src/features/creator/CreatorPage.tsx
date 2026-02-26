@@ -18,6 +18,7 @@ import {
   isLikelyAbsolutePath,
   isTauriLocalRuntime,
   ListChildDirectoriesOutput,
+  ListDirectoryEntriesOutput,
   parseWxH,
   relativeInsideBase,
   tabLabel
@@ -115,6 +116,13 @@ export default function CreatorPage() {
   const [mountBrowserPath, setMountBrowserPath] = createSignal('')
   const [mountBrowserDirs, setMountBrowserDirs] = createSignal<string[]>([])
   const [mountBrowserLoading, setMountBrowserLoading] = createSignal(false)
+  const [integrityFileBrowserOpen, setIntegrityFileBrowserOpen] = createSignal(false)
+  const [integrityBrowserPath, setIntegrityBrowserPath] = createSignal('')
+  const [integrityBrowserDirs, setIntegrityBrowserDirs] = createSignal<string[]>([])
+  const [integrityBrowserFiles, setIntegrityBrowserFiles] = createSignal<string[]>([])
+  const [integrityBrowserLoading, setIntegrityBrowserLoading] = createSignal(false)
+  const [integrityFileBrowserResolve, setIntegrityFileBrowserResolve] =
+    createSignal<((value: string | null) => void) | null>(null)
 
   const [mountDialogOpen, setMountDialogOpen] = createSignal(false)
   const [mountDraft, setMountDraft] = createSignal({
@@ -367,12 +375,34 @@ export default function CreatorPage() {
           ? ctf('creator_registry_import_warning_suffix_count', { count: result.warnings.length })
           : ''
 
-      setStatusMessage(
-        ctf('creator_imported_registry_keys_from_reg_file', {
-          count: deduped.length,
-          warningSuffix
+      const successMessage = ctf('creator_imported_registry_keys_from_reg_file', {
+        count: deduped.length,
+        warningSuffix
+      })
+
+      if (deduped.length > 0) {
+        const importedSignatures = new Set(
+          deduped.map((item) => [item.path, item.name, item.value_type, item.value].join('\u0000'))
+        )
+        toast.success(successMessage, {
+          description: selected,
+          action: {
+            label: ct('creator_undo'),
+            onClick: () => {
+              patchConfig((prev) => ({
+                ...prev,
+                registry_keys: prev.registry_keys.filter((item) => {
+                  const signature = [item.path, item.name, item.value_type, item.value].join('\u0000')
+                  return !importedSignatures.has(signature)
+                })
+              }))
+              toast.info(ct('creator_registry_import_undone'))
+            }
+          }
         })
-      )
+      } else {
+        toast.info(successMessage, { description: selected })
+      }
 
       setRegistryImportWarnings(result.warnings)
       setRegistryImportWarningsOpen(result.warnings.length > 0)
@@ -412,6 +442,55 @@ export default function CreatorPage() {
     }
   }
 
+  const loadIntegrityBrowserEntries = async (absolutePath: string) => {
+    if (!isLikelyAbsolutePath(absolutePath)) {
+      setStatusMessage(
+        ct('creator_required_file_browser_requires_an_absolute_game_root_pat')
+      )
+      return
+    }
+    setIntegrityBrowserLoading(true)
+    try {
+      const result = await invokeCommand<ListDirectoryEntriesOutput>('cmd_list_directory_entries', {
+        path: absolutePath
+      })
+      setIntegrityBrowserPath(result.path)
+      setIntegrityBrowserDirs(result.directories)
+      setIntegrityBrowserFiles(result.files)
+    } catch (error) {
+      setStatusMessage(ctf('creator_failed_to_list_files_error', { error: String(error) }))
+    } finally {
+      setIntegrityBrowserLoading(false)
+    }
+  }
+
+  const resolveIntegrityFileBrowser = (value: string | null) => {
+    const resolver = integrityFileBrowserResolve()
+    setIntegrityFileBrowserResolve(null)
+    if (resolver) resolver(value)
+  }
+
+  const openIntegrityFileBrowser = async () => {
+    const root = gameRoot().trim()
+    if (!root) {
+      setStatusMessage(ct('creator_select_an_executable_first_to_define_the_game_folder'))
+      return null
+    }
+    if (!isLikelyAbsolutePath(root)) {
+      setStatusMessage(
+        ct('creator_in_browser_lan_mode_the_mini_file_browser_cannot_access_')
+      )
+      return null
+    }
+
+    await loadIntegrityBrowserEntries(root)
+    setIntegrityFileBrowserOpen(true)
+
+    return new Promise<string | null>((resolve) => {
+      setIntegrityFileBrowserResolve(() => resolve)
+    })
+  }
+
   const openMountSourceBrowser = async () => {
     const root = gameRoot().trim()
     if (!root) {
@@ -448,6 +527,34 @@ export default function CreatorPage() {
     const relative = relativeInsideBase(gameRoot().trim(), mountBrowserPath().trim())
     return relative ?? ''
   })
+
+  const integrityFileBrowserSegments = createMemo(() => {
+    const root = gameRoot().trim()
+    const current = integrityBrowserPath().trim()
+    const relative = root && current ? relativeInsideBase(root, current) : null
+    if (!relative || relative === '.') return [] as Array<{ label: string; path: string }>
+
+    let acc = root
+    return relative
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => {
+        acc = `${acc.replace(/\/+$/, '')}/${segment}`
+        return { label: segment, path: acc }
+      })
+  })
+
+  const integrityFileBrowserCurrentRelative = createMemo(() => {
+    const relative = relativeInsideBase(gameRoot().trim(), integrityBrowserPath().trim())
+    return relative ?? ''
+  })
+
+  const pickIntegrityFileRelativeWithBrowser = async () => {
+    if (isTauriLocalRuntime() && isLikelyAbsolutePath(gameRoot().trim())) {
+      return await openIntegrityFileBrowser()
+    }
+    return await pickIntegrityFileRelative()
+  }
 
   const cycleLocale = () => {
     setLocale(locale() === 'pt-BR' ? 'en-US' : 'pt-BR')
@@ -564,6 +671,18 @@ export default function CreatorPage() {
     setMountBrowserDirs,
     mountBrowserLoading,
     setMountBrowserLoading,
+    integrityFileBrowserOpen,
+    setIntegrityFileBrowserOpen,
+    integrityBrowserPath,
+    setIntegrityBrowserPath,
+    integrityBrowserDirs,
+    setIntegrityBrowserDirs,
+    integrityBrowserFiles,
+    setIntegrityBrowserFiles,
+    integrityBrowserLoading,
+    setIntegrityBrowserLoading,
+    integrityFileBrowserResolve,
+    setIntegrityFileBrowserResolve,
     mountDialogOpen,
     setMountDialogOpen,
     mountDraft,
@@ -619,12 +738,18 @@ export default function CreatorPage() {
     canBrowseMountFolders,
     canImportRegistryFromFile,
     importRegistryKeysFromRegFile,
+    pickIntegrityFileRelativeWithBrowser,
     gameRootAncestorCandidates,
     openGameRootChooser,
     loadMountBrowserDirs,
     openMountSourceBrowser,
     mountSourceBrowserSegments,
     mountSourceBrowserCurrentRelative,
+    loadIntegrityBrowserEntries,
+    openIntegrityFileBrowser,
+    resolveIntegrityFileBrowser,
+    integrityFileBrowserSegments,
+    integrityFileBrowserCurrentRelative,
     cycleLocale,
     cycleTheme,
     sidebarLocaleLabel,
