@@ -39,6 +39,8 @@ export function ReviewTabSection(props: CreatorPageSectionProps) {
     resultJson,
     config,
     exePath,
+    gameRootManualOverride,
+    gameRootRelativeDisplay,
     configPreview,
     t,
     ct,
@@ -73,11 +75,17 @@ export function ReviewTabSection(props: CreatorPageSectionProps) {
     })()
     const runtimeItems = [
       cfg.runner.runtime_preference === 'Proton' ? `Proton (${cfg.runner.proton_version || 'GE-Proton-latest'})` : cfg.runner.runtime_preference,
+      cfg.requirements.runtime.strict
+        ? `${ct('creator_summary_strict_proton_version')}: ${cfg.runner.proton_version || 'GE-Proton-latest'}`
+        : '',
       cfg.runner.esync ? 'ESYNC' : '',
       cfg.runner.fsync ? 'FSYNC' : '',
-      cfg.runner.auto_update ? 'Auto update' : ''
+      cfg.runner.auto_update ? ct('creator_auto_update') : '',
+      featureStateEnabled(cfg.compatibility.easy_anti_cheat_runtime) ? 'EAC Runtime' : '',
+      featureStateEnabled(cfg.compatibility.battleye_runtime) ? 'BattlEye Runtime' : ''
     ]
     const fileLaunchItems = [
+      gameRootManualOverride() ? `${ct('creator_summary_game_root')}: ${gameRootRelativeDisplay()}` : '',
       cfg.launch_args.length > 0 ? `Args: ${cfg.launch_args.length}` : '',
       cfg.integrity_files.length > 0 ? `${ct('creator_required_files')}: ${cfg.integrity_files.length}` : '',
       cfg.folder_mounts.length > 0 ? `${ct('creator_mounts')}: ${cfg.folder_mounts.length}` : ''
@@ -100,9 +108,7 @@ export function ReviewTabSection(props: CreatorPageSectionProps) {
       featureStateEnabled(cfg.environment.prime_offload) ? ct('creator_use_dedicated_gpu') : '',
       featureStateEnabled(cfg.compatibility.wine_wayland) ? 'Wine-Wayland' : '',
       featureStateEnabled(cfg.compatibility.hdr) ? 'HDR' : '',
-      featureStateEnabled(cfg.compatibility.auto_dxvk_nvapi) ? 'DXVK-NVAPI' : '',
-      featureStateEnabled(cfg.compatibility.easy_anti_cheat_runtime) ? 'EAC Runtime' : '',
-      featureStateEnabled(cfg.compatibility.battleye_runtime) ? 'BattlEye Runtime' : ''
+      featureStateEnabled(cfg.compatibility.auto_dxvk_nvapi) ? 'DXVK-NVAPI' : ''
     ]
     if (featureStateEnabled(cfg.environment.gamescope.state)) {
       if (cfg.environment.gamescope.game_width.trim() && cfg.environment.gamescope.game_height.trim()) {
@@ -121,24 +127,28 @@ export function ReviewTabSection(props: CreatorPageSectionProps) {
     }
 
     const winecfgItems: string[] = []
-    if (cfg.winecfg.windows_version) winecfgItems.push(`Windows: ${cfg.winecfg.windows_version}`)
-    if (cfg.winecfg.dll_overrides.length > 0) winecfgItems.push(`DLL: ${cfg.winecfg.dll_overrides.length}`)
+    if (cfg.winecfg.windows_version) {
+      winecfgItems.push(`${ct('creator_summary_windows_version')}: ${cfg.winecfg.windows_version}`)
+    }
+    if (cfg.winecfg.dll_overrides.length > 0) {
+      winecfgItems.push(`${ct('creator_dll_overrides')}: ${cfg.winecfg.dll_overrides.length}`)
+    }
     if (cfg.winecfg.screen_dpi != null) winecfgItems.push(`DPI ${cfg.winecfg.screen_dpi}`)
     if (!cfg.winecfg.virtual_desktop.state.use_wine_default) {
       winecfgItems.push(
-        `Desktop virtual: ${
+        `${ct('creator_summary_virtual_desktop')}: ${
           featureStateEnabled(cfg.winecfg.virtual_desktop.state.state) ? ct('creator_label_enabled') : ct('creator_label_disabled')
         }`
       )
     }
     if (cfg.winecfg.virtual_desktop.resolution) {
-      winecfgItems.push(`Desktop ${cfg.winecfg.virtual_desktop.resolution}`)
+      winecfgItems.push(`${ct('creator_desktop')} ${cfg.winecfg.virtual_desktop.resolution}`)
     }
     if (cfg.winecfg.audio_driver) winecfgItems.push(`${ct('creator_audio')}: ${cfg.winecfg.audio_driver}`)
     if (cfg.winecfg.drives.length > 0) winecfgItems.push(`${ct('creator_drives')}: ${cfg.winecfg.drives.length}`)
     if (cfg.winecfg.desktop_folders.length > 0) winecfgItems.push(`${ct('creator_special_folders')}: ${cfg.winecfg.desktop_folders.length}`)
     if (!cfg.winecfg.desktop_integration.use_wine_default) winecfgItems.push(ct('creator_desktop_integration'))
-    if (!cfg.winecfg.mime_associations.use_wine_default) winecfgItems.push('MIME/Protocolos')
+    if (!cfg.winecfg.mime_associations.use_wine_default) winecfgItems.push(ct('creator_summary_mime_protocols'))
 
     // Keep the same order as the navigation tabs.
     pushRow(ct('creator_label_game'), [cfg.game_name || null, exeName ? `EXE: ${exeName}` : null])

@@ -302,18 +302,18 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                                   <li class="text-muted-foreground">/</li>
                                 </Show>
                                 <li>
-                                  <Button
-                                    type="button"
-                                    variant={gameRoot() === candidate ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    class="h-7 px-2"
-                                    onClick={() => {
-                                      const exeDir = posixDirname(exePath())
-                                      setGameRoot(candidate)
-                                      setGameRootManualOverride(candidate !== exeDir)
-                                      setGameRootChooserOpen(false)
-                                    }}
-                                  >
+                                <Button
+                                  type="button"
+                                  variant={gameRoot() === candidate ? 'secondary' : 'ghost'}
+                                  size="sm"
+                                  class="h-7 px-2"
+                                  onClick={() => {
+                                    const exeDir = posixDirname(exePath())
+                                    setGameRootManualOverride(candidate !== exeDir)
+                                    setGameRoot(candidate)
+                                    setGameRootChooserOpen(false)
+                                  }}
+                                >
                                     {basenamePath(candidate) || '/'}
                                   </Button>
                                 </li>
@@ -344,8 +344,8 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                                     : 'border-border/60 bg-muted/20 hover:bg-muted/35')
                                 }
                                 onClick={() => {
-                                  setGameRoot(candidate)
                                   setGameRootManualOverride(!isAutoRoot)
+                                  setGameRoot(candidate)
                                   setGameRootChooserOpen(false)
                                 }}
                               >

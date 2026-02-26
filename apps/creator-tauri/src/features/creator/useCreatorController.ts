@@ -673,8 +673,8 @@ export function useCreatorController() {
       return
     }
 
-    setGameRoot(selected)
     setGameRootManualOverride(true)
+    setGameRoot(selected)
   }
 
   const pickIntegrityFileRelative = async () => {
