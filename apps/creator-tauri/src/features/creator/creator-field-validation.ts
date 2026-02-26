@@ -1,4 +1,5 @@
 import type { Locale } from '../../i18n'
+import { creatorFormat, creatorTranslate } from './creator-copy'
 
 export type ValidationResult = {
   error?: string
@@ -16,8 +17,16 @@ function isPt(locale: Locale) {
   return locale === 'pt-BR'
 }
 
-function t(locale: Locale, pt: string, en: string) {
-  return isPt(locale) ? pt : en
+function ct(locale: Locale, key: Parameters<typeof creatorTranslate>[1]) {
+  return creatorTranslate(locale, key)
+}
+
+function ctf(
+  locale: Locale,
+  key: Parameters<typeof creatorFormat>[1],
+  params: Record<string, string | number>
+) {
+  return creatorFormat(locale, key, params)
 }
 
 function hasControlChars(raw: string) {
@@ -74,21 +83,19 @@ export function validatePositiveIntegerString(
   if (!value) return {}
   if (!/^\d+$/.test(value)) {
     return {
-      error: t(
-        locale,
-        `${options.labelPt} deve conter apenas números positivos.`,
-        `${options.labelEn} must contain only positive numbers.`
-      )
+      error: ctf(locale, 'creator_validation_positive_integer_digits', {
+        label: isPt(locale) ? options.labelPt : options.labelEn
+      })
     }
   }
   const parsed = Number.parseInt(value, 10)
   if (!Number.isFinite(parsed) || parsed < options.min || parsed > options.max) {
     return {
-      error: t(
-        locale,
-        `${options.labelPt} deve ficar entre ${options.min} e ${options.max}.`,
-        `${options.labelEn} must be between ${options.min} and ${options.max}.`
-      )
+      error: ctf(locale, 'creator_validation_positive_integer_range', {
+        label: isPt(locale) ? options.labelPt : options.labelEn,
+        min: options.min,
+        max: options.max
+      })
     }
   }
   return {}
@@ -106,50 +113,43 @@ export function validateRelativeGamePath(
   const value = raw.trim()
   if (!value) {
     return {
-      error: t(
+      error: ct(
         locale,
-        `Informe um ${options.kind === 'file' ? 'arquivo' : 'caminho'} relativo.`,
-        `Provide a relative ${options.kind === 'file' ? 'file' : 'path'}.`
+        options.kind === 'file'
+          ? 'creator_validation_relative_path_required_file'
+          : 'creator_validation_relative_path_required_folder'
       )
     }
   }
 
   if (looksLikeLinuxPath(value) || looksLikeWindowsPath(value)) {
     return {
-      error: t(
-        locale,
-        `Use um caminho relativo dentro da pasta do jogo, não um caminho absoluto.`,
-        `Use a relative path inside the game folder, not an absolute path.`
-      )
+      error: ct(locale, 'creator_validation_relative_path_no_absolute')
     }
   }
 
   const normalized = normalizeRelativeSlashes(value)
   if (value.includes('\\')) {
     return {
-      error: t(
-        locale,
-        'Use "/" nesse caminho relativo (não use "\\").',
-        'Use "/" in this relative path (do not use "\\").'
-      ),
+      error: ct(locale, 'creator_validation_relative_path_use_forward_slashes'),
       hint: normalized
     }
   }
   if (options.requireDotPrefix && !normalized.startsWith('./')) {
     return {
-      error: t(locale, 'Use o formato relativo começando com "./".', 'Use the relative format starting with "./".')
+      error: ct(locale, 'creator_validation_relative_path_dot_prefix')
     }
   }
 
   if (normalized.includes('//')) {
     return {
-      error: t(locale, 'O caminho relativo contém "//".', 'Relative path contains "//".')
+      error: ct(locale, 'creator_validation_relative_path_double_slash')
     }
   }
 
   if (hasControlChars(normalized)) {
     return {
-      error: t(locale, 'O caminho contém caracteres inválidos.', 'Path contains invalid characters.')
+      error: ct(locale, 'creator_validation_path_invalid_chars')
     }
   }
 
@@ -157,37 +157,33 @@ export function validateRelativeGamePath(
   if (stripped === '.') {
     if (options.allowDot) return {}
     return {
-      error: t(locale, 'Use uma subpasta ou arquivo específico.', 'Use a specific subfolder or file.')
+      error: ct(locale, 'creator_validation_relative_path_specific_target')
     }
   }
 
   const segments = stripped.split('/').filter(Boolean)
   if (segments.length === 0 && !options.allowDot) {
     return {
-      error: t(locale, 'O caminho relativo está vazio.', 'Relative path is empty.')
+      error: ct(locale, 'creator_validation_relative_path_empty')
     }
   }
 
   for (const segment of segments) {
     if (segment === '.' || segment === '..') {
       return {
-        error: t(
-          locale,
-          'Não use "." ou ".." nesse campo; selecione algo dentro da pasta do jogo.',
-          'Do not use "." or ".." in this field; select something inside the game folder.'
-        )
+        error: ct(locale, 'creator_validation_relative_path_no_dotdot')
       }
     }
     if (/[<>:"|?*\u0000]/.test(segment)) {
       return {
-        error: t(locale, 'O caminho contém caracteres inválidos.', 'Path contains invalid characters.')
+        error: ct(locale, 'creator_validation_path_invalid_chars')
       }
     }
   }
 
   if (options.kind === 'file' && stripped.endsWith('/')) {
     return {
-      error: t(locale, 'Esse campo espera um arquivo, não uma pasta.', 'This field expects a file, not a folder.')
+      error: ct(locale, 'creator_validation_relative_path_file_expected')
     }
   }
 
@@ -197,17 +193,17 @@ export function validateRelativeGamePath(
 export function validateWindowsPath(raw: string, locale: Locale): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: t(locale, 'Informe um caminho Windows.', 'Provide a Windows path.') }
+    return { error: ct(locale, 'creator_validation_windows_path_required') }
   }
   if (hasControlChars(value)) {
-    return { error: t(locale, 'O caminho contém caracteres inválidos.', 'Path contains invalid characters.') }
+    return { error: ct(locale, 'creator_validation_path_invalid_chars') }
   }
   if (looksLikeLinuxPath(value)) {
     const suggestion = linuxToWineZPathSuggestion(value)
     return {
-      error: t(locale, 'Esse campo espera um caminho Windows (ex.: C:\\... ou Z:\\...).', 'This field expects a Windows path (e.g. C:\\... or Z:\\...).'),
+      error: ct(locale, 'creator_validation_windows_path_expected'),
       hint: suggestion
-        ? t(locale, `Sugestão: ${suggestion}`, `Suggestion: ${suggestion}`)
+        ? ctf(locale, 'creator_validation_suggestion', { value: suggestion })
         : undefined
     }
   }
@@ -215,24 +211,20 @@ export function validateWindowsPath(raw: string, locale: Locale): ValidationResu
   const normalized = value.replace(/\//g, '\\')
   if (!/^[A-Za-z]:\\/.test(normalized) && !/^\\\\[^\\]+\\[^\\]+/.test(normalized)) {
     return {
-      error: t(
-        locale,
-        'Caminho Windows inválido. Use uma letra de drive (ex.: C:\\...) ou UNC (\\\\servidor\\pasta).',
-        'Invalid Windows path. Use a drive letter path (e.g. C:\\...) or UNC (\\\\server\\share).'
-      )
+      error: ct(locale, 'creator_validation_windows_path_invalid_format')
     }
   }
 
   const withoutRoot = normalized.replace(/^[A-Za-z]:\\/, '').replace(/^\\\\[^\\]+\\[^\\]+\\?/, '')
   if (/[<>:"|?*]/.test(withoutRoot)) {
     return {
-      error: t(locale, 'O caminho Windows contém caracteres inválidos.', 'Windows path contains invalid characters.')
+      error: ct(locale, 'creator_validation_windows_path_invalid_chars')
     }
   }
 
   if (normalized !== value) {
     return {
-      hint: t(locale, `Sugestão: use barras invertidas: ${normalized}`, `Suggestion: use backslashes: ${normalized}`)
+      hint: ctf(locale, 'creator_validation_windows_path_backslash_hint', { path: normalized })
     }
   }
 
@@ -242,20 +234,20 @@ export function validateWindowsPath(raw: string, locale: Locale): ValidationResu
 export function validateLinuxPath(raw: string, locale: Locale, required = true): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return required ? { error: t(locale, 'Informe um caminho Linux.', 'Provide a Linux path.') } : {}
+    return required ? { error: ct(locale, 'creator_validation_linux_path_required') } : {}
   }
   if (hasControlChars(value)) {
-    return { error: t(locale, 'O caminho contém caracteres inválidos.', 'Path contains invalid characters.') }
+    return { error: ct(locale, 'creator_validation_path_invalid_chars') }
   }
   if (looksLikeWindowsPath(value)) {
     return {
-      error: t(locale, 'Esse campo espera um caminho Linux (ex.: /home/... ).', 'This field expects a Linux path (e.g. /home/... ).'),
-      hint: t(locale, 'Use um path do host Linux, não um path Windows do Wine.', 'Use a Linux host path, not a Wine Windows path.')
+      error: ct(locale, 'creator_validation_linux_path_expected'),
+      hint: ct(locale, 'creator_validation_linux_path_host_hint')
     }
   }
   if (!value.startsWith('/')) {
     return {
-      error: t(locale, 'Use um caminho Linux absoluto começando com "/".', 'Use an absolute Linux path starting with "/".')
+      error: ct(locale, 'creator_validation_linux_path_absolute')
     }
   }
   return {}
@@ -264,26 +256,26 @@ export function validateLinuxPath(raw: string, locale: Locale, required = true):
 export function validateRegistryPath(raw: string, locale: Locale): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: t(locale, 'Informe o path do registro.', 'Provide the registry path.') }
+    return { error: ct(locale, 'creator_validation_registry_path_required') }
   }
   if (looksLikeLinuxPath(value) || looksLikeWindowsPath(value)) {
     return {
-      error: t(locale, 'Esse campo espera um path de registro (ex.: HKCU\\Software\\...).', 'This field expects a registry path (e.g. HKCU\\Software\\...).')
+      error: ct(locale, 'creator_validation_registry_path_expected')
     }
   }
   if (hasControlChars(value)) {
-    return { error: t(locale, 'O path do registro contém caracteres inválidos.', 'Registry path contains invalid characters.') }
+    return { error: ct(locale, 'creator_validation_registry_path_invalid_chars') }
   }
   const normalized = value.replace(/\//g, '\\')
   const hiveRegex =
     /^(HKCU|HKLM|HKCR|HKU|HKCC|HKEY_CURRENT_USER|HKEY_LOCAL_MACHINE|HKEY_CLASSES_ROOT|HKEY_USERS|HKEY_CURRENT_CONFIG)(\\|$)/i
   if (!hiveRegex.test(normalized)) {
     return {
-      error: t(locale, 'Use um hive válido (HKCU, HKLM, HKCR, HKU, HKCC...).', 'Use a valid hive (HKCU, HKLM, HKCR, HKU, HKCC...).')
+      error: ct(locale, 'creator_validation_registry_hive_invalid')
     }
   }
   return normalized !== value
-    ? { hint: t(locale, `Sugestão: use "\\\\": ${normalized}`, `Suggestion: use "\\\\": ${normalized}`) }
+    ? { hint: ctf(locale, 'creator_validation_registry_backslash_hint', { path: normalized }) }
     : {}
 }
 
@@ -302,12 +294,12 @@ export function validateRegistryValueType(raw: string, locale: Locale): Validati
   ])
   if (!supported.has(normalized)) {
     return {
-      error: t(locale, 'Tipo de registro inválido. Ex.: REG_SZ, REG_DWORD, REG_BINARY.', 'Invalid registry type. E.g. REG_SZ, REG_DWORD, REG_BINARY.')
+      error: ct(locale, 'creator_validation_registry_type_invalid')
     }
   }
   return normalized !== value
     ? {
-        hint: t(locale, `Sugestão: ${normalized}`, `Suggestion: ${normalized}`)
+        hint: ctf(locale, 'creator_validation_suggestion', { value: normalized })
       }
     : {}
 }
@@ -315,11 +307,11 @@ export function validateRegistryValueType(raw: string, locale: Locale): Validati
 export function validateEnvVarName(raw: string, locale: Locale): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: t(locale, 'Informe o nome da variável.', 'Provide the variable name.') }
+    return { error: ct(locale, 'creator_validation_env_var_name_required') }
   }
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
     return {
-      error: t(locale, 'Nome de variável inválido. Use letras, números e underscore, sem espaços.', 'Invalid variable name. Use letters, numbers and underscore, no spaces.')
+      error: ct(locale, 'creator_validation_env_var_name_invalid')
     }
   }
   return {}
@@ -328,14 +320,14 @@ export function validateEnvVarName(raw: string, locale: Locale): ValidationResul
 export function validateDllName(raw: string, locale: Locale): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: t(locale, 'Informe o nome da DLL.', 'Provide the DLL name.') }
+    return { error: ct(locale, 'creator_validation_dll_name_required') }
   }
   if (/[\\/]/.test(value)) {
-    return { error: t(locale, 'Informe apenas o nome da DLL, sem path.', 'Provide only the DLL name, without a path.') }
+    return { error: ct(locale, 'creator_validation_dll_name_no_path') }
   }
   if (!/^[A-Za-z0-9_.-]+$/.test(value)) {
     return {
-      error: t(locale, 'Nome de DLL inválido.', 'Invalid DLL name.')
+      error: ct(locale, 'creator_validation_dll_name_invalid')
     }
   }
   return {}
@@ -344,16 +336,16 @@ export function validateDllName(raw: string, locale: Locale): ValidationResult {
 export function validateWrapperExecutable(raw: string, locale: Locale): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: t(locale, 'Informe o executável/comando do wrapper.', 'Provide the wrapper executable/command.') }
+    return { error: ct(locale, 'creator_validation_wrapper_executable_required') }
   }
   if (looksLikeWindowsPath(value)) {
     return {
-      error: t(locale, 'Wrapper deve ser comando/path Linux, não path Windows.', 'Wrapper must be a Linux command/path, not a Windows path.')
+      error: ct(locale, 'creator_validation_wrapper_executable_windows_path')
     }
   }
   if (/\s/.test(value) && !value.startsWith('/')) {
     return {
-      error: t(locale, 'Informe só o executável neste campo. Use o campo de argumentos para os parâmetros.', 'Put only the executable in this field. Use the arguments field for parameters.')
+      error: ct(locale, 'creator_validation_wrapper_executable_args_separate')
     }
   }
   return {}
@@ -364,7 +356,7 @@ export function validateCommandToken(raw: string, locale: Locale): ValidationRes
   if (!value) return {}
   if (looksLikeWindowsPath(value)) {
     return {
-      error: t(locale, 'Esse campo espera comando/path Linux.', 'This field expects a Linux command/path.')
+      error: ct(locale, 'creator_validation_command_linux_expected')
     }
   }
   return {}
@@ -373,13 +365,13 @@ export function validateCommandToken(raw: string, locale: Locale): ValidationRes
 export function validateWindowsFriendlyName(raw: string, locale: Locale, labelPt: string, labelEn: string): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: t(locale, `Informe ${labelPt}.`, `Provide ${labelEn}.`) }
+    return { error: ctf(locale, 'creator_validation_windows_name_required', { label: isPt(locale) ? labelPt : labelEn }) }
   }
   if (/[<>:"/\\|?*\u0000-\u001f]/.test(value)) {
-    return { error: t(locale, `${labelPt} contém caracteres inválidos.`, `${labelEn} contains invalid characters.`) }
+    return { error: ctf(locale, 'creator_validation_windows_name_invalid_chars', { label: isPt(locale) ? labelPt : labelEn }) }
   }
   if (/[. ]$/.test(value)) {
-    return { error: t(locale, `${labelPt} não deve terminar com espaço ou ponto.`, `${labelEn} must not end with a space or dot.`) }
+    return { error: ctf(locale, 'creator_validation_windows_name_trailing', { label: isPt(locale) ? labelPt : labelEn }) }
   }
   return {}
 }
@@ -389,7 +381,7 @@ export function validateWindowsDriveSerial(raw: string, locale: Locale): Validat
   if (!value) return {}
   if (!/^(0x)?[A-Fa-f0-9]{1,16}$/.test(value)) {
     return {
-      error: t(locale, 'Serial inválido. Use hexadecimal (ex.: 1A2B3C4D).', 'Invalid serial. Use hexadecimal (e.g. 1A2B3C4D).')
+      error: ct(locale, 'creator_validation_drive_serial_invalid')
     }
   }
   return {}
@@ -398,16 +390,23 @@ export function validateWindowsDriveSerial(raw: string, locale: Locale): Validat
 export function validateFileOrFolderName(raw: string, locale: Locale, kind: 'file' | 'folder'): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: t(locale, `Informe um ${kind === 'file' ? 'arquivo' : 'nome de pasta'}.`, `Provide a ${kind === 'file' ? 'file' : 'folder name'}.`) }
+    return {
+      error: ct(
+        locale,
+        kind === 'file'
+          ? 'creator_validation_file_name_required'
+          : 'creator_validation_folder_name_required'
+      )
+    }
   }
   if (value === '.' || value === '..') {
-    return { error: t(locale, 'Nome inválido.', 'Invalid name.') }
+    return { error: ct(locale, 'creator_validation_name_invalid') }
   }
   if (/[\\/]/.test(value)) {
-    return { error: t(locale, 'Informe apenas o nome, sem path.', 'Provide only the name, without a path.') }
+    return { error: ct(locale, 'creator_validation_name_no_path') }
   }
   if (/[<>:"|?*\u0000-\u001f]/.test(value)) {
-    return { error: t(locale, 'Nome contém caracteres inválidos.', 'Name contains invalid characters.') }
+    return { error: ct(locale, 'creator_validation_name_invalid_chars') }
   }
   return {}
 }

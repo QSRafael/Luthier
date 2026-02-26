@@ -1,10 +1,18 @@
 import type { Locale } from '../../i18n'
 import { creatorMessagesEnUS } from './creator-copy.en-US'
 import { creatorMessagesPtBR } from './creator-copy.pt-BR'
+import { creatorValidationMessagesEnUS } from './creator-copy.validation.en-US'
+import { creatorValidationMessagesPtBR } from './creator-copy.validation.pt-BR'
 
 export const creatorMessages = {
-  'pt-BR': creatorMessagesPtBR,
-  'en-US': creatorMessagesEnUS,
+  'pt-BR': {
+    ...creatorMessagesPtBR,
+    ...creatorValidationMessagesPtBR
+  },
+  'en-US': {
+    ...creatorMessagesEnUS,
+    ...creatorValidationMessagesEnUS
+  },
 } as const
 
 export type CreatorCopyKey = keyof typeof creatorMessages['pt-BR']

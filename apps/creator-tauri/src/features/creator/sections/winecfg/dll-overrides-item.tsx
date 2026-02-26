@@ -27,6 +27,13 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
   const dllValidation = createMemo(() =>
     dllDraft().dll.trim() ? validateDllName(dllDraft().dll, locale()) : {}
   )
+  const dllDuplicateValidation = createMemo(() => {
+    const dll = dllDraft().dll.trim().toLowerCase()
+    if (!dll) return ''
+    const duplicate = config().winecfg.dll_overrides.some((item) => item.dll.trim().toLowerCase() === dll)
+    if (!duplicate) return ''
+    return ct('creator_validation_duplicate_dll_override')
+  })
 
   return (
             <FieldShell
@@ -136,6 +143,9 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                         {dllValidation().error ?? dllValidation().hint}
                       </p>
                     </Show>
+                    <Show when={dllDuplicateValidation()}>
+                      <p class="text-xs text-destructive">{dllDuplicateValidation()}</p>
+                    </Show>
                     <Select
                       value={dllDraft().mode}
                       onInput={(e) =>
@@ -155,10 +165,10 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                     </Button>
                     <Button
                       type="button"
-                      disabled={!dllDraft().dll.trim() || !!dllValidation().error}
+                      disabled={!dllDraft().dll.trim() || !!dllValidation().error || !!dllDuplicateValidation()}
                       onClick={() => {
                         const draft = dllDraft()
-                        if (!draft.dll.trim() || dllValidation().error) return
+                        if (!draft.dll.trim() || dllValidation().error || dllDuplicateValidation()) return
                         patchConfig((prev) => ({
                           ...prev,
                           winecfg: {

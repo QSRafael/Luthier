@@ -7,7 +7,7 @@ import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
 import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
-import { sanitizeDigits, validatePositiveIntegerString } from '../../creator-field-validation'
+import { validatePositiveIntegerString } from '../../creator-field-validation'
 
 export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionProps) {
   const {
@@ -105,7 +105,7 @@ export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionPr
                           placeholder="1280"
                           inputMode="numeric"
                           class={virtualDesktopWidthValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
-                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('width', sanitizeDigits(e.currentTarget.value))}
+                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('width', e.currentTarget.value)}
                         />
                         <span class="text-sm font-semibold text-muted-foreground">x</span>
                         <Input
@@ -113,7 +113,7 @@ export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionPr
                           placeholder="720"
                           inputMode="numeric"
                           class={virtualDesktopHeightValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
-                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('height', sanitizeDigits(e.currentTarget.value))}
+                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('height', e.currentTarget.value)}
                         />
                       </div>
                       <Show when={virtualDesktopWidthValidation().error || virtualDesktopHeightValidation().error}>

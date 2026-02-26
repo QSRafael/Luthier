@@ -1,5 +1,6 @@
 import { createMemo, For, Show } from 'solid-js'
 import { IconAlertCircle, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
+import { toast } from 'solid-sonner'
 
 import {
   FeatureStateField,
@@ -114,6 +115,26 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
   const mountTargetValidation = createMemo(() =>
     mountDraft().target_windows_path.trim() ? validateWindowsPath(mountDraft().target_windows_path, locale()) : {}
   )
+  const mountDuplicateValidation = createMemo(() => {
+    const source = mountDraft().source_relative_path.trim()
+    const target = mountDraft().target_windows_path.trim().toLowerCase()
+    if (!source || !target) return ''
+    const duplicateTarget = config().folder_mounts.some(
+      (item) => item.target_windows_path.trim().toLowerCase() === target
+    )
+    if (duplicateTarget) {
+      return ct('creator_validation_duplicate_mount_target')
+    }
+    const duplicatePair = config().folder_mounts.some(
+      (item) =>
+        item.source_relative_path.trim() === source &&
+        item.target_windows_path.trim().toLowerCase() === target
+    )
+    if (duplicatePair) {
+      return ct('creator_validation_duplicate_mount')
+    }
+    return ''
+  })
 
   return (
           <section class="stack">
@@ -456,12 +477,7 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                 if (validation.error) return validation
                 const duplicate = items.some((item) => item.trim() === value.trim())
                 if (duplicate) {
-                  return {
-                    error:
-                      locale() === 'pt-BR'
-                        ? 'Esse arquivo já foi adicionado.'
-                        : 'This file is already listed.'
-                  }
+                  return { error: ct('creator_validation_duplicate_required_file') }
                 }
                 return validation.hint ? validation : undefined
               }}
@@ -753,6 +769,9 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                         {mountTargetValidation().error ?? mountTargetValidation().hint}
                       </p>
                     </Show>
+                    <Show when={mountDuplicateValidation()}>
+                      <p class="text-xs text-destructive">{mountDuplicateValidation()}</p>
+                    </Show>
 
                     <label class="flex items-center gap-2 text-sm">
                       <input
@@ -779,7 +798,8 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                         !mountDraft().source_relative_path.trim() ||
                         !mountDraft().target_windows_path.trim() ||
                         !!mountSourceValidation().error ||
-                        !!mountTargetValidation().error
+                        !!mountTargetValidation().error ||
+                        !!mountDuplicateValidation()
                       }
                       onClick={() => {
                         const draft = mountDraft()
@@ -787,23 +807,47 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                           !draft.source_relative_path.trim() ||
                           !draft.target_windows_path.trim() ||
                           mountSourceValidation().error ||
-                          mountTargetValidation().error
+                          mountTargetValidation().error ||
+                          mountDuplicateValidation()
                         ) {
                           return
                         }
                         const source = draft.source_relative_path.trim()
                         const target = draft.target_windows_path.trim()
+                        const addedMount = {
+                          ...draft,
+                          source_relative_path: source,
+                          target_windows_path: target
+                        }
                         patchConfig((prev) => ({
                           ...prev,
                           folder_mounts: [
                             ...prev.folder_mounts,
-                            {
-                              ...draft,
-                              source_relative_path: source,
-                              target_windows_path: target
-                            }
+                            addedMount
                           ]
                         }))
+                        toast(ct('creator_mount_added'), {
+                          action: {
+                            label: ct('creator_undo'),
+                            onClick: () =>
+                              patchConfig((prev) => {
+                                const index = [...prev.folder_mounts]
+                                  .map((item, idx) => ({ item, idx }))
+                                  .reverse()
+                                  .find(
+                                    ({ item }) =>
+                                      item.source_relative_path === addedMount.source_relative_path &&
+                                      item.target_windows_path === addedMount.target_windows_path &&
+                                      item.create_source_if_missing === addedMount.create_source_if_missing
+                                  )?.idx
+                                if (typeof index !== 'number') return prev
+                                return {
+                                  ...prev,
+                                  folder_mounts: removeAt(prev.folder_mounts, index)
+                                }
+                              })
+                          }
+                        })
                         setMountDraft({
                           source_relative_path: '',
                           target_windows_path: '',

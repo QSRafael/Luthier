@@ -92,9 +92,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
       (item) => item.path.trim().toLowerCase() === path && item.name.trim().toLowerCase() === name
     )
     if (!duplicate) return ''
-    return locale() === 'pt-BR'
-      ? 'Já existe uma entrada com o mesmo path e nome.'
-      : 'An entry with the same path and name already exists.'
+    return ct('creator_validation_duplicate_registry_key')
   })
 
   const extraDependencyCommandValidation = createMemo(() => {
@@ -117,6 +115,15 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
       if (result.error) return result.error
     }
     return ''
+  })
+  const extraDependencyDuplicateValidation = createMemo(() => {
+    const name = extraDependencyDraft().name.trim().toLowerCase()
+    if (!name) return ''
+    const duplicate = config().extra_system_dependencies.some(
+      (item) => item.name.trim().toLowerCase() === name
+    )
+    if (!duplicate) return ''
+    return ct('creator_validation_duplicate_extra_dependency')
   })
 
   return (
@@ -579,6 +586,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                     <Input
                       value={extraDependencyDraft().name}
                       placeholder={ct('creator_dependency_name')}
+                      class={extraDependencyDuplicateValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
                           ...prev,
@@ -586,6 +594,9 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         }))
                       }
                     />
+                    <Show when={extraDependencyDuplicateValidation()}>
+                      <p class="text-xs text-destructive">{extraDependencyDuplicateValidation()}</p>
+                    </Show>
 
                     <Input
                       value={extraDependencyDraft().command}
@@ -641,6 +652,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       type="button"
                       disabled={
                         !extraDependencyDraft().name.trim() ||
+                        !!extraDependencyDuplicateValidation() ||
                         !!extraDependencyCommandValidation() ||
                         !!extraDependencyEnvVarsValidation() ||
                         !!extraDependencyPathsValidation()
@@ -649,6 +661,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         const draft = extraDependencyDraft()
                         if (
                           !draft.name.trim() ||
+                          extraDependencyDuplicateValidation() ||
                           extraDependencyCommandValidation() ||
                           extraDependencyEnvVarsValidation() ||
                           extraDependencyPathsValidation()

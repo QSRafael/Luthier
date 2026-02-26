@@ -35,6 +35,15 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
       ? validateLinuxPath(wineDesktopFolderDraft().linux_path, locale(), true)
       : {}
   )
+  const desktopFolderDuplicateValidation = createMemo(() => {
+    const key = wineDesktopFolderDraft().folder_key.trim().toLowerCase()
+    if (!key) return ''
+    const duplicate = config().winecfg.desktop_folders.some(
+      (item) => item.folder_key.trim().toLowerCase() === key
+    )
+    if (!duplicate) return ''
+    return ct('creator_validation_duplicate_desktop_folder_type')
+  })
 
   return (
               <AccordionSection
@@ -141,6 +150,9 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                                 {desktopFolderLinuxPathValidation().error ?? desktopFolderLinuxPathValidation().hint}
                               </p>
                             </Show>
+                            <Show when={desktopFolderDuplicateValidation()}>
+                              <p class="text-xs text-destructive">{desktopFolderDuplicateValidation()}</p>
+                            </Show>
                             <p class="text-xs text-muted-foreground">
                               {ct('creator_prefer_generic_paths_without_a_fixed_username_when_possi')}
                             </p>
@@ -155,6 +167,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                               disabled={
                                 !wineDesktopFolderDraft().shortcut_name.trim() ||
                                 !wineDesktopFolderDraft().linux_path.trim() ||
+                                !!desktopFolderDuplicateValidation() ||
                                 !!shortcutNameValidation().error ||
                                 !!desktopFolderLinuxPathValidation().error
                               }
@@ -163,6 +176,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                                 if (
                                   !draft.shortcut_name.trim() ||
                                   !draft.linux_path.trim() ||
+                                  desktopFolderDuplicateValidation() ||
                                   shortcutNameValidation().error ||
                                   desktopFolderLinuxPathValidation().error
                                 ) {

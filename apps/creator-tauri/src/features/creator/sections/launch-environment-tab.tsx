@@ -55,6 +55,16 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
   const wrapperExecutableValidation = createMemo(() =>
     wrapperDraft().executable.trim() ? validateWrapperExecutable(wrapperDraft().executable, locale()) : {}
   )
+  const wrapperDuplicateValidation = createMemo(() => {
+    const executable = wrapperDraft().executable.trim()
+    const args = wrapperDraft().args.trim()
+    if (!executable) return ''
+    const duplicate = config().compatibility.wrapper_commands.some(
+      (item) => item.executable.trim() === executable && item.args.trim() === args
+    )
+    if (!duplicate) return ''
+    return ct('creator_validation_duplicate_wrapper')
+  })
 
   return (
           <section class="stack">
@@ -183,6 +193,9 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                         }))
                       }
                     />
+                    <Show when={wrapperDuplicateValidation()}>
+                      <p class="text-xs text-destructive">{wrapperDuplicateValidation()}</p>
+                    </Show>
                   </div>
 
                   <DialogFooter>
@@ -191,10 +204,14 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                     </Button>
                     <Button
                       type="button"
-                      disabled={!wrapperDraft().executable.trim() || !!wrapperExecutableValidation().error}
+                      disabled={
+                        !wrapperDraft().executable.trim() ||
+                        !!wrapperExecutableValidation().error ||
+                        !!wrapperDuplicateValidation()
+                      }
                       onClick={() => {
                         const draft = wrapperDraft()
-                        if (!draft.executable.trim() || wrapperExecutableValidation().error) return
+                        if (!draft.executable.trim() || wrapperExecutableValidation().error || wrapperDuplicateValidation()) return
                         patchConfig((prev) => ({
                           ...prev,
                           compatibility: {
@@ -247,12 +264,7 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
 
                 const duplicate = items.some((item) => item.key.trim() === draft.key.trim())
                 if (duplicate) {
-                  return {
-                    formError:
-                      locale() === 'pt-BR'
-                        ? 'Já existe uma variável com esse nome.'
-                        : 'A variable with this name already exists.'
-                  }
+                  return { formError: ct('creator_validation_duplicate_env_var') }
                 }
 
                 return undefined

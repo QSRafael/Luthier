@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js'
+import { toast } from 'solid-sonner'
 
 import { invokeCommand, pickFile, pickFolder } from '../../api/tauri'
 import type { SelectOption } from '../../components/form/FormControls'
@@ -827,28 +828,22 @@ export function useCreatorController() {
 
   async function hashExecutablePath(absoluteExePath: string) {
     if (!absoluteExePath.trim()) {
-      setStatusMessage(ct('creator_select_an_executable_before_hashing'))
       return
     }
 
     if (!isLikelyAbsolutePath(absoluteExePath)) {
-      setStatusMessage(
-        ct('creator_hashing_requires_an_absolute_path_in_browser_lan_mode_us')
-      )
       return
     }
 
     try {
       setHashingExePath(absoluteExePath)
       setLastHashedExePath(absoluteExePath)
-      setStatusMessage(t('msgHashStart'))
       const result = await invokeCommand<{ sha256_hex: string }>('cmd_hash_executable', {
         executable_path: absoluteExePath
       })
       if (exePath().trim() === absoluteExePath) {
         patchConfig((prev) => ({ ...prev, exe_hash: result.sha256_hex }))
       }
-      setStatusMessage(t('msgHashOk'))
     } catch (error) {
       setStatusMessage(`${t('msgHashFail')} ${String(error)}`)
     } finally {
@@ -865,7 +860,6 @@ export function useCreatorController() {
   const runTest = async () => {
     try {
       setTestingConfiguration(true)
-      setStatusMessage(t('msgTestStart'))
       const result = await invokeCommand<unknown>('cmd_test_configuration', {
         config_json: configPreview(),
         game_root: gameRoot()
@@ -888,7 +882,6 @@ export function useCreatorController() {
 
     try {
       setCreatingExecutable(true)
-      setStatusMessage(t('msgCreateStart'))
       const result = await invokeCommand<unknown>('cmd_create_executable', {
         base_binary_path: ORCHESTRATOR_BASE_PATH,
         output_path: outputPath(),
@@ -944,9 +937,6 @@ export function useCreatorController() {
     if (!selected) return
 
     if (!hasWindowsLauncherExtension(selected)) {
-      setStatusMessage(
-        ct('creator_select_a_valid_windows_launcher_exe_bat_cmd_com')
-      )
       return
     }
 
@@ -985,9 +975,6 @@ export function useCreatorController() {
 
     const currentExe = exePath().trim()
     if (currentExe && relativeFromRoot(selected, currentExe) === null) {
-      setStatusMessage(
-        ct('creator_the_selected_game_root_must_contain_the_main_executable')
-      )
       return
     }
 
@@ -1009,9 +996,6 @@ export function useCreatorController() {
 
     const relative = relativeFromRoot(gameRoot(), selected)
     if (!relative) {
-      setStatusMessage(
-        ct('creator_selected_file_must_be_inside_the_game_root_folder')
-      )
       return null
     }
 
@@ -1026,9 +1010,6 @@ export function useCreatorController() {
 
     const relative = relativeFromRoot(gameRoot(), selected)
     if (!relative) {
-      setStatusMessage(
-        ct('creator_selected_folder_must_be_inside_game_root_folder')
-      )
       return
     }
 
@@ -1049,9 +1030,6 @@ export function useCreatorController() {
 
     const relative = relativeFromRoot(gameRoot(), selected)
     if (!relative) {
-      setStatusMessage(
-        ct('creator_selected_folder_must_be_inside_game_root_folder')
-      )
       return null
     }
 
@@ -1155,6 +1133,12 @@ export function useCreatorController() {
 
     const normalizedGameName = gameName.toLowerCase()
     const cachedCandidates = heroImageSearchCandidates()
+    const previousHeroSnapshot = {
+      hero_image_url: config().splash.hero_image_url,
+      hero_image_data_url: config().splash.hero_image_data_url,
+      lastPreparedHeroImageUrl: lastPreparedHeroImageUrl(),
+      searchIndex: heroImageSearchIndex()
+    }
     if (canSearchAnotherHeroImage() && heroImageSearchCacheGameName() === normalizedGameName) {
       const currentUrl = config().splash.hero_image_url.trim()
       const currentIndex = cachedCandidates.findIndex((candidate) => candidate === currentUrl)
@@ -1165,6 +1149,23 @@ export function useCreatorController() {
       setHeroImageUrl(nextUrl)
       setStatusMessage(ct('creator_hero_image_found_processing_preview'))
       await prepareHeroImageFromUrl(nextUrl)
+      toast(ct('creator_hero_image_updated'), {
+        action: {
+          label: ct('creator_undo'),
+          onClick: () => {
+            patchConfig((prev) => ({
+              ...prev,
+              splash: {
+                ...prev.splash,
+                hero_image_url: previousHeroSnapshot.hero_image_url,
+                hero_image_data_url: previousHeroSnapshot.hero_image_data_url
+              }
+            }))
+            setLastPreparedHeroImageUrl(previousHeroSnapshot.lastPreparedHeroImageUrl)
+            setHeroImageSearchIndex(previousHeroSnapshot.searchIndex)
+          }
+        }
+      })
       return
     }
 
@@ -1186,6 +1187,23 @@ export function useCreatorController() {
       setHeroImageUrl(search.image_url)
       setStatusMessage(ct('creator_hero_image_found_processing_preview'))
       await prepareHeroImageFromUrl(search.image_url)
+      toast(ct('creator_hero_image_updated'), {
+        action: {
+          label: ct('creator_undo'),
+          onClick: () => {
+            patchConfig((prev) => ({
+              ...prev,
+              splash: {
+                ...prev.splash,
+                hero_image_url: previousHeroSnapshot.hero_image_url,
+                hero_image_data_url: previousHeroSnapshot.hero_image_data_url
+              }
+            }))
+            setLastPreparedHeroImageUrl(previousHeroSnapshot.lastPreparedHeroImageUrl)
+            setHeroImageSearchIndex(previousHeroSnapshot.searchIndex)
+          }
+        }
+      })
     } catch (error) {
       setStatusMessage(ctf('creator_failed_to_search_hero_image_error', { error: String(error) }))
     } finally {
@@ -1320,9 +1338,19 @@ export function useCreatorController() {
   }
 
   const addWinetricksVerb = (verb: string) => {
+    let added = false
     patchConfig((prev) => {
       if (prev.dependencies.includes(verb)) return prev
+      added = true
       return { ...prev, dependencies: [...prev.dependencies, verb] }
+    })
+    if (!added) return
+    toast(ct('creator_winetricks_verb_added'), {
+      description: verb,
+      action: {
+        label: ct('creator_undo'),
+        onClick: () => removeWinetricksVerb(verb)
+      }
     })
   }
 
@@ -1336,9 +1364,6 @@ export function useCreatorController() {
   const addWinetricksFromSearch = () => {
     const exact = winetricksExactMatch()
     if (!exact) {
-      setStatusMessage(
-        ct('creator_type_at_least_2_characters_and_select_a_valid_catalog_ve')
-      )
       return
     }
 

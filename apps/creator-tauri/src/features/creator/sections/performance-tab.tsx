@@ -34,7 +34,7 @@ import {
   SwitchChoiceCard,
   type CreatorPageSectionProps
 } from '../creator-page-shared'
-import { sanitizeDigits, validatePositiveIntegerString } from '../creator-field-validation'
+import { validatePositiveIntegerString } from '../creator-field-validation'
 
 export function PerformanceTabSection(props: CreatorPageSectionProps) {
     const {
@@ -226,7 +226,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                   ...prev.environment,
                                   gamescope: {
                                     ...prev.environment.gamescope,
-                                    game_width: sanitizeDigits(e.currentTarget.value)
+                                    game_width: e.currentTarget.value
                                   }
                                 }
                               }))
@@ -245,7 +245,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                   ...prev.environment,
                                   gamescope: {
                                     ...prev.environment.gamescope,
-                                    game_height: sanitizeDigits(e.currentTarget.value)
+                                    game_height: e.currentTarget.value
                                   }
                                 }
                               }))
@@ -274,7 +274,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                             disabled={gamescopeUsesMonitorResolution()}
                             inputMode="numeric"
                             class={gamescopeOutputWidthValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
-                            onInput={(e) => setGamescopeOutputWidth(sanitizeDigits(e.currentTarget.value))}
+                            onInput={(e) => setGamescopeOutputWidth(e.currentTarget.value)}
                           />
                           <span class="text-sm font-semibold text-muted-foreground">x</span>
                           <Input
@@ -283,7 +283,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                             disabled={gamescopeUsesMonitorResolution()}
                             inputMode="numeric"
                             class={gamescopeOutputHeightValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
-                            onInput={(e) => setGamescopeOutputHeight(sanitizeDigits(e.currentTarget.value))}
+                            onInput={(e) => setGamescopeOutputHeight(e.currentTarget.value)}
                           />
                         </div>
                         <Show
@@ -399,7 +399,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                 ...prev.environment,
                                 gamescope: {
                                   ...prev.environment.gamescope,
-                                  fps_limiter: sanitizeDigits(value)
+                                  fps_limiter: value
                                 }
                               }
                             }))
@@ -419,7 +419,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                 ...prev.environment,
                                 gamescope: {
                                   ...prev.environment.gamescope,
-                                  fps_limiter_no_focus: sanitizeDigits(value)
+                                  fps_limiter_no_focus: value
                                 }
                               }
                             }))
