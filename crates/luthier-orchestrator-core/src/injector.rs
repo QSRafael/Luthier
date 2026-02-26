@@ -320,6 +320,7 @@ mod tests {
             registry_keys: Vec::new(),
             integrity_files: vec!["./data/core.dll".to_string()],
             folder_mounts: Vec::new(),
+            splash: SplashConfig::default(),
             scripts: ScriptsConfig {
                 pre_launch: String::new(),
                 post_launch: String::new(),

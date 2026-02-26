@@ -154,7 +154,7 @@ pub trait PeIconReaderPort: Send + Sync {
     fn read_ico_icon_groups(&self, executable_bytes: &[u8]) -> BackendResult<Vec<Vec<u8>>>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegistryParseOutput {
     pub entries: Vec<RegistryKey>,
     pub warnings: Vec<String>,

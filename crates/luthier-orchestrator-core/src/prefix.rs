@@ -273,6 +273,7 @@ mod tests {
             registry_keys: vec![],
             integrity_files: vec![],
             folder_mounts: vec![],
+            splash: SplashConfig::default(),
             scripts: ScriptsConfig {
                 pre_launch: String::new(),
                 post_launch: String::new(),
