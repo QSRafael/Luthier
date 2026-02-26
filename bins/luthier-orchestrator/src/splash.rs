@@ -125,7 +125,7 @@ fn t(key: SplashTextKey) -> &'static str {
 fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
     match locale {
         SplashLocale::PtBr => match key {
-            SplashTextKey::WindowTitle => "Game Orchestrator",
+            SplashTextKey::WindowTitle => "Luthier",
             SplashTextKey::WindowDependencies => "Dependencias",
             SplashTextKey::StatusPreparingExecution => "Preparando execucao",
             SplashTextKey::StatusPreparingEnvironment => "Preparando ambiente",
@@ -174,7 +174,7 @@ fn t_for(locale: SplashLocale, key: SplashTextKey) -> &'static str {
             SplashTextKey::SpawnFailed => "Falha ao iniciar",
         },
         SplashLocale::EnUs => match key {
-            SplashTextKey::WindowTitle => "Game Orchestrator",
+            SplashTextKey::WindowTitle => "Luthier",
             SplashTextKey::WindowDependencies => "Dependencies",
             SplashTextKey::StatusPreparingExecution => "Preparing execution",
             SplashTextKey::StatusPreparingEnvironment => "Preparing environment",

@@ -61,8 +61,8 @@ fn print_doctor_human_summary(
     report: &DoctorReport,
     prefix_plan: Option<&luthier_orchestrator_core::prefix::PrefixSetupPlan>,
 ) {
-    println!("Game Orchestrator Doctor");
-    println!("----------------------");
+    println!("Luthier Orchestrator Doctor");
+    println!("---------------------------");
     println!(
         "{} Runtime: {}",
         status_icon(report.runtime.runtime_status),
