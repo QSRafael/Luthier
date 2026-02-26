@@ -1,115 +1,134 @@
 #[cfg(feature = "tauri-commands")]
+use std::path::PathBuf;
+
+#[cfg(feature = "tauri-commands")]
+use luthier_backend::{
+    CreateExecutableInput, CreateExecutableOutput, ExtractExecutableIconInput,
+    ExtractExecutableIconOutput, HashExeInput, HashExeOutput, ImportRegistryFileInput,
+    ImportRegistryFileOutput, ListChildDirectoriesInput, ListChildDirectoriesOutput,
+    ListDirectoryEntriesInput, ListDirectoryEntriesOutput, PrepareHeroImageInput,
+    PrepareHeroImageOutput, SearchHeroImageInput, SearchHeroImageOutput,
+    TestConfigurationInput, TestConfigurationOutput, create_executable_with_base_hints,
+    extract_executable_icon, hash_executable, import_registry_file, list_child_directories,
+    list_directory_entries, prepare_hero_image, search_hero_image, test_configuration,
+    winetricks_available, WinetricksAvailableOutput,
+};
+#[cfg(feature = "tauri-commands")]
+use tauri::async_runtime::spawn_blocking;
+
+#[cfg(feature = "tauri-commands")]
+type CommandResult<T> = Result<T, String>;
+
+#[cfg(feature = "tauri-commands")]
+fn collect_orchestrator_base_hints(app: &tauri::AppHandle) -> Vec<PathBuf> {
+    let resolver = app.path_resolver();
+    let mut hints = Vec::<PathBuf>::new();
+
+    if let Some(path) = resolver.resolve_resource("luthier-orchestrator-base/luthier-orchestrator") {
+        hints.push(path);
+    }
+    if let Some(path) = resolver.resource_dir() {
+        hints.push(path.join("luthier-orchestrator-base/luthier-orchestrator"));
+    }
+    if let Some(path) = resolver.app_data_dir() {
+        hints.push(path.join("luthier-orchestrator-base/luthier-orchestrator"));
+    }
+
+    hints
+}
+
+#[cfg(feature = "tauri-commands")]
+async fn run_blocking_command<T, F>(task_name: &'static str, f: F) -> CommandResult<T>
+where
+    T: Send + 'static,
+    F: FnOnce() -> CommandResult<T> + Send + 'static,
+{
+    spawn_blocking(f)
+        .await
+        .map_err(|err| format!("failed to join {task_name} task: {err}"))?
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_create_executable(
+    app: tauri::AppHandle,
+    input: CreateExecutableInput,
+) -> CommandResult<CreateExecutableOutput> {
+    let hints = collect_orchestrator_base_hints(&app);
+    run_blocking_command("create executable", move || {
+        create_executable_with_base_hints(input, &hints)
+    })
+    .await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_hash_executable(input: HashExeInput) -> CommandResult<HashExeOutput> {
+    run_blocking_command("hash", move || hash_executable(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_extract_executable_icon(
+    input: ExtractExecutableIconInput,
+) -> CommandResult<ExtractExecutableIconOutput> {
+    run_blocking_command("icon extraction", move || extract_executable_icon(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_test_configuration(
+    input: TestConfigurationInput,
+) -> CommandResult<TestConfigurationOutput> {
+    run_blocking_command("test configuration", move || test_configuration(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_winetricks_available() -> CommandResult<WinetricksAvailableOutput> {
+    run_blocking_command("winetricks", winetricks_available).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_import_registry_file(
+    input: ImportRegistryFileInput,
+) -> CommandResult<ImportRegistryFileOutput> {
+    run_blocking_command("registry import", move || import_registry_file(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_list_child_directories(
+    input: ListChildDirectoriesInput,
+) -> CommandResult<ListChildDirectoriesOutput> {
+    run_blocking_command("list child directories", move || list_child_directories(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_list_directory_entries(
+    input: ListDirectoryEntriesInput,
+) -> CommandResult<ListDirectoryEntriesOutput> {
+    run_blocking_command("list directory entries", move || list_directory_entries(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_search_hero_image(input: SearchHeroImageInput) -> CommandResult<SearchHeroImageOutput> {
+    run_blocking_command("hero search", move || search_hero_image(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_prepare_hero_image(
+    input: PrepareHeroImageInput,
+) -> CommandResult<PrepareHeroImageOutput> {
+    run_blocking_command("hero image processing", move || prepare_hero_image(input)).await
+}
+
+#[cfg(feature = "tauri-commands")]
 fn main() {
-    use std::path::PathBuf;
-    use tauri::async_runtime::spawn_blocking;
-
-    use luthier_backend::{
-        create_executable_with_base_hints, extract_executable_icon, hash_executable,
-        import_registry_file, list_child_directories, list_directory_entries, prepare_hero_image,
-        search_hero_image, test_configuration, winetricks_available, CreateExecutableInput,
-        CreateExecutableOutput, ExtractExecutableIconInput, ExtractExecutableIconOutput,
-        HashExeInput, HashExeOutput, ImportRegistryFileInput, ImportRegistryFileOutput,
-        ListChildDirectoriesInput, ListChildDirectoriesOutput, ListDirectoryEntriesInput,
-        ListDirectoryEntriesOutput, PrepareHeroImageInput, PrepareHeroImageOutput,
-        SearchHeroImageInput, SearchHeroImageOutput, TestConfigurationInput,
-        TestConfigurationOutput, WinetricksAvailableOutput,
-    };
-    #[tauri::command]
-    async fn cmd_create_executable(
-        app: tauri::AppHandle,
-        input: CreateExecutableInput,
-    ) -> Result<CreateExecutableOutput, String> {
-        let resolver = app.path_resolver();
-        let mut hints = Vec::<PathBuf>::new();
-
-        if let Some(path) = resolver.resolve_resource("luthier-orchestrator-base/luthier-orchestrator") {
-            hints.push(path);
-        }
-        if let Some(path) = resolver.resource_dir() {
-            hints.push(path.join("luthier-orchestrator-base/luthier-orchestrator"));
-        }
-        if let Some(path) = resolver.app_data_dir() {
-            hints.push(path.join("luthier-orchestrator-base/luthier-orchestrator"));
-        }
-
-        spawn_blocking(move || create_executable_with_base_hints(input, &hints))
-            .await
-            .map_err(|err| format!("failed to join create executable task: {err}"))?
-    }
-
-    #[tauri::command]
-    async fn cmd_hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
-        spawn_blocking(move || hash_executable(input))
-            .await
-            .map_err(|err| format!("failed to join hash task: {err}"))?
-    }
-
-    #[tauri::command]
-    async fn cmd_extract_executable_icon(
-        input: ExtractExecutableIconInput,
-    ) -> Result<ExtractExecutableIconOutput, String> {
-        spawn_blocking(move || extract_executable_icon(input))
-            .await
-            .map_err(|err| format!("failed to join icon extraction task: {err}"))?
-    }
-
-    #[tauri::command]
-    async fn cmd_test_configuration(
-        input: TestConfigurationInput,
-    ) -> Result<TestConfigurationOutput, String> {
-        spawn_blocking(move || test_configuration(input))
-            .await
-            .map_err(|err| format!("failed to join test configuration task: {err}"))?
-    }
-
-    #[tauri::command]
-    async fn cmd_winetricks_available() -> Result<WinetricksAvailableOutput, String> {
-        spawn_blocking(winetricks_available)
-            .await
-            .map_err(|err| format!("failed to join winetricks task: {err}"))?
-    }
-
-    #[tauri::command]
-    async fn cmd_import_registry_file(
-        input: ImportRegistryFileInput,
-    ) -> Result<ImportRegistryFileOutput, String> {
-        spawn_blocking(move || import_registry_file(input))
-            .await
-            .map_err(|err| format!("failed to join registry import task: {err}"))?
-    }
-
-    #[tauri::command]
-    fn cmd_list_child_directories(
-        input: ListChildDirectoriesInput,
-    ) -> Result<ListChildDirectoriesOutput, String> {
-        list_child_directories(input)
-    }
-
-    #[tauri::command]
-    fn cmd_list_directory_entries(
-        input: ListDirectoryEntriesInput,
-    ) -> Result<ListDirectoryEntriesOutput, String> {
-        list_directory_entries(input)
-    }
-
-    #[tauri::command]
-    async fn cmd_search_hero_image(
-        input: SearchHeroImageInput,
-    ) -> Result<SearchHeroImageOutput, String> {
-        spawn_blocking(move || search_hero_image(input))
-            .await
-            .map_err(|err| format!("failed to join hero search task: {err}"))?
-    }
-
-    #[tauri::command]
-    async fn cmd_prepare_hero_image(
-        input: PrepareHeroImageInput,
-    ) -> Result<PrepareHeroImageOutput, String> {
-        spawn_blocking(move || prepare_hero_image(input))
-            .await
-            .map_err(|err| format!("failed to join hero image processing task: {err}"))?
-    }
-
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             cmd_create_executable,
