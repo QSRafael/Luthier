@@ -37,7 +37,6 @@ export function tabLabel(tab: LuthierTab, controller: LuthierController) {
   if (tab === 'prefix') return ct('luthier_dependencies')
   if (tab === 'winecfg') return 'Winecfg'
   if (tab === 'wrappers') return ct('luthier_launch_and_environment')
-  if (tab === 'scripts') return ct('luthier_label_scripts')
   return ct('luthier_review_and_generate')
 }
 

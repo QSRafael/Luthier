@@ -13,7 +13,6 @@ export type LuthierTab =
   | 'prefix'
   | 'winecfg'
   | 'wrappers'
-  | 'scripts'
   | 'review'
 
 export type GameConfig = {
