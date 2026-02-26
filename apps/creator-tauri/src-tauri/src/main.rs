@@ -1,6 +1,7 @@
 #[cfg(feature = "tauri-commands")]
 fn main() {
     use std::path::PathBuf;
+    use tauri::async_runtime::spawn_blocking;
 
     use creator_tauri_backend::{
         create_executable_with_base_hints, extract_executable_icon, hash_executable,
@@ -13,7 +14,7 @@ fn main() {
         TestConfigurationOutput, WinetricksAvailableOutput,
     };
     #[tauri::command]
-    fn cmd_create_executable(
+    async fn cmd_create_executable(
         app: tauri::AppHandle,
         input: CreateExecutableInput,
     ) -> Result<CreateExecutableOutput, String> {
@@ -30,38 +31,50 @@ fn main() {
             hints.push(path.join("orchestrator-base/orchestrator"));
         }
 
-        create_executable_with_base_hints(input, &hints)
+        spawn_blocking(move || create_executable_with_base_hints(input, &hints))
+            .await
+            .map_err(|err| format!("failed to join create executable task: {err}"))?
     }
 
     #[tauri::command]
-    fn cmd_hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
-        hash_executable(input)
+    async fn cmd_hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
+        spawn_blocking(move || hash_executable(input))
+            .await
+            .map_err(|err| format!("failed to join hash task: {err}"))?
     }
 
     #[tauri::command]
-    fn cmd_extract_executable_icon(
+    async fn cmd_extract_executable_icon(
         input: ExtractExecutableIconInput,
     ) -> Result<ExtractExecutableIconOutput, String> {
-        extract_executable_icon(input)
+        spawn_blocking(move || extract_executable_icon(input))
+            .await
+            .map_err(|err| format!("failed to join icon extraction task: {err}"))?
     }
 
     #[tauri::command]
-    fn cmd_test_configuration(
+    async fn cmd_test_configuration(
         input: TestConfigurationInput,
     ) -> Result<TestConfigurationOutput, String> {
-        test_configuration(input)
+        spawn_blocking(move || test_configuration(input))
+            .await
+            .map_err(|err| format!("failed to join test configuration task: {err}"))?
     }
 
     #[tauri::command]
-    fn cmd_winetricks_available() -> Result<WinetricksAvailableOutput, String> {
-        winetricks_available()
+    async fn cmd_winetricks_available() -> Result<WinetricksAvailableOutput, String> {
+        spawn_blocking(winetricks_available)
+            .await
+            .map_err(|err| format!("failed to join winetricks task: {err}"))?
     }
 
     #[tauri::command]
-    fn cmd_import_registry_file(
+    async fn cmd_import_registry_file(
         input: ImportRegistryFileInput,
     ) -> Result<ImportRegistryFileOutput, String> {
-        import_registry_file(input)
+        spawn_blocking(move || import_registry_file(input))
+            .await
+            .map_err(|err| format!("failed to join registry import task: {err}"))?
     }
 
     #[tauri::command]
@@ -72,15 +85,21 @@ fn main() {
     }
 
     #[tauri::command]
-    fn cmd_search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageOutput, String> {
-        search_hero_image(input)
+    async fn cmd_search_hero_image(
+        input: SearchHeroImageInput,
+    ) -> Result<SearchHeroImageOutput, String> {
+        spawn_blocking(move || search_hero_image(input))
+            .await
+            .map_err(|err| format!("failed to join hero search task: {err}"))?
     }
 
     #[tauri::command]
-    fn cmd_prepare_hero_image(
+    async fn cmd_prepare_hero_image(
         input: PrepareHeroImageInput,
     ) -> Result<PrepareHeroImageOutput, String> {
-        prepare_hero_image(input)
+        spawn_blocking(move || prepare_hero_image(input))
+            .await
+            .map_err(|err| format!("failed to join hero image processing task: {err}"))?
     }
 
     tauri::Builder::default()

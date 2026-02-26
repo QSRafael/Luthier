@@ -80,15 +80,6 @@ const dedupeUrls = (values: string[]) => {
   return out
 }
 
-const yieldToUiFrame = () =>
-  new Promise<void>((resolve) => {
-    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
-      setTimeout(resolve, 0)
-      return
-    }
-    window.requestAnimationFrame(() => resolve())
-  })
-
 export function useCreatorController() {
   const initialLocale = detectLocale()
   const [locale, setLocale] = createSignal<Locale>(initialLocale)
@@ -533,7 +524,6 @@ export function useCreatorController() {
       setHashingExePath(absoluteExePath)
       setLastHashedExePath(absoluteExePath)
       setStatusMessage(t('msgHashStart'))
-      await yieldToUiFrame()
       const result = await invokeCommand<{ sha256_hex: string }>('cmd_hash_executable', {
         executable_path: absoluteExePath
       })
@@ -558,7 +548,6 @@ export function useCreatorController() {
     try {
       setTestingConfiguration(true)
       setStatusMessage(t('msgTestStart'))
-      await yieldToUiFrame()
       const result = await invokeCommand<unknown>('cmd_test_configuration', {
         config_json: configPreview(),
         game_root: gameRoot()
@@ -582,7 +571,6 @@ export function useCreatorController() {
     try {
       setCreatingExecutable(true)
       setStatusMessage(t('msgCreateStart'))
-      await yieldToUiFrame()
       const result = await invokeCommand<unknown>('cmd_create_executable', {
         base_binary_path: ORCHESTRATOR_BASE_PATH,
         output_path: outputPath(),
@@ -604,7 +592,6 @@ export function useCreatorController() {
     if (winetricksLoading()) return
     try {
       setWinetricksLoading(true)
-      await yieldToUiFrame()
       const result = await invokeCommand<WinetricksAvailableOutput>('cmd_winetricks_available')
       setWinetricksAvailable(result.components)
       setWinetricksSource(result.source)
@@ -770,7 +757,6 @@ export function useCreatorController() {
     try {
       setExtractingExecutableIcon(true)
       setStatusMessage(ct('creator_extracting_icon_from_executable'))
-      await yieldToUiFrame()
       const result = await invokeCommand<ExtractExecutableIconOutput>('cmd_extract_executable_icon', {
         executable_path: currentExe
       })
@@ -810,7 +796,6 @@ export function useCreatorController() {
     try {
       setHeroImageProcessing(true)
       setStatusMessage(ct('creator_processing_hero_image'))
-      await yieldToUiFrame()
       const result = await invokeCommand<PrepareHeroImageOutput>('cmd_prepare_hero_image', {
         image_url: imageUrl
       })
@@ -868,7 +853,6 @@ export function useCreatorController() {
     try {
       setHeroImageAutoSearching(true)
       setStatusMessage(ct('creator_searching_hero_image'))
-      await yieldToUiFrame()
       const search = await invokeCommand<SearchHeroImageOutput>('cmd_search_hero_image', {
         game_name: gameName
       })
