@@ -1,4 +1,4 @@
-import { Show } from 'solid-js'
+import { createMemo, Show } from 'solid-js'
 import { IconAlertCircle } from '@tabler/icons-solidjs'
 
 import { WinecfgFeatureStateField } from '../../../../components/form/FormControls'
@@ -7,9 +7,34 @@ import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
 import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
+import { sanitizeDigits, validatePositiveIntegerString } from '../../creator-field-validation'
 
 export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionProps) {
-  const { config, patchConfig, ct, winecfgVirtualDesktopEnabled, winecfgVirtualDesktopResolution, setWinecfgVirtualDesktopResolutionPart } = props.view
+  const {
+    config,
+    patchConfig,
+    ct,
+    locale,
+    winecfgVirtualDesktopEnabled,
+    winecfgVirtualDesktopResolution,
+    setWinecfgVirtualDesktopResolutionPart,
+  } = props.view
+  const virtualDesktopWidthValidation = createMemo(() =>
+    validatePositiveIntegerString(winecfgVirtualDesktopResolution().width, locale(), {
+      min: 1,
+      max: 16384,
+      labelPt: 'Largura do desktop virtual',
+      labelEn: 'Virtual desktop width'
+    })
+  )
+  const virtualDesktopHeightValidation = createMemo(() =>
+    validatePositiveIntegerString(winecfgVirtualDesktopResolution().height, locale(), {
+      min: 1,
+      max: 16384,
+      labelPt: 'Altura do desktop virtual',
+      labelEn: 'Virtual desktop height'
+    })
+  )
 
   return (
               <AccordionSection
@@ -78,15 +103,24 @@ export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionPr
                         <Input
                           value={winecfgVirtualDesktopResolution().width}
                           placeholder="1280"
-                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('width', e.currentTarget.value)}
+                          inputMode="numeric"
+                          class={virtualDesktopWidthValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('width', sanitizeDigits(e.currentTarget.value))}
                         />
                         <span class="text-sm font-semibold text-muted-foreground">x</span>
                         <Input
                           value={winecfgVirtualDesktopResolution().height}
                           placeholder="720"
-                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('height', e.currentTarget.value)}
+                          inputMode="numeric"
+                          class={virtualDesktopHeightValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                          onInput={(e) => setWinecfgVirtualDesktopResolutionPart('height', sanitizeDigits(e.currentTarget.value))}
                         />
                       </div>
+                      <Show when={virtualDesktopWidthValidation().error || virtualDesktopHeightValidation().error}>
+                        <p class="mt-2 text-xs text-destructive">
+                          {virtualDesktopWidthValidation().error ?? virtualDesktopHeightValidation().error}
+                        </p>
+                      </Show>
                     </div>
                   </Show>
 

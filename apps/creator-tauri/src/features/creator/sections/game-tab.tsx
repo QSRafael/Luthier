@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import { IconAlertCircle, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
 import {
@@ -34,6 +34,7 @@ import {
   SwitchChoiceCard,
   type CreatorPageSectionProps
 } from '../creator-page-shared'
+import { validateRelativeGamePath, validateWindowsPath } from '../creator-field-validation'
 
 export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overview' | 'files' }) {
   const mode = props.mode ?? 'overview'
@@ -52,6 +53,7 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
     patchConfig,
     ct,
     ctf,
+    locale,
     prefixPathPreview,
     removeAt,
     pickExecutable,
@@ -99,6 +101,19 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
     integrityFileBrowserSegments,
     integrityFileBrowserCurrentRelative,
   } = props.view
+
+  const mountSourceValidation = createMemo(() =>
+    mountDraft().source_relative_path.trim()
+      ? validateRelativeGamePath(mountDraft().source_relative_path, locale(), {
+          kind: 'folder',
+          allowDot: true,
+          requireDotPrefix: false
+        })
+      : {}
+  )
+  const mountTargetValidation = createMemo(() =>
+    mountDraft().target_windows_path.trim() ? validateWindowsPath(mountDraft().target_windows_path, locale()) : {}
+  )
 
   return (
           <section class="stack">
@@ -431,6 +446,25 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
               pickerDisabled={!canPickIntegrityFromGameRoot()}
               emptyMessage={ct('creator_no_file_added')}
               tableValueHeader={ct('creator_relative_file')}
+              validateDraft={(value, items) => {
+                if (!value.trim()) return undefined
+                const validation = validateRelativeGamePath(value, locale(), {
+                  kind: 'file',
+                  allowDot: false,
+                  requireDotPrefix: true
+                })
+                if (validation.error) return validation
+                const duplicate = items.some((item) => item.trim() === value.trim())
+                if (duplicate) {
+                  return {
+                    error:
+                      locale() === 'pt-BR'
+                        ? 'Esse arquivo já foi adicionado.'
+                        : 'This file is already listed.'
+                  }
+                }
+                return validation.hint ? validation : undefined
+              }}
             />
 
             <Dialog
@@ -680,6 +714,7 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                       <Input
                         value={mountDraft().source_relative_path}
                         placeholder={ct('creator_relative_source_e_g_save')}
+                        class={mountSourceValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                         onInput={(e) =>
                           setMountDraft((prev: any) => ({
                             ...prev,
@@ -696,10 +731,16 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                         {ct('creator_browse_folders')}
                       </Button>
                     </div>
+                    <Show when={mountSourceValidation().error || mountSourceValidation().hint}>
+                      <p class={mountSourceValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                        {mountSourceValidation().error ?? mountSourceValidation().hint}
+                      </p>
+                    </Show>
 
                     <Input
                       value={mountDraft().target_windows_path}
                       placeholder={ct('creator_windows_target_c_users')}
+                      class={mountTargetValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setMountDraft((prev: any) => ({
                           ...prev,
@@ -707,6 +748,11 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                         }))
                       }
                     />
+                    <Show when={mountTargetValidation().error || mountTargetValidation().hint}>
+                      <p class={mountTargetValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                        {mountTargetValidation().error ?? mountTargetValidation().hint}
+                      </p>
+                    </Show>
 
                     <label class="flex items-center gap-2 text-sm">
                       <input
@@ -729,13 +775,34 @@ export function GameTabSection(props: CreatorPageSectionProps & { mode?: 'overvi
                     </Button>
                     <Button
                       type="button"
-                      disabled={!mountDraft().source_relative_path.trim() || !mountDraft().target_windows_path.trim()}
+                      disabled={
+                        !mountDraft().source_relative_path.trim() ||
+                        !mountDraft().target_windows_path.trim() ||
+                        !!mountSourceValidation().error ||
+                        !!mountTargetValidation().error
+                      }
                       onClick={() => {
                         const draft = mountDraft()
-                        if (!draft.source_relative_path.trim() || !draft.target_windows_path.trim()) return
+                        if (
+                          !draft.source_relative_path.trim() ||
+                          !draft.target_windows_path.trim() ||
+                          mountSourceValidation().error ||
+                          mountTargetValidation().error
+                        ) {
+                          return
+                        }
+                        const source = draft.source_relative_path.trim()
+                        const target = draft.target_windows_path.trim()
                         patchConfig((prev) => ({
                           ...prev,
-                          folder_mounts: [...prev.folder_mounts, draft]
+                          folder_mounts: [
+                            ...prev.folder_mounts,
+                            {
+                              ...draft,
+                              source_relative_path: source,
+                              target_windows_path: target
+                            }
+                          ]
                         }))
                         setMountDraft({
                           source_relative_path: '',

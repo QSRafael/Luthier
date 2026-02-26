@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import { IconAlertCircle, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
 import {
@@ -34,6 +34,13 @@ import {
   SwitchChoiceCard,
   type CreatorPageSectionProps
 } from '../creator-page-shared'
+import {
+  validateCommandToken,
+  validateEnvVarName,
+  validateLinuxPath,
+  validateRegistryPath,
+  validateRegistryValueType,
+} from '../creator-field-validation'
 
 export function DependenciesTabSection(props: CreatorPageSectionProps) {
     const {
@@ -46,6 +53,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
     config,
     patchConfig,
     ct,
+    locale,
     normalizedWinetricksSearch,
     winetricksCandidates,
     splitCommaList,
@@ -69,6 +77,47 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
     canImportRegistryFromFile,
     importRegistryKeysFromRegFile,
   } = props.view
+
+  const registryPathValidationSafe = createMemo(() =>
+    registryDraft().path.trim() ? validateRegistryPath(registryDraft().path, locale()) : {}
+  )
+  const registryTypeValidation = createMemo(() =>
+    registryDraft().value_type.trim() ? validateRegistryValueType(registryDraft().value_type, locale()) : {}
+  )
+  const registryDuplicateValidation = createMemo(() => {
+    const path = registryDraft().path.trim().toLowerCase()
+    const name = registryDraft().name.trim().toLowerCase()
+    if (!path || !name) return ''
+    const duplicate = config().registry_keys.some(
+      (item) => item.path.trim().toLowerCase() === path && item.name.trim().toLowerCase() === name
+    )
+    if (!duplicate) return ''
+    return locale() === 'pt-BR'
+      ? 'Já existe uma entrada com o mesmo path e nome.'
+      : 'An entry with the same path and name already exists.'
+  })
+
+  const extraDependencyCommandValidation = createMemo(() => {
+    for (const token of splitCommaList(extraDependencyDraft().command)) {
+      const result = validateCommandToken(token, locale())
+      if (result.error) return result.error
+    }
+    return ''
+  })
+  const extraDependencyEnvVarsValidation = createMemo(() => {
+    for (const token of splitCommaList(extraDependencyDraft().env_vars)) {
+      const result = validateEnvVarName(token, locale())
+      if (result.error) return result.error
+    }
+    return ''
+  })
+  const extraDependencyPathsValidation = createMemo(() => {
+    for (const token of splitCommaList(extraDependencyDraft().paths)) {
+      const result = validateLinuxPath(token, locale(), true)
+      if (result.error) return result.error
+    }
+    return ''
+  })
 
   return (
           <section class="stack">
@@ -299,6 +348,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                     <Input
                       value={registryDraft().path}
                       placeholder={ct('creator_path_hkcu')}
+                      class={registryPathValidationSafe().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setRegistryDraft((prev: any) => ({
                           ...prev,
@@ -306,6 +356,11 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         }))
                       }
                     />
+                    <Show when={registryPathValidationSafe().error || registryPathValidationSafe().hint}>
+                      <p class={registryPathValidationSafe().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                        {registryPathValidationSafe().error ?? registryPathValidationSafe().hint}
+                      </p>
+                    </Show>
                     <Input
                       value={registryDraft().name}
                       placeholder={ct('creator_key_name')}
@@ -320,6 +375,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                       <Input
                         value={registryDraft().value_type}
                         placeholder={ct('creator_type_reg_sz')}
+                        class={registryTypeValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                         onInput={(e) =>
                           setRegistryDraft((prev: any) => ({
                             ...prev,
@@ -338,6 +394,14 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         }
                       />
                     </div>
+                    <Show when={registryTypeValidation().error || registryTypeValidation().hint}>
+                      <p class={registryTypeValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                        {registryTypeValidation().error ?? registryTypeValidation().hint}
+                      </p>
+                    </Show>
+                    <Show when={registryDuplicateValidation()}>
+                      <p class="text-xs text-destructive">{registryDuplicateValidation()}</p>
+                    </Show>
                   </div>
 
                   <DialogFooter>
@@ -346,13 +410,35 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                     </Button>
                     <Button
                       type="button"
-                      disabled={!registryDraft().path.trim() || !registryDraft().name.trim()}
+                      disabled={
+                        !registryDraft().path.trim() ||
+                        !registryDraft().name.trim() ||
+                        !!registryPathValidationSafe().error ||
+                        !!registryTypeValidation().error ||
+                        !!registryDuplicateValidation()
+                      }
                       onClick={() => {
                         const draft = registryDraft()
-                        if (!draft.path.trim() || !draft.name.trim()) return
+                        if (
+                          !draft.path.trim() ||
+                          !draft.name.trim() ||
+                          registryPathValidationSafe().error ||
+                          registryTypeValidation().error ||
+                          registryDuplicateValidation()
+                        ) {
+                          return
+                        }
                         patchConfig((prev) => ({
                           ...prev,
-                          registry_keys: [...prev.registry_keys, draft]
+                          registry_keys: [
+                            ...prev.registry_keys,
+                            {
+                              ...draft,
+                              path: draft.path.trim().replace(/\//g, '\\'),
+                              name: draft.name.trim(),
+                              value_type: draft.value_type.trim().toUpperCase() || 'REG_SZ'
+                            }
+                          ]
                         }))
                         setRegistryDraft({ path: '', name: '', value_type: 'REG_SZ', value: '' })
                         setRegistryDialogOpen(false)
@@ -504,6 +590,7 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                     <Input
                       value={extraDependencyDraft().command}
                       placeholder={ct('creator_terminal_command_e_g_mangohud')}
+                      class={extraDependencyCommandValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
                           ...prev,
@@ -511,10 +598,14 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         }))
                       }
                     />
+                    <Show when={extraDependencyCommandValidation()}>
+                      <p class="text-xs text-destructive">{extraDependencyCommandValidation()}</p>
+                    </Show>
 
                     <Input
                       value={extraDependencyDraft().env_vars}
                       placeholder={ct('creator_environment_vars_comma_separated')}
+                      class={extraDependencyEnvVarsValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
                           ...prev,
@@ -522,10 +613,14 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         }))
                       }
                     />
+                    <Show when={extraDependencyEnvVarsValidation()}>
+                      <p class="text-xs text-destructive">{extraDependencyEnvVarsValidation()}</p>
+                    </Show>
 
                     <Input
                       value={extraDependencyDraft().paths}
                       placeholder={ct('creator_default_paths_comma_separated')}
+                      class={extraDependencyPathsValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setExtraDependencyDraft((prev: any) => ({
                           ...prev,
@@ -533,6 +628,9 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                         }))
                       }
                     />
+                    <Show when={extraDependencyPathsValidation()}>
+                      <p class="text-xs text-destructive">{extraDependencyPathsValidation()}</p>
+                    </Show>
                   </div>
 
                   <DialogFooter>
@@ -541,10 +639,22 @@ export function DependenciesTabSection(props: CreatorPageSectionProps) {
                     </Button>
                     <Button
                       type="button"
-                      disabled={!extraDependencyDraft().name.trim()}
+                      disabled={
+                        !extraDependencyDraft().name.trim() ||
+                        !!extraDependencyCommandValidation() ||
+                        !!extraDependencyEnvVarsValidation() ||
+                        !!extraDependencyPathsValidation()
+                      }
                       onClick={() => {
                         const draft = extraDependencyDraft()
-                        if (!draft.name.trim()) return
+                        if (
+                          !draft.name.trim() ||
+                          extraDependencyCommandValidation() ||
+                          extraDependencyEnvVarsValidation() ||
+                          extraDependencyPathsValidation()
+                        ) {
+                          return
+                        }
 
                         patchConfig((prev) => ({
                           ...prev,

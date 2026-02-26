@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import { IconAlertCircle, IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/alert'
@@ -9,9 +9,38 @@ import { Select } from '../../../../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
 import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
+import {
+  validateLinuxPath,
+  validateWindowsDriveSerial,
+  validateWindowsFriendlyName,
+} from '../../creator-field-validation'
 
 export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProps) {
-  const { setStatusMessage, config, patchConfig, ct, removeAt, wineDriveDialogOpen, setWineDriveDialogOpen, wineDriveDraft, setWineDriveDraft, wineDriveTypeOptions, availableWineDriveLetters } = props.view
+  const {
+    setStatusMessage,
+    config,
+    patchConfig,
+    ct,
+    locale,
+    removeAt,
+    wineDriveDialogOpen,
+    setWineDriveDialogOpen,
+    wineDriveDraft,
+    setWineDriveDraft,
+    wineDriveTypeOptions,
+    availableWineDriveLetters,
+  } = props.view
+  const wineDriveHostPathValidation = createMemo(() =>
+    wineDriveDraft().host_path.trim() ? validateLinuxPath(wineDriveDraft().host_path, locale(), true) : {}
+  )
+  const wineDriveLabelValidation = createMemo(() =>
+    wineDriveDraft().label.trim()
+      ? validateWindowsFriendlyName(wineDriveDraft().label, locale(), 'o rótulo', 'the label')
+      : {}
+  )
+  const wineDriveSerialValidation = createMemo(() =>
+    wineDriveDraft().serial.trim() ? validateWindowsDriveSerial(wineDriveDraft().serial, locale()) : {}
+  )
 
   return (
               <AccordionSection
@@ -114,8 +143,14 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                           <Input
                             value={wineDriveDraft().host_path}
                             placeholder="/mnt/storage/shared"
+                            class={wineDriveHostPathValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                             onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, host_path: e.currentTarget.value }))}
                           />
+                          <Show when={wineDriveHostPathValidation().error || wineDriveHostPathValidation().hint}>
+                            <p class={wineDriveHostPathValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                              {wineDriveHostPathValidation().error ?? wineDriveHostPathValidation().hint}
+                            </p>
+                          </Show>
 
                           <Select
                             value={wineDriveDraft().drive_type}
@@ -130,14 +165,26 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                             <Input
                               value={wineDriveDraft().label}
                               placeholder={ct('creator_label_optional')}
+                              class={wineDriveLabelValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                               onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, label: e.currentTarget.value }))}
                             />
                             <Input
                               value={wineDriveDraft().serial}
                               placeholder={ct('creator_serial_optional')}
+                              class={wineDriveSerialValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                               onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, serial: e.currentTarget.value }))}
                             />
                           </div>
+                          <Show when={wineDriveLabelValidation().error || wineDriveLabelValidation().hint}>
+                            <p class={wineDriveLabelValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                              {wineDriveLabelValidation().error ?? wineDriveLabelValidation().hint}
+                            </p>
+                          </Show>
+                          <Show when={wineDriveSerialValidation().error || wineDriveSerialValidation().hint}>
+                            <p class={wineDriveSerialValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                              {wineDriveSerialValidation().error ?? wineDriveSerialValidation().hint}
+                            </p>
+                          </Show>
 
                           <p class="text-xs text-muted-foreground">
                             {ct('creator_use_a_generic_linux_directory_when_possible_avoid_user_s')}
@@ -150,11 +197,25 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                           </Button>
                           <Button
                             type="button"
-                            disabled={!wineDriveDraft().letter.trim() || !wineDriveDraft().host_path.trim()}
+                            disabled={
+                              !wineDriveDraft().letter.trim() ||
+                              !wineDriveDraft().host_path.trim() ||
+                              !!wineDriveHostPathValidation().error ||
+                              !!wineDriveLabelValidation().error ||
+                              !!wineDriveSerialValidation().error
+                            }
                             onClick={() => {
                               const draft = wineDriveDraft()
                               const letter = draft.letter.trim().toUpperCase()
-                              if (!letter || !draft.host_path.trim()) return
+                              if (
+                                !letter ||
+                                !draft.host_path.trim() ||
+                                wineDriveHostPathValidation().error ||
+                                wineDriveLabelValidation().error ||
+                                wineDriveSerialValidation().error
+                              ) {
+                                return
+                              }
                               if (config().winecfg.drives.some((item) => item.letter.trim().toUpperCase() === letter)) {
                                 setStatusMessage(ct('creator_that_drive_letter_is_already_in_use'))
                                 return

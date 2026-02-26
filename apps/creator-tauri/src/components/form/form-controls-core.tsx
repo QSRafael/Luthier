@@ -1,4 +1,4 @@
-import { createContext, For, JSX, Show, useContext } from 'solid-js'
+import { createContext, For, JSX, Show, useContext, type ComponentProps } from 'solid-js'
 
 import { Select } from '../ui/select'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../ui/switch'
@@ -119,16 +119,29 @@ type TextInputFieldProps = {
   placeholder?: string
   readonly?: boolean
   compact?: boolean
+  inputMode?: ComponentProps<'input'>['inputMode']
+  type?: string
+  error?: string
 }
 
 export function TextInputField(props: TextInputFieldProps) {
   return (
-    <FieldShell label={props.label} help={props.help} compact={props.compact ?? false}>
+    <FieldShell
+      label={props.label}
+      help={props.help}
+      compact={props.compact ?? false}
+      footer={props.error ? <p class="text-xs text-destructive">{props.error}</p> : undefined}
+    >
       <Input
         value={props.value}
+        type={props.type}
+        inputMode={props.inputMode}
         readOnly={props.readonly}
         placeholder={props.placeholder}
-        class={props.readonly ? 'bg-muted/50 text-muted-foreground' : ''}
+        class={
+          (props.readonly ? 'bg-muted/50 text-muted-foreground ' : '') +
+          (props.error ? 'border-destructive focus-visible:ring-destructive' : '')
+        }
         onInput={(e) => props.onInput(e.currentTarget.value)}
       />
     </FieldShell>

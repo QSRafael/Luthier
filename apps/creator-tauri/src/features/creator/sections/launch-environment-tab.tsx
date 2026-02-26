@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import { IconAlertCircle, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
 import {
@@ -33,12 +33,14 @@ import {
   SwitchChoiceCard,
   type CreatorPageSectionProps
 } from '../creator-page-shared'
+import { validateEnvVarName, validateWrapperExecutable } from '../creator-field-validation'
 
 export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
     const {
     config,
     patchConfig,
     ct,
+    locale,
     environmentVarsAsList,
     removeAt,
     updateCustomVars,
@@ -49,6 +51,10 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
     launchScriptsAccordionOpen,
     setLaunchScriptsAccordionOpen,
   } = props.view
+
+  const wrapperExecutableValidation = createMemo(() =>
+    wrapperDraft().executable.trim() ? validateWrapperExecutable(wrapperDraft().executable, locale()) : {}
+  )
 
   return (
           <section class="stack">
@@ -154,6 +160,7 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                     <Input
                       value={wrapperDraft().executable}
                       placeholder={ct('creator_executable_e_g_gamescope')}
+                      class={wrapperExecutableValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setWrapperDraft((prev: any) => ({
                           ...prev,
@@ -161,6 +168,11 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                         }))
                       }
                     />
+                    <Show when={wrapperExecutableValidation().error || wrapperExecutableValidation().hint}>
+                      <p class={wrapperExecutableValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                        {wrapperExecutableValidation().error ?? wrapperExecutableValidation().hint}
+                      </p>
+                    </Show>
                     <Input
                       value={wrapperDraft().args}
                       placeholder={ct('creator_args_e_g_w_1920_h_1080')}
@@ -179,15 +191,22 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
                     </Button>
                     <Button
                       type="button"
-                      disabled={!wrapperDraft().executable.trim()}
+                      disabled={!wrapperDraft().executable.trim() || !!wrapperExecutableValidation().error}
                       onClick={() => {
                         const draft = wrapperDraft()
-                        if (!draft.executable.trim()) return
+                        if (!draft.executable.trim() || wrapperExecutableValidation().error) return
                         patchConfig((prev) => ({
                           ...prev,
                           compatibility: {
                             ...prev.compatibility,
-                            wrapper_commands: [...prev.compatibility.wrapper_commands, draft]
+                            wrapper_commands: [
+                              ...prev.compatibility.wrapper_commands,
+                              {
+                                ...draft,
+                                executable: draft.executable.trim(),
+                                args: draft.args.trim()
+                              }
+                            ]
                           }
                         }))
                         setWrapperDraft({
@@ -218,6 +237,25 @@ export function LaunchEnvironmentTabSection(props: CreatorPageSectionProps) {
               tableHeaders={{
                 key: ct('creator_variable'),
                 value: ct('creator_value')
+              }}
+              validateDraft={(draft, items) => {
+                if (!draft.key && !draft.value) return undefined
+                const keyValidation = validateEnvVarName(draft.key, locale())
+                if (keyValidation.error) {
+                  return { keyError: keyValidation.error, keyHint: keyValidation.hint }
+                }
+
+                const duplicate = items.some((item) => item.key.trim() === draft.key.trim())
+                if (duplicate) {
+                  return {
+                    formError:
+                      locale() === 'pt-BR'
+                        ? 'Já existe uma variável com esse nome.'
+                        : 'A variable with this name already exists.'
+                  }
+                }
+
+                return undefined
               }}
             />
 

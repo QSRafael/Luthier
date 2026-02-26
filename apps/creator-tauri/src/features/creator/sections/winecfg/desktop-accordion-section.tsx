@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import { IconAlertCircle, IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import { WinecfgFeatureStateField } from '../../../../components/form/FormControls'
@@ -10,9 +10,31 @@ import { Select } from '../../../../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
 import { AccordionSection } from '../../creator-page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
+import { validateLinuxPath, validateWindowsFriendlyName } from '../../creator-field-validation'
 
 export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionProps) {
-  const { config, patchConfig, ct, removeAt, wineDesktopFolderDialogOpen, setWineDesktopFolderDialogOpen, wineDesktopFolderDraft, setWineDesktopFolderDraft, wineDesktopFolderKeyOptions } = props.view
+  const {
+    config,
+    patchConfig,
+    ct,
+    locale,
+    removeAt,
+    wineDesktopFolderDialogOpen,
+    setWineDesktopFolderDialogOpen,
+    wineDesktopFolderDraft,
+    setWineDesktopFolderDraft,
+    wineDesktopFolderKeyOptions,
+  } = props.view
+  const shortcutNameValidation = createMemo(() =>
+    wineDesktopFolderDraft().shortcut_name.trim()
+      ? validateWindowsFriendlyName(wineDesktopFolderDraft().shortcut_name, locale(), 'o nome do atalho', 'the shortcut name')
+      : {}
+  )
+  const desktopFolderLinuxPathValidation = createMemo(() =>
+    wineDesktopFolderDraft().linux_path.trim()
+      ? validateLinuxPath(wineDesktopFolderDraft().linux_path, locale(), true)
+      : {}
+  )
 
   return (
               <AccordionSection
@@ -96,17 +118,29 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                             <Input
                               value={wineDesktopFolderDraft().shortcut_name}
                               placeholder={ct('creator_shortcut_name_in_wine')}
+                              class={shortcutNameValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                               onInput={(e) =>
                                 setWineDesktopFolderDraft((prev: any) => ({ ...prev, shortcut_name: e.currentTarget.value }))
                               }
                             />
+                            <Show when={shortcutNameValidation().error || shortcutNameValidation().hint}>
+                              <p class={shortcutNameValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                {shortcutNameValidation().error ?? shortcutNameValidation().hint}
+                              </p>
+                            </Show>
                             <Input
                               value={wineDesktopFolderDraft().linux_path}
                               placeholder="/mnt/games/shared"
+                              class={desktopFolderLinuxPathValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                               onInput={(e) =>
                                 setWineDesktopFolderDraft((prev: any) => ({ ...prev, linux_path: e.currentTarget.value }))
                               }
                             />
+                            <Show when={desktopFolderLinuxPathValidation().error || desktopFolderLinuxPathValidation().hint}>
+                              <p class={desktopFolderLinuxPathValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                {desktopFolderLinuxPathValidation().error ?? desktopFolderLinuxPathValidation().hint}
+                              </p>
+                            </Show>
                             <p class="text-xs text-muted-foreground">
                               {ct('creator_prefer_generic_paths_without_a_fixed_username_when_possi')}
                             </p>
@@ -118,10 +152,22 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                             </Button>
                             <Button
                               type="button"
-                              disabled={!wineDesktopFolderDraft().shortcut_name.trim() || !wineDesktopFolderDraft().linux_path.trim()}
+                              disabled={
+                                !wineDesktopFolderDraft().shortcut_name.trim() ||
+                                !wineDesktopFolderDraft().linux_path.trim() ||
+                                !!shortcutNameValidation().error ||
+                                !!desktopFolderLinuxPathValidation().error
+                              }
                               onClick={() => {
                                 const draft = wineDesktopFolderDraft()
-                                if (!draft.shortcut_name.trim() || !draft.linux_path.trim()) return
+                                if (
+                                  !draft.shortcut_name.trim() ||
+                                  !draft.linux_path.trim() ||
+                                  shortcutNameValidation().error ||
+                                  desktopFolderLinuxPathValidation().error
+                                ) {
+                                  return
+                                }
                                 patchConfig((prev) => ({
                                   ...prev,
                                   winecfg: {

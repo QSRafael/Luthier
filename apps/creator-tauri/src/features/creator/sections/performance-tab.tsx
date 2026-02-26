@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import { IconAlertCircle, IconPlus, IconTrash, IconX } from '@tabler/icons-solidjs'
 
 import {
@@ -34,12 +34,14 @@ import {
   SwitchChoiceCard,
   type CreatorPageSectionProps
 } from '../creator-page-shared'
+import { sanitizeDigits, validatePositiveIntegerString } from '../creator-field-validation'
 
 export function PerformanceTabSection(props: CreatorPageSectionProps) {
     const {
     config,
     patchConfig,
     ct,
+    locale,
     upscaleMethodOptions,
     windowTypeOptions,
     gamescopeEnabled,
@@ -53,6 +55,55 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
     setGamescopeOutputWidth,
     setGamescopeOutputHeight,
   } = props.view
+
+  const gamescopeGameWidthValidation = createMemo(() =>
+    validatePositiveIntegerString(config().environment.gamescope.game_width, locale(), {
+      min: 1,
+      max: 16384,
+      labelPt: 'Largura da resolução do jogo',
+      labelEn: 'Game resolution width'
+    })
+  )
+  const gamescopeGameHeightValidation = createMemo(() =>
+    validatePositiveIntegerString(config().environment.gamescope.game_height, locale(), {
+      min: 1,
+      max: 16384,
+      labelPt: 'Altura da resolução do jogo',
+      labelEn: 'Game resolution height'
+    })
+  )
+  const gamescopeOutputWidthValidation = createMemo(() =>
+    validatePositiveIntegerString(config().environment.gamescope.output_width, locale(), {
+      min: 1,
+      max: 16384,
+      labelPt: 'Largura da resolução de saída',
+      labelEn: 'Output resolution width'
+    })
+  )
+  const gamescopeOutputHeightValidation = createMemo(() =>
+    validatePositiveIntegerString(config().environment.gamescope.output_height, locale(), {
+      min: 1,
+      max: 16384,
+      labelPt: 'Altura da resolução de saída',
+      labelEn: 'Output resolution height'
+    })
+  )
+  const gamescopeFpsFocusValidation = createMemo(() =>
+    validatePositiveIntegerString(config().environment.gamescope.fps_limiter, locale(), {
+      min: 1,
+      max: 1000,
+      labelPt: 'Limite de FPS',
+      labelEn: 'FPS limit'
+    })
+  )
+  const gamescopeFpsNoFocusValidation = createMemo(() =>
+    validatePositiveIntegerString(config().environment.gamescope.fps_limiter_no_focus, locale(), {
+      min: 1,
+      max: 1000,
+      labelPt: 'Limite de FPS sem foco',
+      labelEn: 'FPS limit without focus'
+    })
+  )
 
   return (
           <section class="stack">
@@ -166,6 +217,8 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                           <Input
                             value={config().environment.gamescope.game_width}
                             placeholder="1080"
+                            inputMode="numeric"
+                            class={gamescopeGameWidthValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                             onInput={(e) =>
                               patchConfig((prev) => ({
                                 ...prev,
@@ -173,7 +226,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                   ...prev.environment,
                                   gamescope: {
                                     ...prev.environment.gamescope,
-                                    game_width: e.currentTarget.value
+                                    game_width: sanitizeDigits(e.currentTarget.value)
                                   }
                                 }
                               }))
@@ -183,6 +236,8 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                           <Input
                             value={config().environment.gamescope.game_height}
                             placeholder="720"
+                            inputMode="numeric"
+                            class={gamescopeGameHeightValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                             onInput={(e) =>
                               patchConfig((prev) => ({
                                 ...prev,
@@ -190,13 +245,18 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                   ...prev.environment,
                                   gamescope: {
                                     ...prev.environment.gamescope,
-                                    game_height: e.currentTarget.value
+                                    game_height: sanitizeDigits(e.currentTarget.value)
                                   }
                                 }
                               }))
                             }
                           />
                         </div>
+                        <Show when={gamescopeGameWidthValidation().error || gamescopeGameHeightValidation().error}>
+                          <p class="mt-2 text-xs text-destructive">
+                            {gamescopeGameWidthValidation().error ?? gamescopeGameHeightValidation().error}
+                          </p>
+                        </Show>
                       </div>
 
                       <div class="rounded-md border border-border/60 bg-muted/30 p-3">
@@ -212,16 +272,30 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                             value={config().environment.gamescope.output_width}
                             placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1920'}
                             disabled={gamescopeUsesMonitorResolution()}
-                            onInput={(e) => setGamescopeOutputWidth(e.currentTarget.value)}
+                            inputMode="numeric"
+                            class={gamescopeOutputWidthValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            onInput={(e) => setGamescopeOutputWidth(sanitizeDigits(e.currentTarget.value))}
                           />
                           <span class="text-sm font-semibold text-muted-foreground">x</span>
                           <Input
                             value={config().environment.gamescope.output_height}
                             placeholder={gamescopeUsesMonitorResolution() ? ct('creator_auto') : '1080'}
                             disabled={gamescopeUsesMonitorResolution()}
-                            onInput={(e) => setGamescopeOutputHeight(e.currentTarget.value)}
+                            inputMode="numeric"
+                            class={gamescopeOutputHeightValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            onInput={(e) => setGamescopeOutputHeight(sanitizeDigits(e.currentTarget.value))}
                           />
                         </div>
+                        <Show
+                          when={
+                            !gamescopeUsesMonitorResolution() &&
+                            (gamescopeOutputWidthValidation().error || gamescopeOutputHeightValidation().error)
+                          }
+                        >
+                          <p class="mt-2 text-xs text-destructive">
+                            {gamescopeOutputWidthValidation().error ?? gamescopeOutputHeightValidation().error}
+                          </p>
+                        </Show>
 
                         <div class="mt-3">
                           <SwitchChoiceCard
@@ -316,6 +390,8 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                           label={ct('creator_fps_limit')}
                           help={ct('creator_fps_limit_when_game_is_focused')}
                           value={config().environment.gamescope.fps_limiter}
+                          inputMode="numeric"
+                          error={gamescopeFpsFocusValidation().error}
                           onInput={(value) =>
                             patchConfig((prev) => ({
                               ...prev,
@@ -323,7 +399,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                 ...prev.environment,
                                 gamescope: {
                                   ...prev.environment.gamescope,
-                                  fps_limiter: value
+                                  fps_limiter: sanitizeDigits(value)
                                 }
                               }
                             }))
@@ -334,6 +410,8 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                           label={ct('creator_fps_limit_without_focus')}
                           help={ct('creator_fps_limit_when_game_loses_focus')}
                           value={config().environment.gamescope.fps_limiter_no_focus}
+                          inputMode="numeric"
+                          error={gamescopeFpsNoFocusValidation().error}
                           onInput={(value) =>
                             patchConfig((prev) => ({
                               ...prev,
@@ -341,7 +419,7 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
                                 ...prev.environment,
                                 gamescope: {
                                   ...prev.environment.gamescope,
-                                  fps_limiter_no_focus: value
+                                  fps_limiter_no_focus: sanitizeDigits(value)
                                 }
                               }
                             }))

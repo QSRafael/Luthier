@@ -13,6 +13,12 @@ import {
 import { Input } from '../ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { FieldShell, useFormControlsI18n } from './form-controls-core'
+
+type FieldValidation = {
+  error?: string
+  hint?: string
+}
+
 type StringListFieldProps = {
   label: string
   help: string
@@ -26,6 +32,7 @@ type StringListFieldProps = {
   tableValueHeader?: string
   addDisabled?: boolean
   pickerDisabled?: boolean
+  validateDraft?: (value: string, items: string[]) => FieldValidation | null | undefined
 }
 
 export function StringListField(props: StringListFieldProps) {
@@ -34,10 +41,12 @@ export function StringListField(props: StringListFieldProps) {
   const [draft, setDraft] = createSignal('')
 
   const cleanDraft = createMemo(() => draft().trim())
+  const draftValidation = createMemo(() => props.validateDraft?.(cleanDraft(), props.items) ?? null)
 
   const addItem = () => {
     const value = cleanDraft()
     if (!value) return
+    if (draftValidation()?.error) return
     props.onChange([...props.items, value])
     setDraft('')
     setOpen(false)
@@ -137,6 +146,7 @@ export function StringListField(props: StringListFieldProps) {
               <Input
                 value={draft()}
                 placeholder={props.placeholder}
+                class={draftValidation()?.error ? 'border-destructive focus-visible:ring-destructive' : ''}
                 onInput={(e) => setDraft(e.currentTarget.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -152,6 +162,7 @@ export function StringListField(props: StringListFieldProps) {
                 <Input
                   value={draft()}
                   placeholder={props.placeholder}
+                  class={draftValidation()?.error ? 'border-destructive focus-visible:ring-destructive' : ''}
                   onInput={(e) => setDraft(e.currentTarget.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -179,11 +190,24 @@ export function StringListField(props: StringListFieldProps) {
             </div>
           </Show>
 
+          <Show when={draftValidation()}>
+            {(validation) => (
+              <div class="space-y-1">
+                <Show when={validation().error}>
+                  <p class="text-xs text-destructive">{validation().error}</p>
+                </Show>
+                <Show when={!validation().error && validation().hint}>
+                  <p class="text-xs text-muted-foreground">{validation().hint}</p>
+                </Show>
+              </div>
+            )}
+          </Show>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               {i18n.cancel}
             </Button>
-            <Button type="button" onClick={addItem} disabled={!cleanDraft()}>
+            <Button type="button" onClick={addItem} disabled={!cleanDraft() || !!draftValidation()?.error}>
               {i18n.confirm}
             </Button>
           </DialogFooter>
@@ -212,6 +236,16 @@ type KeyValueListFieldProps = {
     key: string
     value: string
   }
+  validateDraft?: (
+    draft: { key: string; value: string },
+    items: KeyValueItem[]
+  ) => {
+    keyError?: string
+    keyHint?: string
+    valueError?: string
+    valueHint?: string
+    formError?: string
+  } | null | undefined
 }
 
 export function KeyValueListField(props: KeyValueListFieldProps) {
@@ -221,10 +255,21 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
   const [draftValue, setDraftValue] = createSignal('')
 
   const canAdd = createMemo(() => draftKey().trim().length > 0)
+  const draftValidation = createMemo(
+    () =>
+      props.validateDraft?.(
+        {
+          key: draftKey().trim(),
+          value: draftValue()
+        },
+        props.items
+      ) ?? null
+  )
 
   const addItem = () => {
     const key = draftKey().trim()
     if (!key) return
+    if (draftValidation()?.keyError || draftValidation()?.valueError || draftValidation()?.formError) return
 
     props.onChange([...props.items, { key, value: draftValue() }])
     setDraftKey('')
@@ -332,20 +377,40 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
             <Input
               value={draftKey()}
               placeholder={props.keyPlaceholder ?? i18n.keyPlaceholder}
+              class={draftValidation()?.keyError ? 'border-destructive focus-visible:ring-destructive' : ''}
               onInput={(e) => setDraftKey(e.currentTarget.value)}
             />
             <Input
               value={draftValue()}
               placeholder={props.valuePlaceholder ?? i18n.valuePlaceholder}
+              class={draftValidation()?.valueError ? 'border-destructive focus-visible:ring-destructive' : ''}
               onInput={(e) => setDraftValue(e.currentTarget.value)}
             />
+
+            <Show when={draftValidation()?.keyError || draftValidation()?.keyHint}>
+              <p class={draftValidation()?.keyError ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                {draftValidation()?.keyError ?? draftValidation()?.keyHint}
+              </p>
+            </Show>
+            <Show when={draftValidation()?.valueError || draftValidation()?.valueHint}>
+              <p class={draftValidation()?.valueError ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                {draftValidation()?.valueError ?? draftValidation()?.valueHint}
+              </p>
+            </Show>
+            <Show when={draftValidation()?.formError}>
+              <p class="text-xs text-destructive">{draftValidation()?.formError}</p>
+            </Show>
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               {i18n.cancel}
             </Button>
-            <Button type="button" onClick={addItem} disabled={!canAdd()}>
+            <Button
+              type="button"
+              onClick={addItem}
+              disabled={!canAdd() || !!draftValidation()?.keyError || !!draftValidation()?.valueError || !!draftValidation()?.formError}
+            >
               {i18n.confirm}
             </Button>
           </DialogFooter>

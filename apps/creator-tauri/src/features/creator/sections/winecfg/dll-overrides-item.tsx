@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import { FieldShell } from '../../../../components/form/FormControls'
@@ -8,9 +8,25 @@ import { Input } from '../../../../components/ui/input'
 import { Select } from '../../../../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
 import type { WinecfgSectionViewProps } from './shared'
+import { validateDllName } from '../../creator-field-validation'
 
 export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
-  const { config, patchConfig, ct, dllModeOptions, replaceAt, removeAt, dllDialogOpen, setDllDialogOpen, dllDraft, setDllDraft } = props.view
+  const {
+    config,
+    patchConfig,
+    ct,
+    locale,
+    dllModeOptions,
+    replaceAt,
+    removeAt,
+    dllDialogOpen,
+    setDllDialogOpen,
+    dllDraft,
+    setDllDraft,
+  } = props.view
+  const dllValidation = createMemo(() =>
+    dllDraft().dll.trim() ? validateDllName(dllDraft().dll, locale()) : {}
+  )
 
   return (
             <FieldShell
@@ -107,6 +123,7 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                     <Input
                       value={dllDraft().dll}
                       placeholder="d3dcompiler_47"
+                      class={dllValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                       onInput={(e) =>
                         setDllDraft((prev: any) => ({
                           ...prev,
@@ -114,6 +131,11 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                         }))
                       }
                     />
+                    <Show when={dllValidation().error || dllValidation().hint}>
+                      <p class={dllValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                        {dllValidation().error ?? dllValidation().hint}
+                      </p>
+                    </Show>
                     <Select
                       value={dllDraft().mode}
                       onInput={(e) =>
@@ -133,15 +155,21 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                     </Button>
                     <Button
                       type="button"
-                      disabled={!dllDraft().dll.trim()}
+                      disabled={!dllDraft().dll.trim() || !!dllValidation().error}
                       onClick={() => {
                         const draft = dllDraft()
-                        if (!draft.dll.trim()) return
+                        if (!draft.dll.trim() || dllValidation().error) return
                         patchConfig((prev) => ({
                           ...prev,
                           winecfg: {
                             ...prev.winecfg,
-                            dll_overrides: [...prev.winecfg.dll_overrides, draft]
+                            dll_overrides: [
+                              ...prev.winecfg.dll_overrides,
+                              {
+                                ...draft,
+                                dll: draft.dll.trim()
+                              }
+                            ]
                           }
                         }))
                         setDllDraft({ dll: '', mode: 'builtin' })
