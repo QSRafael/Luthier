@@ -59,7 +59,11 @@ export function PerformanceTabSection(props: CreatorPageSectionProps) {
             <FeatureStateField
               label="Gamescope"
               help={ct('creator_defines_gamescope_policy_and_syncs_with_requirements_gam')}
-              value={config().environment.gamescope.state}
+              value={
+                config().environment.gamescope.state === 'OptionalOff'
+                  ? 'MandatoryOff'
+                  : config().environment.gamescope.state
+              }
               onChange={setGamescopeState}
               footer={
                 <Show

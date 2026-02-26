@@ -140,13 +140,14 @@ export function ReviewTabSection(props: CreatorPageSectionProps) {
     if (!cfg.winecfg.desktop_integration.use_wine_default) winecfgItems.push(ct('creator_desktop_integration'))
     if (!cfg.winecfg.mime_associations.use_wine_default) winecfgItems.push('MIME/Protocolos')
 
+    // Keep the same order as the navigation tabs.
     pushRow(ct('creator_label_game'), [cfg.game_name || null, exeName ? `EXE: ${exeName}` : null])
-    pushRow(ct('creator_label_runtime'), runtimeItems)
     pushRow(ct('creator_label_game_files_and_launch'), fileLaunchItems)
-    pushRow(ct('creator_dependencies'), dependencyItems)
-    pushRow(ct('creator_launch_and_environment'), scriptEnvItems)
+    pushRow(ct('creator_label_runtime'), runtimeItems)
     pushRow(ct('creator_enhancements'), enhancementItems)
+    pushRow(ct('creator_dependencies'), dependencyItems)
     pushRow('Winecfg', winecfgItems)
+    pushRow(ct('creator_launch_and_environment'), scriptEnvItems)
     return rows
   }
 

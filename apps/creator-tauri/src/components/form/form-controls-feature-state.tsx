@@ -9,15 +9,13 @@ function decodeFeatureState(value: FeatureState) {
   if (value === 'MandatoryOn') return { enabled: true, mandatory: true }
   if (value === 'MandatoryOff') return { enabled: false, mandatory: true }
   if (value === 'OptionalOn') return { enabled: true, mandatory: false }
-  // Disabled rows keep "mandatory" visually on in Creator to avoid invalid combinations.
-  return { enabled: false, mandatory: true }
+  return { enabled: false, mandatory: false }
 }
 
 function encodeFeatureState(enabled: boolean, mandatory: boolean): FeatureState {
-  const normalizedMandatory = enabled ? mandatory : true
-  if (enabled && normalizedMandatory) return 'MandatoryOn'
-  if (!enabled && normalizedMandatory) return 'MandatoryOff'
-  if (enabled && !normalizedMandatory) return 'OptionalOn'
+  if (enabled && mandatory) return 'MandatoryOn'
+  if (!enabled && mandatory) return 'MandatoryOff'
+  if (enabled && !mandatory) return 'OptionalOn'
   return 'OptionalOff'
 }
 
@@ -96,7 +94,6 @@ export function FeatureStateField(props: FeatureStateFieldProps) {
         <FeatureToggleCard
           title={i18n.mandatory}
           checked={state().mandatory}
-          disabled={!state().enabled}
           onChange={(mandatory) => props.onChange(encodeFeatureState(state().enabled, mandatory))}
         />
       </>

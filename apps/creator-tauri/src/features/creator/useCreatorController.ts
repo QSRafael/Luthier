@@ -876,18 +876,19 @@ export function useCreatorController() {
   }
 
   const setGamescopeState = (state: FeatureState) => {
+    const normalizedState: FeatureState = state === 'OptionalOff' ? 'MandatoryOff' : state
     patchConfig((prev) => ({
       ...prev,
       environment: {
         ...prev.environment,
         gamescope: {
           ...prev.environment.gamescope,
-          state
+          state: normalizedState
         }
       },
       requirements: {
         ...prev.requirements,
-        gamescope: state
+        gamescope: normalizedState
       }
     }))
   }
