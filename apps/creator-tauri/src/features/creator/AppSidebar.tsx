@@ -13,6 +13,7 @@ import {
   IconSettings,
   IconTool,
   IconGauge
+  ,IconFolder
 } from '@tabler/icons-solidjs'
 
 import {
@@ -45,6 +46,7 @@ type NavEntry = {
 
 const navMain: NavEntry[] = [
   { tab: 'game', icon: IconDeviceGamepad2 },
+  { tab: 'gameFiles', icon: IconFolder },
   { tab: 'runtime', icon: IconCpu },
   { tab: 'performance', icon: IconGauge },
   { tab: 'prefix', icon: IconTool },
