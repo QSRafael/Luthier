@@ -25,10 +25,24 @@ use crate::splash::{run_splash_flow, SplashLaunchMode};
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let trace_id = new_trace_id();
-    let has_config_override_flags =
-        cli.set_mangohud.is_some() || cli.set_gamescope.is_some() || cli.set_gamemode.is_some();
 
-    if has_config_override_flags && !cli.config {
+    validate_cli_flags(&cli)?;
+    log_startup_event(&trace_id, &cli);
+
+    if route_explicit_commands(&trace_id, &cli)? {
+        return Ok(());
+    }
+
+    if route_implicit_splash(&cli)? {
+        return Ok(());
+    }
+
+    print_noop_hint();
+    Ok(())
+}
+
+fn validate_cli_flags(cli: &Cli) -> anyhow::Result<()> {
+    if has_config_override_flags(cli) && !cli.config {
         return Err(anyhow!(
             "override flags require --config (use --config --set-<feature> ...)"
         ));
@@ -40,8 +54,16 @@ async fn main() -> anyhow::Result<()> {
         ));
     }
 
+    Ok(())
+}
+
+fn has_config_override_flags(cli: &Cli) -> bool {
+    cli.set_mangohud.is_some() || cli.set_gamescope.is_some() || cli.set_gamemode.is_some()
+}
+
+fn log_startup_event(trace_id: &str, cli: &Cli) {
     log_event(
-        &trace_id,
+        trace_id,
         LogLevel::Info,
         "startup",
         "GO-UI-001",
@@ -60,49 +82,64 @@ async fn main() -> anyhow::Result<()> {
             "set_gamemode": cli.set_gamemode.as_ref().map(|v| format!("{v:?}")),
         }),
     );
+}
 
+fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
     if cli.show_config {
-        run_show_embedded_config(&trace_id)
+        run_show_embedded_config(trace_id)
             .context("failed to print embedded config from current executable")?;
-        return Ok(());
+        return Ok(true);
     }
 
     if cli.doctor {
-        run_doctor_command(&trace_id, cli.verbose).context("doctor command failed")?;
-        return Ok(());
+        run_doctor_command(trace_id, cli.verbose).context("doctor command failed")?;
+        return Ok(true);
     }
 
     if cli.winecfg {
-        run_winecfg_command(&trace_id).context("winecfg command failed")?;
-        return Ok(());
+        run_winecfg_command(trace_id).context("winecfg command failed")?;
+        return Ok(true);
     }
 
     if cli.config {
-        run_config_command(&trace_id, &cli).context("config command failed")?;
-        return Ok(());
+        run_config_command(trace_id, cli).context("config command failed")?;
+        return Ok(true);
     }
 
     if cli.play {
-        if cli.splash {
-            run_splash_flow(
-                SplashLaunchMode::ExplicitPlayWithSplash,
-                cli.lang.as_deref(),
-            )
-            .context("splash play flow failed")?;
-            return Ok(());
-        }
-        run_play(&trace_id).context("play flow failed")?;
+        route_play_command(trace_id, cli)?;
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+fn route_play_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
+    if cli.splash {
+        run_splash_flow(
+            SplashLaunchMode::ExplicitPlayWithSplash,
+            cli.lang.as_deref(),
+        )
+        .context("splash play flow failed")?;
         return Ok(());
     }
 
+    run_play(trace_id).context("play flow failed")?;
+    Ok(())
+}
+
+fn route_implicit_splash(cli: &Cli) -> anyhow::Result<bool> {
     if try_load_embedded_config()?.is_some() {
         run_splash_flow(SplashLaunchMode::ImplicitDoubleClick, cli.lang.as_deref())
             .context("implicit splash flow failed")?;
-        return Ok(());
+        return Ok(true);
     }
 
+    Ok(false)
+}
+
+fn print_noop_hint() {
     println!(
         "Nada para executar. Use --show-config, --doctor, --winecfg, --config, --play ou --play --splash."
     );
-    Ok(())
 }
