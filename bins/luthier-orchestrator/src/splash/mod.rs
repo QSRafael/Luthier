@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+
 #[cfg(target_os = "linux")]
 use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
@@ -11,8 +11,7 @@ use std::time::{Duration, Instant};
 use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose, Engine as _};
 use font8x8::{UnicodeFonts, BASIC_FONTS};
-use fontdb::{Database, Family, Query, Source, Style, Weight};
-use fontdue::{Font, FontSettings};
+use fontdue::Font;
 use image::imageops::FilterType;
 use minifb::{Icon, Key, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use luthier_orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
@@ -25,38 +24,27 @@ use crate::overrides::{
 };
 use crate::payload::load_embedded_config_required;
 
-const WIN_W: usize = 960;
-const WIN_H: usize = 310;
-const FPS: u64 = 60;
-const PRELAUNCH_AUTOSTART_SECS: u64 = 10;
+pub mod theme;
+pub mod state;
+use theme::*;
+pub use state::*;
 
-const BG: u32 = 0x000000;
-const BORDER: u32 = 0x2a2a2a;
-const TEXT: u32 = 0xffffff;
-const MUTED: u32 = 0xbdbdbd;
-const BAD: u32 = 0xffffff;
-const BTN: u32 = 0x101010;
-const BTN_HOVER: u32 = 0x181818;
-const SEPARATOR: u32 = 0x1f1f1f;
-
-static SYSTEM_FONT: OnceLock<Option<Font>> = OnceLock::new();
 static SPLASH_LOCALE: OnceLock<SplashLocale> = OnceLock::new();
-const EMBEDDED_SPLASH_FONT_BYTES: &[u8] = include_bytes!("../assets/fonts/NotoSans-Regular.ttf");
 
 #[derive(Debug, Clone, Copy)]
-struct SplashWindowScale {
-    minifb_scale: Scale,
-    factor: i32,
+pub(crate) struct SplashWindowScale {
+    pub minifb_scale: Scale,
+    pub factor: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SplashLocale {
+pub(crate) enum SplashLocale {
     PtBr,
     EnUs,
 }
 
 #[derive(Debug, Clone, Copy)]
-enum SplashTextKey {
+pub(crate) enum SplashTextKey {
     WindowTitle,
     WindowDependencies,
     StatusPreparingExecution,
@@ -118,7 +106,7 @@ fn resolve_splash_locale(lang_override: Option<&str>) -> SplashLocale {
     }
 }
 
-fn t(key: SplashTextKey) -> &'static str {
+pub(crate) fn t(key: SplashTextKey) -> &'static str {
     t_for(active_splash_locale(), key)
 }
 
@@ -264,156 +252,6 @@ fn non_empty_trimmed(raw: &str) -> Option<&str> {
     } else {
         Some(trimmed)
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum SplashLaunchMode {
-    ImplicitDoubleClick,
-    ExplicitPlayWithSplash,
-}
-
-#[derive(Debug, Clone)]
-struct ToggleRow {
-    key: &'static str,
-    label: &'static str,
-    value: Option<bool>,
-}
-
-#[derive(Debug, Clone)]
-struct HeroBackground {
-    pixels: Vec<u32>,
-}
-
-#[derive(Debug, Clone)]
-struct PrelaunchState {
-    config: GameConfig,
-    overrides: RuntimeOverrides,
-    doctor: DoctorReport,
-    countdown_started_at: Instant,
-    configurable_rows: Vec<ToggleRow>,
-    hero_background: Option<Arc<HeroBackground>>,
-}
-
-enum PrelaunchDecision {
-    Start {
-        overrides: RuntimeOverrides,
-        window: Window,
-        buffer: Vec<u32>,
-    },
-    Exit,
-}
-
-#[derive(Debug)]
-enum FeedbackDecision {
-    Close,
-}
-
-#[derive(Debug)]
-struct ChildRunOutcome {
-    game_name: String,
-    hero_background: Option<Arc<HeroBackground>>,
-}
-
-#[derive(Debug)]
-enum ChildStream {
-    Stdout,
-    Stderr,
-}
-
-#[derive(Debug)]
-enum ChildEvent {
-    Line(ChildStream, String),
-    Exited(Option<i32>),
-}
-
-#[derive(Debug, Clone)]
-struct ProgressViewState {
-    game_name: String,
-    hero_background: Option<Arc<HeroBackground>>,
-    status: String,
-    started_at: Instant,
-    launching_started_at: Option<Instant>,
-    game_runtime_start_seen: bool,
-    game_command_started: bool,
-    recent_messages: VecDeque<String>,
-    exit_code: Option<i32>,
-    child_finished: bool,
-    child_failed_to_spawn: Option<String>,
-}
-
-impl ProgressViewState {
-    fn new(game_name: String, hero_background: Option<Arc<HeroBackground>>) -> Self {
-        let mut s = Self {
-            game_name,
-            hero_background,
-            status: t(SplashTextKey::StatusPreparingExecution).to_string(),
-            started_at: Instant::now(),
-            launching_started_at: None,
-            game_runtime_start_seen: false,
-            game_command_started: false,
-            recent_messages: VecDeque::with_capacity(3),
-            exit_code: None,
-            child_finished: false,
-            child_failed_to_spawn: None,
-        };
-        s.push_message(t(SplashTextKey::StatusPreparingExecution).to_string());
-        s
-    }
-
-    fn set_status(&mut self, text: impl Into<String>) {
-        let text = text.into();
-        if self.status != text {
-            self.status = text.clone();
-            self.push_message(text);
-        }
-    }
-
-    fn push_message(&mut self, text: String) {
-        if self
-            .recent_messages
-            .back()
-            .map(|v| v == &text)
-            .unwrap_or(false)
-        {
-            return;
-        }
-        if self.recent_messages.iter().any(|v| v == &text) {
-            return;
-        }
-        if self.recent_messages.len() >= 3 {
-            self.recent_messages.pop_front();
-        }
-        self.recent_messages.push_back(text);
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct Rect {
-    x: i32,
-    y: i32,
-    w: i32,
-    h: i32,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct TextMetrics {
-    width: i32,
-    min_y: i32,
-    height: i32,
-}
-
-impl Rect {
-    fn contains(&self, px: i32, py: i32) -> bool {
-        px >= self.x && py >= self.y && px < self.x + self.w && py < self.y + self.h
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct MouseSnapshot {
-    x: i32,
-    y: i32,
-    left_down: bool,
-    left_pressed: bool,
 }
 
 pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> anyhow::Result<()> {
@@ -2428,43 +2266,7 @@ fn text_px_size(scale: i32) -> f32 {
     }
 }
 
-fn system_font() -> Option<&'static Font> {
-    SYSTEM_FONT
-        .get_or_init(|| load_embedded_splash_font().or_else(load_system_font))
-        .as_ref()
-}
 
-fn load_embedded_splash_font() -> Option<Font> {
-    Font::from_bytes(EMBEDDED_SPLASH_FONT_BYTES, FontSettings::default()).ok()
-}
-
-fn load_system_font() -> Option<Font> {
-    let mut db = Database::new();
-    db.load_system_fonts();
-    let families = [
-        Family::Name("Noto Sans"),
-        Family::Name("Cantarell"),
-        Family::Name("DejaVu Sans"),
-        Family::Name("Liberation Sans"),
-        Family::SansSerif,
-    ];
-    let query = Query {
-        families: &families,
-        weight: Weight::NORMAL,
-        style: Style::Normal,
-        ..Query::default()
-    };
-    let id = db.query(&query)?;
-    let face = db.face(id)?;
-
-    let bytes = match &face.source {
-        Source::Binary(data) => data.as_ref().as_ref().to_vec(),
-        Source::File(path) => std::fs::read(path).ok()?,
-        Source::SharedFile(path, _) => std::fs::read(path).ok()?,
-    };
-
-    Font::from_bytes(bytes, FontSettings::default()).ok()
-}
 
 fn blend_over(dst: u32, src: u32, alpha: u8) -> u32 {
     if alpha == 255 {
