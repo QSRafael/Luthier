@@ -12,20 +12,16 @@ use serde_json::Value;
 
 use crate::{
     instance_lock::acquire_instance_lock,
-    launch::dry_run_enabled,
+    launch::{
+        apply_registry_keys_if_present, apply_winecfg_overrides_if_present, build_launch_command,
+        build_prefix_setup_execution_context, dry_run_enabled, execute_script_if_present,
+        validate_integrity,
+    },
     logging::log_event,
     mounts::{apply_folder_mounts, MountStatus},
     overrides::{apply_runtime_overrides, load_runtime_overrides},
     paths::{resolve_game_root, resolve_relative_path},
     payload::load_embedded_config_required,
-    services::{
-        integrity_service::validate_integrity,
-        launch_plan_builder::build_launch_command,
-        prefix_setup_service::build_prefix_setup_execution_context,
-        registry_apply_service::apply_registry_keys_if_present,
-        script_runner::execute_script_if_present,
-        winecfg_apply_service::apply_winecfg_overrides_if_present,
-    },
 };
 
 #[derive(Debug)]
@@ -55,17 +51,6 @@ impl PlayFlowExecution {
             serialize_context,
         }
     }
-}
-
-pub fn run_play_flow(trace_id: &str) -> anyhow::Result<()> {
-    let execution = execute_play_flow(trace_id)?;
-    print_pretty_output(&execution.output, execution.serialize_context)?;
-
-    if let Some(err) = execution.terminal_error {
-        return Err(err);
-    }
-
-    Ok(())
 }
 
 pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
@@ -538,12 +523,4 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
         output,
         "failed to serialize play output",
     ))
-}
-
-fn print_pretty_output(output: &Value, serialize_context: &'static str) -> anyhow::Result<()> {
-    println!(
-        "{}",
-        serde_json::to_string_pretty(output).context(serialize_context)?
-    );
-    Ok(())
 }
