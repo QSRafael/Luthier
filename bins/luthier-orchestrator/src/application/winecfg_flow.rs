@@ -49,6 +49,10 @@ impl WinecfgFlowExecution {
     }
 }
 
+pub fn run_winecfg_flow(trace_id: &str) -> anyhow::Result<WinecfgFlowExecution> {
+    execute_winecfg_flow(trace_id)
+}
+
 pub fn execute_winecfg_flow(trace_id: &str) -> anyhow::Result<WinecfgFlowExecution> {
     let config = load_embedded_config_required()?;
     let _game_root = resolve_game_root().context("failed to resolve game root")?;
