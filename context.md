@@ -1263,9 +1263,9 @@ Observacao:
 ---
 
 ## 23) Todo
-- Melhorar pasta raiz do jogo
-- Melhorar versão do proton
-- ordem de fallback runtime
+- Arrumar gamescope obrigatório
+- logo em vez do título
+- pastas sendo criadas no local/share
 
 ## 24) Progresso de Implementacao (checkpoint)
 
