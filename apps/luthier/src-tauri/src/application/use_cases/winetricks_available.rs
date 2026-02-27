@@ -195,23 +195,6 @@ impl<'a> WinetricksAvailableUseCase<'a> {
     }
 }
 
-pub fn winetricks_available(
-    process_runner: &dyn ProcessRunnerPort,
-    runtime_environment: &dyn RuntimeEnvironmentPort,
-    file_system: &dyn FileSystemPort,
-    winetricks_catalog_parser: &dyn WinetricksCatalogParserPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<WinetricksAvailableOutput> {
-    WinetricksAvailableUseCase::new(
-        process_runner,
-        runtime_environment,
-        file_system,
-        winetricks_catalog_parser,
-        logger,
-    )
-    .execute()
-}
-
 pub fn winetricks_available_command(
     process_runner: &dyn ProcessRunnerPort,
     runtime_environment: &dyn RuntimeEnvironmentPort,

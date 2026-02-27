@@ -113,14 +113,6 @@ impl<'a> SearchHeroUseCase<'a> {
     }
 }
 
-pub fn search_hero_image(
-    input: SearchHeroImageInput,
-    hero_search: &dyn HeroSearchPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<SearchHeroImageOutput> {
-    SearchHeroUseCase::new(hero_search, logger).execute(input)
-}
-
 pub fn search_hero_image_command(
     input: SearchHeroImageInput,
     hero_search: &dyn HeroSearchPort,

@@ -36,16 +36,6 @@ impl StderrJsonBackendLogger {
         }
     }
 
-    pub fn with_component(component: impl Into<String>) -> Self {
-        Self {
-            component: component.into(),
-        }
-    }
-
-    pub fn component(&self) -> &str {
-        &self.component
-    }
-
     pub fn emit_event(&self, event: &BackendLogEvent) -> BackendResult<()> {
         let payload = self.build_payload(
             format_backend_log_level(event.level),

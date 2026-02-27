@@ -147,22 +147,6 @@ fn map_read_dir_error(err: BackendError) -> BackendError {
     )
 }
 
-pub fn list_child_directories(
-    input: ListChildDirectoriesInput,
-    file_system: &dyn FileSystemPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<ListChildDirectoriesOutput> {
-    ListFsUseCase::new(file_system, logger).list_child_directories(input)
-}
-
-pub fn list_directory_entries(
-    input: ListDirectoryEntriesInput,
-    file_system: &dyn FileSystemPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<ListDirectoryEntriesOutput> {
-    ListFsUseCase::new(file_system, logger).list_directory_entries(input)
-}
-
 pub fn list_child_directories_command(
     input: ListChildDirectoriesInput,
     file_system: &dyn FileSystemPort,

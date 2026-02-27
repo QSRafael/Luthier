@@ -3,15 +3,8 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use luthier_orchestrator_core::GameConfig;
-
 use crate::application::ports::{FileSystemEntry, FileSystemEntryKind, FileSystemPort};
-use crate::domain::paths as domain_paths;
 use crate::error::{BackendError, BackendResult};
-use crate::models::dto::{
-    ListChildDirectoriesInput, ListChildDirectoriesOutput, ListDirectoryEntriesInput,
-    ListDirectoryEntriesOutput,
-};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct LocalFileSystemRepository;
@@ -25,10 +18,6 @@ impl LocalFileSystemRepository {
 impl FileSystemPort for LocalFileSystemRepository {
     fn read_bytes(&self, path: &Path) -> BackendResult<Vec<u8>> {
         fs::read(path).map_err(BackendError::from)
-    }
-
-    fn write_bytes(&self, path: &Path, bytes: &[u8]) -> BackendResult<()> {
-        fs::write(path, bytes).map_err(BackendError::from)
     }
 
     fn read_dir(&self, path: &Path) -> BackendResult<Vec<FileSystemEntry>> {
@@ -65,98 +54,6 @@ impl FileSystemPort for LocalFileSystemRepository {
 
 pub(crate) fn read_bytes(path: &Path) -> BackendResult<Vec<u8>> {
     LocalFileSystemRepository::new().read_bytes(path)
-}
-
-pub(crate) fn list_child_directories(
-    input: ListChildDirectoriesInput,
-) -> BackendResult<ListChildDirectoriesOutput> {
-    let root = PathBuf::from(&input.path);
-    let entries = fs::read_dir(&root).map_err(|err| {
-        BackendError::new(
-            "fs_read_dir_failed",
-            format!("failed to list directory: {err}"),
-        )
-    })?;
-
-    let mut directories = Vec::new();
-    for entry in entries {
-        let entry = entry.map_err(|err| {
-            BackendError::new(
-                "fs_read_dir_entry_failed",
-                format!("failed to read directory entry: {err}"),
-            )
-        })?;
-        let path = entry.path();
-        if path.is_dir() {
-            directories.push(path.to_string_lossy().into_owned());
-        }
-    }
-
-    directories.sort_by_key(|value| value.to_ascii_lowercase());
-
-    Ok(ListChildDirectoriesOutput {
-        path: input.path,
-        directories,
-    })
-}
-
-pub(crate) fn list_directory_entries(
-    input: ListDirectoryEntriesInput,
-) -> BackendResult<ListDirectoryEntriesOutput> {
-    let root = PathBuf::from(&input.path);
-    let entries = fs::read_dir(&root).map_err(|err| {
-        BackendError::new(
-            "fs_read_dir_failed",
-            format!("failed to list directory: {err}"),
-        )
-    })?;
-
-    let mut directories = Vec::new();
-    let mut files = Vec::new();
-    for entry in entries {
-        let entry = entry.map_err(|err| {
-            BackendError::new(
-                "fs_read_dir_entry_failed",
-                format!("failed to read directory entry: {err}"),
-            )
-        })?;
-        let path = entry.path();
-        if path.is_dir() {
-            directories.push(path.to_string_lossy().into_owned());
-        } else if path.is_file() {
-            files.push(path.to_string_lossy().into_owned());
-        }
-    }
-
-    directories.sort_by_key(|value| value.to_ascii_lowercase());
-    files.sort_by_key(|value| value.to_ascii_lowercase());
-
-    Ok(ListDirectoryEntriesOutput {
-        path: input.path,
-        directories,
-        files,
-    })
-}
-
-pub(crate) fn collect_missing_files(
-    config: &GameConfig,
-    game_root: &Path,
-) -> BackendResult<Vec<String>> {
-    let mut missing = Vec::new();
-
-    let exe_path = domain_paths::resolve_relative_path(game_root, &config.relative_exe_path)?;
-    if !exe_path.exists() {
-        missing.push(config.relative_exe_path.clone());
-    }
-
-    for file in &config.integrity_files {
-        let path = domain_paths::resolve_relative_path(game_root, file)?;
-        if !path.exists() {
-            missing.push(file.clone());
-        }
-    }
-
-    Ok(missing)
 }
 
 pub(crate) fn resolve_base_orchestrator_binary(
@@ -239,17 +136,6 @@ pub(crate) fn collect_base_orchestrator_binary_candidates(
     }
 
     candidates
-}
-
-pub(crate) fn find_executable_in_path(name: &str) -> Option<PathBuf> {
-    let path_var = env::var_os("PATH")?;
-    for directory in env::split_paths(&path_var) {
-        let candidate = directory.join(name);
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-    }
-    None
 }
 
 fn map_std_file_type(file_type: fs::FileType) -> FileSystemEntryKind {

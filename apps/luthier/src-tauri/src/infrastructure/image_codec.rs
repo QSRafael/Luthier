@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use image::{imageops::FilterType, DynamicImage, GenericImageView, ImageFormat, RgbaImage};
+use image::{imageops::FilterType, DynamicImage, ImageFormat, RgbaImage};
 
 use crate::application::ports::{ImageCodecPort, RasterImage, RasterImageFormat, ResizeFilter};
 use crate::error::{BackendError, BackendResult};
@@ -74,76 +74,6 @@ impl ImageCodecPort for ImageRsCodec {
             dynamic.thumbnail(max_width, max_height),
         ))
     }
-}
-
-pub(crate) fn extract_best_png_from_ico_groups(
-    icon_groups: Vec<Vec<u8>>,
-) -> Result<(Vec<u8>, u32, u32), String> {
-    if icon_groups.is_empty() {
-        return Err("no icon resources found in executable".to_string());
-    }
-
-    let mut best_image: Option<DynamicImage> = None;
-    let mut best_area = 0u64;
-
-    for icon_bytes in icon_groups {
-        let decoded = match image::load_from_memory_with_format(&icon_bytes, ImageFormat::Ico) {
-            Ok(image) => image,
-            Err(_) => continue,
-        };
-
-        let (width, height) = decoded.dimensions();
-        let area = u64::from(width) * u64::from(height);
-        if area > best_area {
-            best_area = area;
-            best_image = Some(decoded);
-        }
-    }
-
-    let Some(mut image) = best_image else {
-        return Err("failed to decode icon resources to image".to_string());
-    };
-
-    if image.width() > 256 || image.height() > 256 {
-        image = image.thumbnail(256, 256);
-    }
-
-    let (width, height) = image.dimensions();
-    let png_bytes = encode_dynamic_image_to_bytes(&image, ImageFormat::Png)
-        .map_err(|err| format!("failed to encode PNG icon: {err}"))?;
-
-    Ok((png_bytes, width, height))
-}
-
-pub(crate) fn crop_to_ratio_and_resize(
-    image: DynamicImage,
-    ratio_w: u32,
-    ratio_h: u32,
-    target_w: u32,
-    target_h: u32,
-) -> Result<DynamicImage, String> {
-    let (src_w, src_h) = image.dimensions();
-    if src_w == 0 || src_h == 0 {
-        return Err("hero image has invalid dimensions".to_string());
-    }
-
-    let lhs = u64::from(src_w) * u64::from(ratio_h);
-    let rhs = u64::from(src_h) * u64::from(ratio_w);
-
-    let (crop_x, crop_y, crop_w, crop_h) = if lhs > rhs {
-        let crop_w = ((u64::from(src_h) * u64::from(ratio_w)) / u64::from(ratio_h))
-            .clamp(1, u64::from(src_w)) as u32;
-        let crop_x = (src_w.saturating_sub(crop_w)) / 2;
-        (crop_x, 0, crop_w, src_h)
-    } else {
-        let crop_h = ((u64::from(src_w) * u64::from(ratio_h)) / u64::from(ratio_w))
-            .clamp(1, u64::from(src_h)) as u32;
-        let crop_y = (src_h.saturating_sub(crop_h)) / 2;
-        (0, crop_y, src_w, crop_h)
-    };
-
-    let cropped = image.crop_imm(crop_x, crop_y, crop_w, crop_h);
-    Ok(cropped.resize_exact(target_w, target_h, FilterType::Lanczos3))
 }
 
 pub(crate) fn encode_dynamic_image_to_bytes(

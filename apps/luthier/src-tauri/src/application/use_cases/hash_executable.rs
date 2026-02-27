@@ -56,14 +56,6 @@ impl<'a> HashExecutableUseCase<'a> {
     }
 }
 
-pub fn hash_executable(
-    input: HashExeInput,
-    luthier_core: &dyn LuthierCorePort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<HashExeOutput> {
-    HashExecutableUseCase::new(luthier_core, logger).execute(input)
-}
-
 pub fn hash_executable_command(
     input: HashExeInput,
     luthier_core: &dyn LuthierCorePort,

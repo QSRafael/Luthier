@@ -223,26 +223,6 @@ impl<'a> CreateExecutableUseCase<'a> {
     }
 }
 
-pub fn create_executable(
-    input: CreateExecutableInput,
-    luthier_core: &dyn LuthierCorePort,
-    base_binary_resolver: &dyn BaseBinaryResolverPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<CreateExecutableOutput> {
-    CreateExecutableUseCase::new(luthier_core, base_binary_resolver, logger).execute(input)
-}
-
-pub fn create_executable_with_base_hints(
-    input: CreateExecutableInput,
-    base_binary_hints: &[PathBuf],
-    luthier_core: &dyn LuthierCorePort,
-    base_binary_resolver: &dyn BaseBinaryResolverPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<CreateExecutableOutput> {
-    CreateExecutableUseCase::new(luthier_core, base_binary_resolver, logger)
-        .execute_with_base_hints(input, base_binary_hints)
-}
-
 pub fn create_executable_command(
     input: CreateExecutableInput,
     luthier_core: &dyn LuthierCorePort,

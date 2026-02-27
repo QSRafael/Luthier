@@ -1,9 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use luthier_core::{CreateOrchestratorRequest, CreateOrchestratorResult};
-use luthier_orchestrator_core::{
-    doctor::DoctorReport, prefix::PrefixSetupPlan, GameConfig, RegistryKey,
-};
+use luthier_orchestrator_core::{doctor::DoctorReport, prefix::PrefixSetupPlan, GameConfig};
 use serde::{Deserialize, Serialize};
 
 use crate::error::BackendResult;
@@ -30,12 +28,7 @@ pub trait BackendLoggerPort: Send + Sync {
 }
 
 pub trait RuntimeEnvironmentPort: Send + Sync {
-    fn var(&self, key: &str) -> Option<String>;
-    fn current_dir(&self) -> BackendResult<PathBuf>;
-    fn current_exe(&self) -> BackendResult<PathBuf>;
     fn path_entries(&self) -> Vec<PathBuf>;
-    fn process_id(&self) -> u32;
-    fn unix_time_ms(&self) -> u128;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -54,7 +47,6 @@ pub struct FileSystemEntry {
 
 pub trait FileSystemPort: Send + Sync {
     fn read_bytes(&self, path: &Path) -> BackendResult<Vec<u8>>;
-    fn write_bytes(&self, path: &Path, bytes: &[u8]) -> BackendResult<()>;
     fn read_dir(&self, path: &Path) -> BackendResult<Vec<FileSystemEntry>>;
     fn exists(&self, path: &Path) -> bool;
     fn is_file(&self, path: &Path) -> bool;
@@ -152,17 +144,6 @@ pub trait ImageCodecPort: Send + Sync {
 
 pub trait PeIconReaderPort: Send + Sync {
     fn read_ico_icon_groups(&self, executable_bytes: &[u8]) -> BackendResult<Vec<Vec<u8>>>;
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RegistryParseOutput {
-    pub entries: Vec<RegistryKey>,
-    pub warnings: Vec<String>,
-}
-
-pub trait RegistryParserPort: Send + Sync {
-    fn decode_text(&self, bytes: &[u8]) -> BackendResult<String>;
-    fn parse_entries(&self, raw: &str) -> RegistryParseOutput;
 }
 
 pub trait WinetricksCatalogParserPort: Send + Sync {

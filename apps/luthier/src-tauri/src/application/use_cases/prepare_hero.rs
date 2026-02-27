@@ -172,15 +172,6 @@ impl<'a> PrepareHeroUseCase<'a> {
     }
 }
 
-pub fn prepare_hero_image(
-    input: PrepareHeroImageInput,
-    http_client: &dyn HttpClientPort,
-    image_codec: &dyn ImageCodecPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<PrepareHeroImageOutput> {
-    PrepareHeroUseCase::new(http_client, image_codec, logger).execute(input)
-}
-
 pub fn prepare_hero_image_command(
     input: PrepareHeroImageInput,
     http_client: &dyn HttpClientPort,

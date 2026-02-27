@@ -1,7 +1,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use luthier_core::{CreateOrchestratorRequest, CreateOrchestratorResult};
 use luthier_orchestrator_core::{doctor::DoctorReport, prefix::PrefixSetupPlan, GameConfig};
@@ -150,32 +149,9 @@ impl JsonCodecPort for NativeJsonCodecAdapter {
 struct NativeRuntimeEnvironmentAdapter;
 
 impl RuntimeEnvironmentPort for NativeRuntimeEnvironmentAdapter {
-    fn var(&self, key: &str) -> Option<String> {
-        env::var(key).ok()
-    }
-
-    fn current_dir(&self) -> BackendResult<PathBuf> {
-        env::current_dir().map_err(Into::into)
-    }
-
-    fn current_exe(&self) -> BackendResult<PathBuf> {
-        env::current_exe().map_err(Into::into)
-    }
-
     fn path_entries(&self) -> Vec<PathBuf> {
         env::var_os("PATH")
             .map(|value| env::split_paths(&value).collect())
-            .unwrap_or_default()
-    }
-
-    fn process_id(&self) -> u32 {
-        std::process::id()
-    }
-
-    fn unix_time_ms(&self) -> u128 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_millis())
             .unwrap_or_default()
     }
 }

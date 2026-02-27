@@ -133,16 +133,6 @@ impl<'a> ExtractIconUseCase<'a> {
     }
 }
 
-pub fn extract_executable_icon(
-    input: ExtractExecutableIconInput,
-    file_system: &dyn FileSystemPort,
-    pe_icon_reader: &dyn PeIconReaderPort,
-    image_codec: &dyn ImageCodecPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<ExtractExecutableIconOutput> {
-    ExtractIconUseCase::new(file_system, pe_icon_reader, image_codec, logger).execute(input)
-}
-
 pub fn extract_executable_icon_command(
     input: ExtractExecutableIconInput,
     file_system: &dyn FileSystemPort,

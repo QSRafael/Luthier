@@ -172,24 +172,6 @@ impl<'a> TestConfigurationUseCase<'a> {
     }
 }
 
-pub fn test_configuration(
-    input: TestConfigurationInput,
-    luthier_core: &dyn LuthierCorePort,
-    file_system: &dyn FileSystemPort,
-    runtime_inspector: &dyn OrchestratorRuntimeInspectorPort,
-    json_codec: &dyn JsonCodecPort,
-    logger: &dyn BackendLoggerPort,
-) -> BackendResult<TestConfigurationOutput> {
-    TestConfigurationUseCase::new(
-        luthier_core,
-        file_system,
-        runtime_inspector,
-        json_codec,
-        logger,
-    )
-    .execute(input)
-}
-
 pub fn test_configuration_command(
     input: TestConfigurationInput,
     luthier_core: &dyn LuthierCorePort,

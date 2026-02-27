@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 
 pub type BackendResult<T> = Result<T, BackendError>;
 pub type CommandStringResult<T> = Result<T, String>;
-pub type CommandSerializableResult<T> = Result<T, BackendErrorResponse>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackendErrorResponse {
@@ -260,7 +259,6 @@ impl From<std::num::ParseIntError> for BackendError {
 
 pub trait BackendResultExt<T> {
     fn into_command_string_result(self) -> CommandStringResult<T>;
-    fn into_command_serializable_result(self) -> CommandSerializableResult<T>;
 }
 
 impl<T, E> BackendResultExt<T> for Result<T, E>
@@ -269,9 +267,5 @@ where
 {
     fn into_command_string_result(self) -> CommandStringResult<T> {
         self.map_err(|err| err.into().into_string_response())
-    }
-
-    fn into_command_serializable_result(self) -> CommandSerializableResult<T> {
-        self.map_err(|err| err.into().into_serializable_response())
     }
 }

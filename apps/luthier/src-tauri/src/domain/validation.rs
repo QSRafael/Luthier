@@ -8,27 +8,6 @@ pub(crate) fn validate_prepare_hero_image_url_input<'a>(raw: &'a str) -> Backend
     validate_trimmed_non_empty(raw, "hero image URL is empty", "empty_hero_image_url")
 }
 
-pub(crate) fn ensure_hero_http_url<'a>(raw: &'a str) -> BackendResult<&'a str> {
-    validate_hero_http_url(raw).ok_or_else(|| {
-        BackendError::invalid_input("hero image URL must start with http:// or https://")
-            .with_code("invalid_hero_http_url")
-    })
-}
-
-pub(crate) fn ensure_hero_image_url<'a>(raw: &'a str) -> BackendResult<&'a str> {
-    let url = ensure_hero_http_url(raw)?;
-    if is_hero_image_url(url) {
-        Ok(url)
-    } else {
-        Err(
-            BackendError::validation(
-                "automatic search returned a grid image, not a hero image; configure STEAMGRIDDB_API_KEY (or LUTHIER_STEAMGRIDDB_API_KEY) to fetch SteamGridDB hero images",
-            )
-            .with_code("unsupported_hero_image_url"),
-        )
-    }
-}
-
 pub(crate) fn parse_hero_search_response_url(body: &str) -> Option<String> {
     let trimmed = body.trim();
     if trimmed.is_empty() {

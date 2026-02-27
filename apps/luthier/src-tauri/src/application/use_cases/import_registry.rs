@@ -58,12 +58,6 @@ impl ImportRegistryUseCase {
     }
 }
 
-pub fn import_registry_file(
-    input: ImportRegistryFileInput,
-) -> BackendResult<ImportRegistryFileOutput> {
-    ImportRegistryUseCase::new().execute(input)
-}
-
 pub fn import_registry_file_command(
     input: ImportRegistryFileInput,
 ) -> CommandStringResult<ImportRegistryFileOutput> {

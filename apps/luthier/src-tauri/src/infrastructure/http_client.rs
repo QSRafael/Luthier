@@ -92,29 +92,6 @@ pub(crate) fn build_hero_search_client() -> Result<Client, String> {
         .map_err(|err| format!("failed to build HTTP client: {err}"))
 }
 
-pub(crate) fn fetch_remote_bytes(url: &str) -> Result<Vec<u8>, String> {
-    let client = Client::builder()
-        .timeout(Duration::from_secs(12))
-        .build()
-        .map_err(|err| format!("failed to build HTTP client: {err}"))?;
-
-    let response = client
-        .get(url)
-        .header(reqwest::header::USER_AGENT, "luthier/0.1 hero-image-fetch")
-        .send()
-        .map_err(|err| format!("failed to download hero image: {err}"))?;
-
-    let status = response.status();
-    if !status.is_success() {
-        return Err(format!("failed to download hero image (HTTP {status})"));
-    }
-
-    response
-        .bytes()
-        .map(|b| b.to_vec())
-        .map_err(|err| format!("failed to read hero image bytes: {err}"))
-}
-
 pub(crate) fn search_hero_image_via_usebottles(
     game_name: &str,
     client: &Client,
