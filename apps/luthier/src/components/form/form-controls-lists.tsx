@@ -11,8 +11,9 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Input } from '../ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
+import { TableCell, TableRow } from '../ui/table'
 import { FieldShell, useFormControlsI18n } from './form-controls-core'
+import { FormListTable } from './form-list-table'
 
 type FieldValidation = {
   error?: string
@@ -64,36 +65,29 @@ export function StringListField(props: StringListFieldProps) {
       footer={
         props.items.length > 0 ? (
           props.tableValueHeader ? (
-            <div class="max-h-[20rem] overflow-auto rounded-md border border-border/60 bg-background/40">
-              <Table>
-                <TableHeader>
-                  <TableRow class="hover:bg-transparent">
-                    <TableHead>{props.tableValueHeader}</TableHead>
-                    <TableHead class="w-[72px] text-right">{i18n.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <For each={props.items}>
-                    {(item, index) => (
-                      <TableRow>
-                        <TableCell class="max-w-0 truncate">{item}</TableCell>
-                        <TableCell class="text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeItem(index())}
-                            title={i18n.remove}
-                          >
-                            <IconTrash class="size-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </For>
-                </TableBody>
-              </Table>
-            </div>
+            <FormListTable
+              columns={[
+                { label: props.tableValueHeader },
+                { label: i18n.actions, class: 'w-[72px] text-right' }
+              ]}
+              rows={props.items}
+              renderRow={(item, index) => (
+                <TableRow>
+                  <TableCell class="max-w-0 truncate">{item}</TableCell>
+                  <TableCell class="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeItem(index())}
+                      title={i18n.remove}
+                    >
+                      <IconTrash class="size-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
+            />
           ) : (
             <div class="grid gap-2">
               <For each={props.items}>
@@ -319,38 +313,31 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
               </div>
             }
           >
-            <div class="max-h-[20rem] overflow-auto rounded-md border border-border/60 bg-background/40">
-              <Table>
-                <TableHeader>
-                  <TableRow class="hover:bg-transparent">
-                    <TableHead>{props.tableHeaders?.key}</TableHead>
-                    <TableHead>{props.tableHeaders?.value}</TableHead>
-                    <TableHead class="w-14 text-right">{props.removeLabel ?? i18n.action}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <For each={props.items}>
-                    {(item, index) => (
-                      <TableRow>
-                        <TableCell class="font-medium">{item.key}</TableCell>
-                        <TableCell class="text-muted-foreground">{item.value || '—'}</TableCell>
-                        <TableCell class="text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeItem(index())}
-                            title={props.removeLabel ?? i18n.remove}
-                          >
-                            <IconTrash class="size-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </For>
-                </TableBody>
-              </Table>
-            </div>
+            <FormListTable
+              columns={[
+                { label: props.tableHeaders?.key },
+                { label: props.tableHeaders?.value },
+                { label: props.removeLabel ?? i18n.action, class: 'w-14 text-right' }
+              ]}
+              rows={props.items}
+              renderRow={(item, index) => (
+                <TableRow>
+                  <TableCell class="font-medium">{item.key}</TableCell>
+                  <TableCell class="text-muted-foreground">{item.value || '—'}</TableCell>
+                  <TableCell class="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeItem(index())}
+                      title={props.removeLabel ?? i18n.remove}
+                    >
+                      <IconTrash class="size-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
+            />
           </Show>
         </Show>
       }
