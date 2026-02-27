@@ -60,6 +60,7 @@ import { createLuthierHeroActions } from './luthier-controller-hero-actions'
 import { createLuthierWinetricksActions } from './luthier-controller-winetricks-actions'
 import { createLuthierFileActions } from './luthier-controller-file-actions'
 import { createLuthierBuildActions } from './luthier-controller-build-actions'
+import { createLuthierConfigActions } from './luthier-controller-config-actions'
 
 type WinetricksAvailableOutput = {
   source: string
@@ -226,132 +227,6 @@ export function useLuthierController() {
     extractExecutableIcon
   } = createLuthierFileActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
 
-  const setGamescopeState = (state: FeatureState) => {
-    const normalizedState: FeatureState = state === 'OptionalOff' ? 'MandatoryOff' : state
-    patchConfig((prev) => ({
-      ...prev,
-      environment: {
-        ...prev.environment,
-        gamescope: {
-          ...prev.environment.gamescope,
-          state: normalizedState
-        }
-      },
-      requirements: {
-        ...prev.requirements,
-        gamescope: normalizedState
-      }
-    }))
-  }
-
-  const setGamemodeState = (state: FeatureState) => {
-    patchConfig((prev) => ({
-      ...prev,
-      environment: {
-        ...prev.environment,
-        gamemode: state
-      },
-      requirements: {
-        ...prev.requirements,
-        gamemode: state
-      }
-    }))
-  }
-
-  const setMangohudState = (state: FeatureState) => {
-    patchConfig((prev) => ({
-      ...prev,
-      environment: {
-        ...prev.environment,
-        mangohud: state
-      },
-      requirements: {
-        ...prev.requirements,
-        mangohud: state
-      }
-    }))
-  }
-
-  const setRuntimePrimary = (primary: RuntimePrimary) => {
-    patchConfig((prev) => ({
-      ...prev,
-      requirements: {
-        ...prev.requirements,
-        runtime: {
-          ...prev.requirements.runtime,
-          primary,
-          fallback_order: prev.requirements.runtime.fallback_order.filter((item) => item !== primary)
-        }
-      }
-    }))
-  }
-
-  const addFallbackCandidate = (candidate: RuntimePrimary) => {
-    patchConfig((prev) => {
-      if (prev.requirements.runtime.fallback_order.includes(candidate)) return prev
-      return {
-        ...prev,
-        requirements: {
-          ...prev.requirements,
-          runtime: {
-            ...prev.requirements.runtime,
-            fallback_order: [...prev.requirements.runtime.fallback_order, candidate]
-          }
-        }
-      }
-    })
-  }
-
-  const removeFallbackCandidate = (candidate: RuntimePrimary) => {
-    patchConfig((prev) => ({
-      ...prev,
-      requirements: {
-        ...prev.requirements,
-        runtime: {
-          ...prev.requirements.runtime,
-          fallback_order: prev.requirements.runtime.fallback_order.filter((item) => item !== candidate)
-        }
-      }
-    }))
-  }
-
-  const moveFallbackCandidate = (index: number, direction: -1 | 1) => {
-    patchConfig((prev) => {
-      const current = [...prev.requirements.runtime.fallback_order]
-      const target = index + direction
-      if (target < 0 || target >= current.length) return prev
-      const [item] = current.splice(index, 1)
-      current.splice(target, 0, item)
-      return {
-        ...prev,
-        requirements: {
-          ...prev.requirements,
-          runtime: {
-            ...prev.requirements.runtime,
-            fallback_order: current
-          }
-        }
-      }
-    })
-  }
-
-  const updateCustomVars = (items: Array<{ key: string; value: string }>) => {
-    const nextVars: Record<string, string> = {}
-    for (const item of items) {
-      const key = item.key.trim()
-      if (!key) continue
-      nextVars[key] = item.value
-    }
-
-    patchConfig((prev) => ({
-      ...prev,
-      environment: {
-        ...prev.environment,
-        custom_vars: nextVars
-      }
-    }))
-  }
-
   const {
     loadWinetricksCatalog,
     addWinetricksVerb,
@@ -359,11 +234,17 @@ export function useLuthierController() {
     addWinetricksFromSearch
   } = createLuthierWinetricksActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
 
-  const setTab = (next: string) => {
-    if (tabs.includes(next as LuthierTab)) {
-      setActiveTab(next as LuthierTab)
-    }
-  }
+  const {
+    setGamescopeState,
+    setGamemodeState,
+    setMangohudState,
+    setRuntimePrimary,
+    addFallbackCandidate,
+    removeFallbackCandidate,
+    moveFallbackCandidate,
+    updateCustomVars,
+    setTab
+  } = createLuthierConfigActions(state, tabs)
 
   createLuthierStatus(state, computed, { hashExecutablePath, loadWinetricksCatalog })
 
