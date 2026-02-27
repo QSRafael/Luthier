@@ -14,7 +14,6 @@ ignore = [
   { id = "RUSTSEC-2024-0418", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
   { id = "RUSTSEC-2024-0419", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
   { id = "RUSTSEC-2024-0420", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
-  { id = "RUSTSEC-2025-0057", reason = "fxhash is transitive through selectors in current HTML parsing stack" },
 ]
 
 [licenses]
