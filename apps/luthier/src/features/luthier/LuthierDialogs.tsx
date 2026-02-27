@@ -66,12 +66,12 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={registryDialogOpen()} onOpenChange={setRegistryDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_registry_key' as any)}</DialogTitle>
+                        <DialogTitle>{ct('luthier_add_registry_key')}</DialogTitle>
                         <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_registry_path' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_registry_path')}</label>
                             <Input
                                 value={registryDraft().path}
                                 onInput={(e) =>
@@ -91,7 +91,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             />
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_windows_registry_value_type' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_windows_registry_value_type')}</label>
                             <Select
                                 value={registryDraft().value_type}
                                 onInput={(e) =>
@@ -146,9 +146,9 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={registryImportWarningsOpen()} onOpenChange={setRegistryImportWarningsOpen}>
                 <DialogContent class="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_registry_import_warnings' as any)}</DialogTitle>
+                        <DialogTitle>{ct('luthier_registry_import_warnings')}</DialogTitle>
                         <DialogDescription>
-                            {ct('luthier_some_warnings_were_found_during_import_please_check' as any)}
+                            {ct('luthier_some_warnings_were_found_during_import_please_check')}
                         </DialogDescription>
                     </DialogHeader>
                     <div class="max-h-[60vh] overflow-y-auto rounded-md border border-border/60 bg-muted/30 p-4">
@@ -160,7 +160,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                     </div>
                     <DialogFooter>
                         <Button type="button" onClick={() => setRegistryImportWarningsOpen(false)}>
-                            {ct('luthier_close' as any)}
+                            {ct('luthier_close')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -170,12 +170,12 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={mountDialogOpen()} onOpenChange={setMountDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_folder_mount' as any)}</DialogTitle>
-                        <DialogDescription>{ct('luthier_add_folder_mount_description' as any)}</DialogDescription>
+                        <DialogTitle>{ct('luthier_add_folder_mount')}</DialogTitle>
+                        <DialogDescription>{ct('luthier_add_folder_mount_description')}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_source_path_relative_to_game_root' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_source_path_relative_to_game_root')}</label>
                             <div class="flex gap-2">
                                 <Input
                                     class="flex-1"
@@ -188,7 +188,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             </div>
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_target_windows_path' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_target_windows_path')}</label>
                             <Input
                                 value={mountDraft().target_windows_path}
                                 onInput={(e) =>
@@ -231,7 +231,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={dllDialogOpen()} onOpenChange={setDllDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_dll_override' as any)}</DialogTitle>
+                        <DialogTitle>{ct('luthier_add_dll_override')}</DialogTitle>
                         <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
@@ -244,7 +244,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             />
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_behavior' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_behavior')}</label>
                             <Select
                                 value={dllDraft().mode}
                                 onInput={(e) => setDllDraft({ ...dllDraft(), mode: e.currentTarget.value })}
@@ -289,12 +289,12 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={wrapperDialogOpen()} onOpenChange={setWrapperDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_wrapper_command' as any)}</DialogTitle>
+                        <DialogTitle>{ct('luthier_add_wrapper_command')}</DialogTitle>
                         <DialogDescription>{tForm.addListDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_wrapper_executable' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_wrapper_executable')}</label>
                             <Input
                                 value={wrapperDraft().executable}
                                 onInput={(e) =>
@@ -304,7 +304,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             />
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_arguments_optional' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_arguments_optional')}</label>
                             <Input
                                 value={wrapperDraft().args}
                                 onInput={(e) => setWrapperDraft({ ...wrapperDraft(), args: e.currentTarget.value })}
@@ -312,7 +312,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             />
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_feature_state' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_feature_state')}</label>
                             <Select
                                 value={wrapperDraft().state}
                                 onInput={(e) => setWrapperDraft({ ...wrapperDraft(), state: e.currentTarget.value as FeatureState })}
@@ -365,12 +365,12 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={extraDependencyDialogOpen()} onOpenChange={setExtraDependencyDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_extra_system_dependency' as any)}</DialogTitle>
+                        <DialogTitle>{ct('luthier_add_extra_system_dependency')}</DialogTitle>
                         <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_dependency_name' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_dependency_name')}</label>
                             <Input
                                 value={extraDependencyDraft().name}
                                 onInput={(e) =>
@@ -380,7 +380,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             />
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_test_command_optional' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_test_command_optional')}</label>
                             <Input
                                 value={extraDependencyDraft().command}
                                 onInput={(e) =>
@@ -434,12 +434,12 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={wineDesktopFolderDialogOpen()} onOpenChange={setWineDesktopFolderDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_wine_special_folder' as any)}</DialogTitle>
+                        <DialogTitle>{ct('luthier_add_wine_special_folder')}</DialogTitle>
                         <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_folder_type' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_folder_type')}</label>
                             <Select
                                 value={wineDesktopFolderDraft().folder_key}
                                 onInput={(e) => setWineDesktopFolderDraft({ ...wineDesktopFolderDraft(), folder_key: e.currentTarget.value })}
@@ -450,7 +450,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             </Select>
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_shortcut_name_optional' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_shortcut_name_optional')}</label>
                             <Input
                                 value={wineDesktopFolderDraft().shortcut_name}
                                 onInput={(e) =>
@@ -463,7 +463,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             />
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_target_relative_linux_path' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_target_relative_linux_path')}</label>
                             <Input
                                 value={wineDesktopFolderDraft().linux_path}
                                 onInput={(e) =>
@@ -523,13 +523,13 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={wineDriveDialogOpen()} onOpenChange={setWineDriveDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_wine_drive' as any)}</DialogTitle>
+                        <DialogTitle>{ct('luthier_add_wine_drive')}</DialogTitle>
                         <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div class="grid gap-2">
-                                <label class="text-sm font-medium">{ct('luthier_drive_letter' as any)}</label>
+                                <label class="text-sm font-medium">{ct('luthier_drive_letter')}</label>
                                 <Select
                                     value={wineDriveDraft().letter}
                                     onInput={(e) => setWineDriveDraft({ ...wineDriveDraft(), letter: e.currentTarget.value })}
@@ -540,7 +540,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                                 </Select>
                             </div>
                             <div class="grid gap-2">
-                                <label class="text-sm font-medium">{ct('luthier_drive_type' as any)}</label>
+                                <label class="text-sm font-medium">{ct('luthier_drive_type')}</label>
                                 <Select
                                     value={wineDriveDraft().drive_type}
                                     onInput={(e) => setWineDriveDraft({ ...wineDriveDraft(), drive_type: e.currentTarget.value })}
@@ -552,7 +552,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             </div>
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_host_path' as any)}</label>
+                            <label class="text-sm font-medium">{ct('luthier_host_path')}</label>
                             <Input
                                 value={wineDriveDraft().host_path}
                                 onInput={(e) =>

@@ -439,7 +439,7 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
           >
             <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setMountDialogOpen(true)}>
               <IconPlus class="size-4" />
-              {ct('luthier_add_folder_mount' as any)}
+              {ct('luthier_add_folder_mount')}
             </Button>
           </FieldShell>
         </>
