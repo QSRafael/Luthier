@@ -103,39 +103,6 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
     integrityFileBrowserCurrentRelative,
   } = props.view
 
-  const mountSourceValidation = createMemo(() =>
-    mountDraft().source_relative_path.trim()
-      ? validateRelativeGamePath(mountDraft().source_relative_path, locale(), {
-        kind: 'folder',
-        allowDot: true,
-        requireDotPrefix: false
-      })
-      : {}
-  )
-  const mountTargetValidation = createMemo(() =>
-    mountDraft().target_windows_path.trim() ? validateWindowsPath(mountDraft().target_windows_path, locale()) : {}
-  )
-  const mountDuplicateValidation = createMemo(() => {
-    const source = mountDraft().source_relative_path.trim()
-    const target = mountDraft().target_windows_path.trim().toLowerCase()
-    if (!source || !target) return ''
-    const duplicateTarget = config().folder_mounts.some(
-      (item) => item.target_windows_path.trim().toLowerCase() === target
-    )
-    if (duplicateTarget) {
-      return ct('luthier_validation_duplicate_mount_target')
-    }
-    const duplicatePair = config().folder_mounts.some(
-      (item) =>
-        item.source_relative_path.trim() === source &&
-        item.target_windows_path.trim().toLowerCase() === target
-    )
-    if (duplicatePair) {
-      return ct('luthier_validation_duplicate_mount')
-    }
-    return ''
-  })
-
   return (
     <section class="stack">
       <Show when={mode === 'overview'}>
@@ -437,7 +404,14 @@ export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overvi
               </Show>
             }
           >
-            <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setMountDialogOpen(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              class="inline-flex items-center gap-1.5"
+              onClick={() => setMountDialogOpen(true)}
+              disabled={!canAddMount()}
+            >
               <IconPlus class="size-4" />
               {ct('luthier_add_folder_mount')}
             </Button>

@@ -21,7 +21,9 @@ import {
     validateRegistryValueType,
     validateDllName,
     validateWindowsFriendlyName,
-    validateWindowsDriveSerial
+    validateWindowsDriveSerial,
+    validateRelativeGamePath,
+    validateWindowsPath
 } from './field-validation'
 
 export function LuthierDialogs(props: LuthierPageSectionProps) {
@@ -92,9 +94,11 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
         setMountSourceBrowserOpen,
         mountBrowserDirs,
         mountBrowserLoading,
+        openMountSourceBrowser,
         mountSourceBrowserSegments,
         mountSourceBrowserCurrentRelative,
         loadMountBrowserDirs,
+        canBrowseMountFolders,
         locale,
         splitCommaList,
         setStatusMessage,
@@ -148,6 +152,39 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
         )
         if (!duplicate) return ''
         return ct('luthier_validation_duplicate_extra_dependency')
+    })
+
+    const mountSourceValidation = createMemo(() =>
+        mountDraft().source_relative_path.trim()
+            ? validateRelativeGamePath(mountDraft().source_relative_path, locale(), {
+                kind: 'folder',
+                allowDot: true,
+                requireDotPrefix: false
+            })
+            : {}
+    )
+    const mountTargetValidation = createMemo(() =>
+        mountDraft().target_windows_path.trim() ? validateWindowsPath(mountDraft().target_windows_path, locale()) : {}
+    )
+    const mountDuplicateValidation = createMemo(() => {
+        const source = mountDraft().source_relative_path.trim()
+        const target = mountDraft().target_windows_path.trim().toLowerCase()
+        if (!source || !target) return ''
+        const duplicateTarget = config().folder_mounts.some(
+            (item) => item.target_windows_path.trim().toLowerCase() === target
+        )
+        if (duplicateTarget) {
+            return ct('luthier_validation_duplicate_mount_target')
+        }
+        const duplicatePair = config().folder_mounts.some(
+            (item) =>
+                item.source_relative_path.trim() === source &&
+                item.target_windows_path.trim().toLowerCase() === target
+        )
+        if (duplicatePair) {
+            return ct('luthier_validation_duplicate_mount')
+        }
+        return ''
     })
 
     const dllValidation = createMemo(() =>
@@ -338,33 +375,62 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
             <Dialog open={mountDialogOpen()} onOpenChange={setMountDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{ct('luthier_add_folder_mount')}</DialogTitle>
-                        <DialogDescription>{ct('luthier_add_folder_mount_description')}</DialogDescription>
+                        <DialogTitle>{ct('luthier_add_mount')}</DialogTitle>
+                        <DialogDescription>{ct('luthier_set_relative_source_and_windows_target_to_create_the_mou')}</DialogDescription>
                     </DialogHeader>
-                    <div class="grid gap-4 py-4">
-                        <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_source_path_relative_to_game_root')}</label>
-                            <div class="flex gap-2">
-                                <Input
-                                    class="flex-1"
-                                    value={mountDraft().source_relative_path}
-                                    onInput={(e) =>
-                                        setMountDraft({ ...mountDraft(), source_relative_path: e.currentTarget.value })
-                                    }
-                                    placeholder="mods"
-                                />
-                            </div>
-                        </div>
-                        <div class="grid gap-2">
-                            <label class="text-sm font-medium">{ct('luthier_target_windows_path')}</label>
+                    <div class="grid gap-2">
+                        <div class="picker-row">
                             <Input
-                                value={mountDraft().target_windows_path}
+                                class={mountSourceValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                                value={mountDraft().source_relative_path}
                                 onInput={(e) =>
-                                    setMountDraft({ ...mountDraft(), target_windows_path: e.currentTarget.value })
+                                    setMountDraft({ ...mountDraft(), source_relative_path: e.currentTarget.value })
                                 }
-                                placeholder="C:\mods"
+                                placeholder={ct('luthier_relative_source_e_g_save')}
                             />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={!canBrowseMountFolders()}
+                                onClick={() => void openMountSourceBrowser()}
+                            >
+                                {ct('luthier_browse_folders')}
+                            </Button>
                         </div>
+                        <Show when={mountSourceValidation().error || mountSourceValidation().hint}>
+                            <p class={mountSourceValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                {mountSourceValidation().error ?? mountSourceValidation().hint}
+                            </p>
+                        </Show>
+
+                        <Input
+                            value={mountDraft().target_windows_path}
+                            class={mountTargetValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            onInput={(e) =>
+                                setMountDraft({ ...mountDraft(), target_windows_path: e.currentTarget.value })
+                            }
+                            placeholder={ct('luthier_windows_target_c_users')}
+                        />
+                        <Show when={mountTargetValidation().error || mountTargetValidation().hint}>
+                            <p class={mountTargetValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                {mountTargetValidation().error ?? mountTargetValidation().hint}
+                            </p>
+                        </Show>
+                        <Show when={mountDuplicateValidation()}>
+                            <p class="text-xs text-destructive">{mountDuplicateValidation()}</p>
+                        </Show>
+
+                        <label class="mt-2 flex items-center gap-2 text-sm">
+                            <input
+                                type="checkbox"
+                                checked={mountDraft().create_source_if_missing}
+                                onChange={(e) =>
+                                    setMountDraft({ ...mountDraft(), create_source_if_missing: e.currentTarget.checked })
+                                }
+                                class="rounded border-input text-primary shadow-sm focus:ring-primary"
+                            />
+                            {ct('luthier_create_source_if_missing')}
+                        </label>
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setMountDialogOpen(false)}>
@@ -374,20 +440,40 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             type="button"
                             onClick={() => {
                                 const draft = mountDraft()
-                                if (draft.source_relative_path && draft.target_windows_path) {
-                                    patchConfig((prev) => ({
-                                        ...prev,
-                                        folder_mounts: [...prev.folder_mounts, { ...draft }]
-                                    }))
-                                    setMountDraft({
-                                        source_relative_path: '',
-                                        target_windows_path: '',
-                                        create_source_if_missing: true
-                                    })
-                                    setMountDialogOpen(false)
+                                if (
+                                    !draft.source_relative_path.trim() ||
+                                    !draft.target_windows_path.trim() ||
+                                    mountSourceValidation().error ||
+                                    mountTargetValidation().error ||
+                                    mountDuplicateValidation()
+                                ) {
+                                    return
                                 }
+                                patchConfig((prev) => ({
+                                    ...prev,
+                                    folder_mounts: [
+                                        ...prev.folder_mounts,
+                                        {
+                                            ...draft,
+                                            source_relative_path: draft.source_relative_path.trim(),
+                                            target_windows_path: draft.target_windows_path.trim()
+                                        }
+                                    ]
+                                }))
+                                setMountDraft({
+                                    source_relative_path: '',
+                                    target_windows_path: '',
+                                    create_source_if_missing: true
+                                })
+                                setMountDialogOpen(false)
                             }}
-                            disabled={!mountDraft().source_relative_path.trim() || !mountDraft().target_windows_path.trim()}
+                            disabled={
+                                !mountDraft().source_relative_path.trim() ||
+                                !mountDraft().target_windows_path.trim() ||
+                                !!mountSourceValidation().error ||
+                                !!mountTargetValidation().error ||
+                                !!mountDuplicateValidation()
+                            }
                         >
                             {tForm().add}
                         </Button>
