@@ -12,6 +12,12 @@ export type SearchHeroImageOutput = {
   image_url: string
   candidate_image_urls?: string[]
 }
+
+export type ExtractExecutableIconOutput = {
+  data_url: string
+  width: number
+  height: number
+}
 function isTauriRuntime(): boolean {
   if (typeof window === 'undefined') return false
   const w = window as unknown as Record<string, unknown>

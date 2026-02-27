@@ -58,6 +58,7 @@ import { createLuthierComputed } from './luthier-controller-computed'
 import { createLuthierStatus } from './luthier-controller-status'
 import { createLuthierHeroActions } from './luthier-controller-hero-actions'
 import { createLuthierWinetricksActions } from './luthier-controller-winetricks-actions'
+import { createLuthierFileActions } from './luthier-controller-file-actions'
 
 type WinetricksAvailableOutput = {
   source: string
@@ -280,155 +281,15 @@ export function useLuthierController() {
     }
   }
 
-  const pickExecutable = async () => {
-    const defaultPathCandidate = (() => {
-      const exe = exePath().trim()
-      if (isLikelyAbsolutePath(exe)) return dirname(exe)
-      const root = gameRoot().trim()
-      if (isLikelyAbsolutePath(root)) return root
-      return undefined
-    })()
-
-    const selected = await pickFile({
-      title: ct('luthier_select_game_executable'),
-      filters: [{ name: 'Windows Launchers', extensions: ['exe', 'bat', 'cmd', 'com'] }],
-      defaultPath: defaultPathCandidate
-    })
-    if (!selected) return
-
-    if (!hasWindowsLauncherExtension(selected)) {
-      return
-    }
-
-    setExePath(selected)
-    setLastHashedExePath('')
-    setIconPreviewPath('')
-    patchConfig((prev) => ({ ...prev, exe_hash: '' }))
-    const detectedRoot = dirname(selected)
-    setGameRootManualOverride(false)
-    setGameRoot(detectedRoot)
-
-    const relative = relativeFromRoot(detectedRoot, selected)
-
-    patchConfig((prev) => ({
-      ...prev,
-      relative_exe_path: relative ? `./${relative}` : `./${basename(selected)}`
-    }))
-  }
-
-  const pickRegistryFile = async () => {
-    const selected = await pickFile({
-      title: ct('luthier_select_reg_file'),
-      filters: [{ name: 'Registry file', extensions: ['reg'] }]
-    })
-    if (!selected) return null
-    setRegistryImportPath(selected)
-    return selected
-  }
-
-  const pickGameRootOverride = async () => {
-    const selected = await pickFolder({
-      title: ct('luthier_select_game_root_folder'),
-      defaultPath: (isLikelyAbsolutePath(exeDirectory()) ? exeDirectory() : undefined) ?? undefined
-    })
-    if (!selected) return
-
-    const currentExe = exePath().trim()
-    if (currentExe && relativeFromRoot(selected, currentExe) === null) {
-      return
-    }
-
-    setGameRootManualOverride(true)
-    setGameRoot(selected)
-  }
-
-  const pickIntegrityFileRelative = async () => {
-    const selected = await pickFile({
-      title: ct('luthier_select_required_file'),
-      defaultPath: gameRoot() || undefined
-    })
-    if (!selected) return null
-
-    // Browser fallback may return only a file name; accept as relative input.
-    if (!selected.includes('/') && !selected.includes('\\')) {
-      return `./${basename(selected)}`
-    }
-
-    const relative = relativeFromRoot(gameRoot(), selected)
-    if (!relative) {
-      return null
-    }
-
-    return `./${relative}`
-  }
-
-  const pickMountFolder = async (index: number) => {
-    const selected = await pickFolder({
-      title: ct('luthier_select_folder_to_mount')
-    })
-    if (!selected) return
-
-    const relative = relativeFromRoot(gameRoot(), selected)
-    if (!relative) {
-      return
-    }
-
-    patchConfig((prev) => ({
-      ...prev,
-      folder_mounts: replaceAt(prev.folder_mounts, index, {
-        ...prev.folder_mounts[index],
-        source_relative_path: relative
-      })
-    }))
-  }
-
-  const pickMountSourceRelative = async () => {
-    const selected = await pickFolder({
-      title: ct('luthier_select_folder_to_mount')
-    })
-    if (!selected) return null
-
-    const relative = relativeFromRoot(gameRoot(), selected)
-    if (!relative) {
-      return null
-    }
-
-    return relative
-  }
-
-  const extractExecutableIcon = async () => {
-    const currentExe = exePath().trim()
-    if (!currentExe) {
-      setStatusMessage(ct('luthier_select_an_executable_before_extracting_icon'))
-      return
-    }
-
-    if (!isLikelyAbsolutePath(currentExe)) {
-      setStatusMessage(
-        ct('luthier_icon_extraction_requires_an_absolute_path_in_browser_lan_m')
-      )
-      return
-    }
-
-    try {
-      setExtractingExecutableIcon(true)
-      setStatusMessage(ct('luthier_extracting_icon_from_executable'))
-      const result = await invokeCommand<ExtractExecutableIconOutput>('cmd_extract_executable_icon', {
-        executable_path: currentExe
-      })
-      setIconPreviewPath(result.data_url)
-      setStatusMessage(
-        ctf('luthier_executable_icon_extracted_size', {
-          width: result.width,
-          height: result.height
-        })
-      )
-    } catch (error) {
-      setStatusMessage(ctf('luthier_failed_to_extract_executable_icon_error', { error: String(error) }))
-    } finally {
-      setExtractingExecutableIcon(false)
-    }
-  }
+  const {
+    pickExecutable,
+    pickRegistryFile,
+    pickGameRootOverride,
+    pickIntegrityFileRelative,
+    pickMountFolder,
+    pickMountSourceRelative,
+    extractExecutableIcon
+  } = createLuthierFileActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
 
   const setGamescopeState = (state: FeatureState) => {
     const normalizedState: FeatureState = state === 'OptionalOff' ? 'MandatoryOff' : state
