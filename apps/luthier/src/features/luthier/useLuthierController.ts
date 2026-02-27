@@ -57,6 +57,7 @@ import { createLuthierState } from './luthier-controller-state'
 import { createLuthierComputed } from './luthier-controller-computed'
 import { createLuthierStatus } from './luthier-controller-status'
 import { createLuthierHeroActions } from './luthier-controller-hero-actions'
+import { createLuthierWinetricksActions } from './luthier-controller-winetricks-actions'
 
 type WinetricksAvailableOutput = {
   source: string
@@ -276,27 +277,6 @@ export function useLuthierController() {
       setStatusMessage(`${t('msgCreateFail')} ${String(error)}`)
     } finally {
       setCreatingExecutable(false)
-    }
-  }
-
-  const loadWinetricksCatalog = async () => {
-    if (winetricksLoading()) return
-    try {
-      setWinetricksLoading(true)
-      const result = await invokeCommand<WinetricksAvailableOutput>('cmd_winetricks_available')
-      setWinetricksAvailable(result.components)
-      setWinetricksSource(result.source)
-      setWinetricksCatalogError(false)
-      setWinetricksLoaded(true)
-      setStatusMessage(ctf('luthier_winetricks_catalog_loaded_count', { count: result.components.length }))
-    } catch (error) {
-      setWinetricksAvailable([])
-      setWinetricksSource('fallback')
-      setWinetricksCatalogError(true)
-      setWinetricksLoaded(true)
-      setStatusMessage(ctf('luthier_failed_to_load_winetricks_catalog_error', { error: String(error) }))
-    } finally {
-      setWinetricksLoading(false)
     }
   }
 
@@ -576,39 +556,12 @@ export function useLuthierController() {
     }))
   }
 
-  const addWinetricksVerb = (verb: string) => {
-    let added = false
-    patchConfig((prev) => {
-      if (prev.dependencies.includes(verb)) return prev
-      added = true
-      return { ...prev, dependencies: [...prev.dependencies, verb] }
-    })
-    if (!added) return
-    toast(ct('luthier_winetricks_verb_added'), {
-      description: verb,
-      action: {
-        label: ct('luthier_undo'),
-        onClick: () => removeWinetricksVerb(verb)
-      }
-    })
-  }
-
-  const removeWinetricksVerb = (verb: string) => {
-    patchConfig((prev) => ({
-      ...prev,
-      dependencies: prev.dependencies.filter((item) => item !== verb)
-    }))
-  }
-
-  const addWinetricksFromSearch = () => {
-    const exact = winetricksExactMatch()
-    if (!exact) {
-      return
-    }
-
-    addWinetricksVerb(exact)
-    setWinetricksSearch('')
-  }
+  const {
+    loadWinetricksCatalog,
+    addWinetricksVerb,
+    removeWinetricksVerb,
+    addWinetricksFromSearch
+  } = createLuthierWinetricksActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
 
   const setTab = (next: string) => {
     if (tabs.includes(next as LuthierTab)) {
