@@ -14,7 +14,7 @@ use luthier_orchestrator_core::{
 };
 use sha2::{Digest, Sha256};
 
-use crate::launch::{build_winecfg_command, effective_prefix_path_for_runtime};
+use crate::services::launch_plan_builder::{build_winecfg_command, effective_prefix_path_for_runtime};
 
 pub fn apply_winecfg_overrides_if_present(
     config: &GameConfig,

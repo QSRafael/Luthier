@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::Context;
 use luthier_orchestrator_core::GameConfig;
 
-use crate::paths::resolve_relative_path;
+use crate::infrastructure::paths::resolve_relative_path;
 
 pub fn validate_integrity(config: &GameConfig, game_root: &Path) -> anyhow::Result<Vec<String>> {
     validate_required_paths(game_root, &config.relative_exe_path, &config.integrity_files)

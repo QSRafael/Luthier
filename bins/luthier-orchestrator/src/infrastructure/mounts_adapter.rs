@@ -8,7 +8,7 @@ use anyhow::{anyhow, Context};
 use luthier_orchestrator_core::{FolderMount, GameConfig};
 use serde::Serialize;
 
-use crate::paths::normalize_relative_payload_path;
+use super::paths::normalize_relative_payload_path;
 
 #[derive(Debug, Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]

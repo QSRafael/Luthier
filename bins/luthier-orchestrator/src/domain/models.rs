@@ -23,16 +23,3 @@ pub struct PrefixSetupExecutionContext {
     pub prefix_root_path: PathBuf,
     pub effective_prefix_path: PathBuf,
 }
-
-#[derive(Debug, Clone)]
-pub(crate) enum RegValueKind {
-    String(String),
-    Dword(u32),
-    Delete,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct RegMutation {
-    pub(crate) name: String,
-    pub(crate) kind: RegValueKind,
-}

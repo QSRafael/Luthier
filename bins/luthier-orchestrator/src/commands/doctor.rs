@@ -5,7 +5,7 @@ use luthier_orchestrator_core::{
     prefix::build_prefix_setup_plan,
 };
 
-use crate::{logging::log_event, payload::try_load_embedded_config};
+use crate::{infrastructure::payload_loader::try_load_embedded_config, logging::log_event};
 
 pub fn run_doctor_command(trace_id: &str, verbose: bool) -> anyhow::Result<()> {
     let embedded_config =
