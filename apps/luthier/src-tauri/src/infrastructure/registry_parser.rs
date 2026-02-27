@@ -1,28 +1,5 @@
 use luthier_orchestrator_core::RegistryKey;
 
-use crate::application::ports::{RegistryParseOutput, RegistryParserPort};
-use crate::error::{BackendError, BackendResult};
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct RegFileRegistryParser;
-
-impl RegFileRegistryParser {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl RegistryParserPort for RegFileRegistryParser {
-    fn decode_text(&self, bytes: &[u8]) -> BackendResult<String> {
-        decode_reg_file_text(bytes).map_err(BackendError::from)
-    }
-
-    fn parse_entries(&self, raw: &str) -> RegistryParseOutput {
-        let (entries, warnings) = parse_reg_file_entries(raw);
-        RegistryParseOutput { entries, warnings }
-    }
-}
-
 pub(crate) fn decode_reg_file_text(bytes: &[u8]) -> Result<String, String> {
     if bytes.starts_with(&[0xFF, 0xFE]) {
         let mut units = Vec::new();
