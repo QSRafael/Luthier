@@ -266,12 +266,7 @@ pub fn prepare_hero_image(input: PrepareHeroImageInput) -> Result<PrepareHeroIma
     let http_client = ReqwestBlockingHttpClient::new();
     let image_codec = ImageRsCodec::new();
     let logger = StderrJsonBackendLogger::new();
-    use_cases::prepare_hero::prepare_hero_image_command(
-        input,
-        &http_client,
-        &image_codec,
-        &logger,
-    )
+    use_cases::prepare_hero::prepare_hero_image_command(input, &http_client, &image_codec, &logger)
 }
 
 pub fn test_configuration(

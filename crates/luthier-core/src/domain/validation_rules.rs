@@ -30,15 +30,6 @@ pub(crate) fn validate_game_config_relative_paths(config: &GameConfig) -> Result
     Ok(())
 }
 
-pub(crate) fn validate_game_config(config: &GameConfig) -> Result<(), LuthierError> {
-    let issues = collect_game_config_validation_issues(config);
-    if issues.is_empty() {
-        Ok(())
-    } else {
-        Err(LuthierError::invalid_game_config(issues))
-    }
-}
-
 pub(crate) fn collect_game_config_validation_issues(
     config: &GameConfig,
 ) -> Vec<ConfigValidationIssue> {

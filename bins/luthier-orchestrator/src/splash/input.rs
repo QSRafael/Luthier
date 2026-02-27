@@ -74,7 +74,7 @@ pub fn create_window(title: &str) -> anyhow::Result<Window> {
     window.update();
     let _ = try_center_window(&mut window, scale.factor);
     let _ = try_set_window_icon_from_sidecar(&mut window);
-    let _ = window.set_target_fps(FPS as usize);
+    window.set_target_fps(FPS as usize);
     Ok(window)
 }
 

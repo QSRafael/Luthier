@@ -70,7 +70,9 @@ impl<'a> TestConfigurationUseCase<'a> {
             status: status.to_string(),
             missing_files,
             doctor: self.json_codec.to_json_value_doctor_report(&doctor)?,
-            prefix_setup_plan: self.json_codec.to_json_value_prefix_setup_plan(&prefix_plan)?,
+            prefix_setup_plan: self
+                .json_codec
+                .to_json_value_prefix_setup_plan(&prefix_plan)?,
         };
 
         self.log_info(
@@ -92,7 +94,11 @@ impl<'a> TestConfigurationUseCase<'a> {
         self.execute(input).into_command_string_result()
     }
 
-    fn collect_missing_files(&self, config: &GameConfig, game_root: &Path) -> BackendResult<Vec<String>> {
+    fn collect_missing_files(
+        &self,
+        config: &GameConfig,
+        game_root: &Path,
+    ) -> BackendResult<Vec<String>> {
         let mut missing = Vec::new();
 
         let exe_path = domain_paths::resolve_relative_path(game_root, &config.relative_exe_path)?;
@@ -150,7 +156,13 @@ impl<'a> TestConfigurationUseCase<'a> {
         self.log(BackendLogLevel::Error, event_code, message, context);
     }
 
-    fn log(&self, level: BackendLogLevel, event_code: &str, message: &str, context: serde_json::Value) {
+    fn log(
+        &self,
+        level: BackendLogLevel,
+        event_code: &str,
+        message: &str,
+        context: serde_json::Value,
+    ) {
         let _ = self.logger.log(&BackendLogEvent {
             level,
             event_code: event_code.to_string(),

@@ -421,10 +421,9 @@ fn show_runtime_progress_window(
         if progress.child_finished
             && progress.launching_started_at.is_some()
             && !progress.game_runtime_start_seen
+            && min_launch_elapsed
         {
-            if min_launch_elapsed {
-                break;
-            }
+            break;
         }
 
         if !window.is_open() || window.is_key_down(Key::Escape) {

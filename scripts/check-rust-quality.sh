@@ -50,12 +50,6 @@ CLIPPY_LINT_ARGS=(
   -A clippy::redundant_pub_crate
   -A clippy::too_many_arguments
   -A clippy::large_enum_variant
-  -A clippy::collapsible_if
-  -A clippy::if_same_then_else
-  -A clippy::manual_div_ceil
-  -A clippy::unnecessary_cast
-  -A clippy::let_unit_value
-  -A clippy::option_if_let_else
 )
 
 echo "[rust] fmt --check"

@@ -46,12 +46,17 @@ impl<'a> SearchHeroUseCase<'a> {
             return Ok(Self::to_output(result));
         }
 
-        if let Some(result) = self.hero_search.search_hero_image_via_steamgriddb_api(game_name)? {
+        if let Some(result) = self
+            .hero_search
+            .search_hero_image_via_steamgriddb_api(game_name)?
+        {
             self.log_completed_with_candidates(game_name, &result);
             return Ok(Self::to_output(result));
         }
 
-        let result = self.hero_search.search_hero_image_via_usebottles(game_name)?;
+        let result = self
+            .hero_search
+            .search_hero_image_via_usebottles(game_name)?;
         self.log_completed_simple(game_name, &result.image_url);
 
         Ok(Self::to_output(result))

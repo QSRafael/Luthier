@@ -610,7 +610,7 @@ pub fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
     } else {
         inner_w
     };
-    let rows = ((count + cols - 1) / cols) as i32;
+    let rows = count.div_ceil(cols) as i32;
     let header_bottom = 104;
     let footer_top = WIN_H as i32 - 62;
     let available_h = (footer_top - header_bottom).max(48);
@@ -643,7 +643,7 @@ pub fn config_toggle_layout(count: usize) -> Vec<(Rect, Rect)> {
         let button_h = if cols >= 4 { 22 } else { 24 };
         let button = Rect {
             x: x + ((col_w - btn_w) / 2),
-            y: y + if cols >= 4 { 18 } else { 18 },
+            y: y + 18,
             w: btn_w,
             h: button_h,
         };
@@ -1045,7 +1045,7 @@ pub fn draw_glyph_bitmap(
             if !on {
                 continue;
             }
-            let px = x + (col as i32 * scale);
+            let px = x + (col * scale);
             let py = y + (row_idx as i32 * scale);
             fill_rect(
                 buffer,

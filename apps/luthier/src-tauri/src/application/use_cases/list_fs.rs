@@ -33,7 +33,10 @@ impl<'a> ListFsUseCase<'a> {
         );
 
         let root = Path::new(&input.path);
-        let entries = self.file_system.read_dir(root).map_err(map_read_dir_error)?;
+        let entries = self
+            .file_system
+            .read_dir(root)
+            .map_err(map_read_dir_error)?;
         let mut directories = Vec::new();
 
         for entry in entries {
@@ -73,7 +76,10 @@ impl<'a> ListFsUseCase<'a> {
         );
 
         let root = Path::new(&input.path);
-        let entries = self.file_system.read_dir(root).map_err(map_read_dir_error)?;
+        let entries = self
+            .file_system
+            .read_dir(root)
+            .map_err(map_read_dir_error)?;
         let mut directories = Vec::new();
         let mut files = Vec::new();
 

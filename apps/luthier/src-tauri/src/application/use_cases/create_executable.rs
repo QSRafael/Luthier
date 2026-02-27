@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use luthier_core::CreateOrchestratorRequest;
 use luthier_orchestrator_core::GameConfig;
 
-use crate::application::ports::{BackendLogEvent, BackendLogLevel, BackendLoggerPort, LuthierCorePort};
+use crate::application::ports::{
+    BackendLogEvent, BackendLogLevel, BackendLoggerPort, LuthierCorePort,
+};
 use crate::error::{BackendError, BackendResult, BackendResultExt, CommandStringResult};
 use crate::models::dto::{CreateExecutableInput, CreateExecutableOutput};
 
@@ -158,7 +160,12 @@ impl<'a> CreateExecutableUseCase<'a> {
         );
     }
 
-    fn log_create_failed(&self, err: &BackendError, base_binary_path: &std::path::Path, output_path: &std::path::Path) {
+    fn log_create_failed(
+        &self,
+        err: &BackendError,
+        base_binary_path: &std::path::Path,
+        output_path: &std::path::Path,
+    ) {
         self.log_error(
             "GO-CR-090",
             "create_executable_failed",
@@ -200,7 +207,13 @@ impl<'a> CreateExecutableUseCase<'a> {
         self.log(BackendLogLevel::Error, event_code, message, context);
     }
 
-    fn log(&self, level: BackendLogLevel, event_code: &str, message: &str, context: serde_json::Value) {
+    fn log(
+        &self,
+        level: BackendLogLevel,
+        event_code: &str,
+        message: &str,
+        context: serde_json::Value,
+    ) {
         let _ = self.logger.log(&BackendLogEvent {
             level,
             event_code: event_code.to_string(),

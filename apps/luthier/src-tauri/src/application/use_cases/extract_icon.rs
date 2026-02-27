@@ -105,7 +105,11 @@ impl<'a> ExtractIconUseCase<'a> {
 
         let mut image = match best_image {
             Some(image) => image,
-            None => return Err("failed to decode icon resources to image".to_string().into()),
+            None => {
+                return Err("failed to decode icon resources to image"
+                    .to_string()
+                    .into())
+            }
         };
 
         if image.width > 256 || image.height > 256 {
