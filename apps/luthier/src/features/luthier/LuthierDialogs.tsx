@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { createMemo, For, Show } from 'solid-js'
 import {
     Dialog,
     DialogContent,
@@ -13,6 +13,16 @@ import { Select } from '../../components/ui/select'
 import { Spinner } from '../../components/ui/spinner'
 import { type LuthierPageSectionProps, basenamePath, relativeInsideBase } from './page-shared'
 import type { FeatureState } from '../../models/config'
+import {
+    validateCommandToken,
+    validateEnvVarName,
+    validateLinuxPath,
+    validateRegistryPath,
+    validateRegistryValueType,
+    validateDllName,
+    validateWindowsFriendlyName,
+    validateWindowsDriveSerial
+} from './field-validation'
 
 export function LuthierDialogs(props: LuthierPageSectionProps) {
     const { view } = props
@@ -85,9 +95,103 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
         mountSourceBrowserSegments,
         mountSourceBrowserCurrentRelative,
         loadMountBrowserDirs,
+        locale,
+        splitCommaList,
+        setStatusMessage,
     } = view
 
     const tForm = () => formControlsI18n()
+
+    const registryPathValidationSafe = createMemo(() =>
+        registryDraft().path.trim() ? validateRegistryPath(registryDraft().path, locale()) : {}
+    )
+    const registryTypeValidation = createMemo(() =>
+        registryDraft().value_type.trim() ? validateRegistryValueType(registryDraft().value_type, locale()) : {}
+    )
+    const registryDuplicateValidation = createMemo(() => {
+        const path = registryDraft().path.trim().toLowerCase()
+        const name = registryDraft().name.trim().toLowerCase()
+        if (!path || !name) return ''
+        const duplicate = config().registry_keys.some(
+            (item) => item.path.trim().toLowerCase() === path && item.name.trim().toLowerCase() === name
+        )
+        if (!duplicate) return ''
+        return ct('luthier_validation_duplicate_registry_key')
+    })
+
+    const extraDependencyCommandValidation = createMemo(() => {
+        for (const token of splitCommaList(extraDependencyDraft().command || '')) {
+            const result = validateCommandToken(token, locale())
+            if (result.error) return result.error
+        }
+        return ''
+    })
+    const extraDependencyEnvVarsValidation = createMemo(() => {
+        for (const token of splitCommaList(extraDependencyDraft().env_vars || '')) {
+            const result = validateEnvVarName(token, locale())
+            if (result.error) return result.error
+        }
+        return ''
+    })
+    const extraDependencyPathsValidation = createMemo(() => {
+        for (const token of splitCommaList(extraDependencyDraft().paths || '')) {
+            const result = validateLinuxPath(token, locale(), true)
+            if (result.error) return result.error
+        }
+        return ''
+    })
+    const extraDependencyDuplicateValidation = createMemo(() => {
+        const name = extraDependencyDraft().name.trim().toLowerCase()
+        if (!name) return ''
+        const duplicate = config().extra_system_dependencies.some(
+            (item) => item.name.trim().toLowerCase() === name
+        )
+        if (!duplicate) return ''
+        return ct('luthier_validation_duplicate_extra_dependency')
+    })
+
+    const dllValidation = createMemo(() =>
+        dllDraft().dll.trim() ? validateDllName(dllDraft().dll, locale()) : {}
+    )
+    const dllDuplicateValidation = createMemo(() => {
+        const dll = dllDraft().dll.trim().toLowerCase()
+        if (!dll) return ''
+        const duplicate = config().winecfg.dll_overrides.some((item) => item.dll.trim().toLowerCase() === dll)
+        if (!duplicate) return ''
+        return ct('luthier_validation_duplicate_dll_override')
+    })
+
+    const shortcutNameValidation = createMemo(() =>
+        wineDesktopFolderDraft().shortcut_name.trim()
+            ? validateWindowsFriendlyName(wineDesktopFolderDraft().shortcut_name, locale(), 'o nome do atalho', 'the shortcut name')
+            : {}
+    )
+    const desktopFolderLinuxPathValidation = createMemo(() =>
+        wineDesktopFolderDraft().linux_path.trim()
+            ? validateLinuxPath(wineDesktopFolderDraft().linux_path, locale(), true)
+            : {}
+    )
+    const desktopFolderDuplicateValidation = createMemo(() => {
+        const key = wineDesktopFolderDraft().folder_key.trim().toLowerCase()
+        if (!key) return ''
+        const duplicate = config().winecfg.desktop_folders.some(
+            (item) => item.folder_key.trim().toLowerCase() === key
+        )
+        if (!duplicate) return ''
+        return ct('luthier_validation_duplicate_desktop_folder_type')
+    })
+
+    const wineDriveHostPathValidation = createMemo(() =>
+        wineDriveDraft().host_path.trim() ? validateLinuxPath(wineDriveDraft().host_path, locale(), true) : {}
+    )
+    const wineDriveLabelValidation = createMemo(() =>
+        wineDriveDraft().label.trim()
+            ? validateWindowsFriendlyName(wineDriveDraft().label, locale(), 'o rótulo', 'the label')
+            : {}
+    )
+    const wineDriveSerialValidation = createMemo(() =>
+        wineDriveDraft().serial.trim() ? validateWindowsDriveSerial(wineDriveDraft().serial, locale()) : {}
+    )
 
     return (
         <>
@@ -103,11 +207,17 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             <label class="text-sm font-medium">{ct('luthier_registry_path')}</label>
                             <Input
                                 value={registryDraft().path}
+                                class={registryPathValidationSafe().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 onInput={(e) =>
                                     setRegistryDraft({ ...registryDraft(), path: e.currentTarget.value })
                                 }
                                 placeholder="HKEY_CURRENT_USER\Software\Wine"
                             />
+                            <Show when={registryPathValidationSafe().error || registryPathValidationSafe().hint}>
+                                <p class={registryPathValidationSafe().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                    {registryPathValidationSafe().error ?? registryPathValidationSafe().hint}
+                                </p>
+                            </Show>
                         </div>
                         <div class="grid gap-2">
                             <label class="text-sm font-medium">{tForm().keyPlaceholder}</label>
@@ -141,6 +251,14 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                                 placeholder="win10"
                             />
                         </div>
+                        <Show when={registryTypeValidation().error || registryTypeValidation().hint}>
+                            <p class={registryTypeValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                {registryTypeValidation().error ?? registryTypeValidation().hint}
+                            </p>
+                        </Show>
+                        <Show when={registryDuplicateValidation()}>
+                            <p class="text-xs text-destructive">{registryDuplicateValidation()}</p>
+                        </Show>
                     </div>
                     <DialogFooter>
                         <Button
@@ -152,18 +270,39 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                         </Button>
                         <Button
                             type="button"
+                            disabled={
+                                !registryDraft().path.trim() ||
+                                !registryDraft().name.trim() ||
+                                !!registryPathValidationSafe().error ||
+                                !!registryTypeValidation().error ||
+                                !!registryDuplicateValidation()
+                            }
                             onClick={() => {
                                 const draft = registryDraft()
-                                if (draft.path && draft.name) {
-                                    patchConfig((prev) => ({
-                                        ...prev,
-                                        registry_keys: [...prev.registry_keys, { ...draft }]
-                                    }))
-                                    setRegistryDraft({ path: '', name: '', value_type: 'REG_SZ', value: '' })
-                                    setRegistryDialogOpen(false)
+                                if (
+                                    !draft.path.trim() ||
+                                    !draft.name.trim() ||
+                                    registryPathValidationSafe().error ||
+                                    registryTypeValidation().error ||
+                                    registryDuplicateValidation()
+                                ) {
+                                    return
                                 }
+                                patchConfig((prev) => ({
+                                    ...prev,
+                                    registry_keys: [
+                                        ...prev.registry_keys,
+                                        {
+                                            ...draft,
+                                            path: draft.path.trim().replace(/\//g, '\\'),
+                                            name: draft.name.trim(),
+                                            value_type: draft.value_type.trim().toUpperCase() || 'REG_SZ'
+                                        }
+                                    ]
+                                }))
+                                setRegistryDraft({ path: '', name: '', value_type: 'REG_SZ', value: '' })
+                                setRegistryDialogOpen(false)
                             }}
-                            disabled={!registryDraft().path.trim() || !registryDraft().name.trim()}
                         >
                             {tForm().add}
                         </Button>
@@ -268,9 +407,18 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             <label class="text-sm font-medium">DLL</label>
                             <Input
                                 value={dllDraft().dll}
+                                class={dllValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 onInput={(e) => setDllDraft({ ...dllDraft(), dll: e.currentTarget.value })}
                                 placeholder="d3d11"
                             />
+                            <Show when={dllValidation().error || dllValidation().hint}>
+                                <p class={dllValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                    {dllValidation().error ?? dllValidation().hint}
+                                </p>
+                            </Show>
+                            <Show when={dllDuplicateValidation()}>
+                                <p class="text-xs text-destructive">{dllDuplicateValidation()}</p>
+                            </Show>
                         </div>
                         <div class="grid gap-2">
                             <label class="text-sm font-medium">{ct('luthier_behavior')}</label>
@@ -290,23 +438,26 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                         </Button>
                         <Button
                             type="button"
+                            disabled={!dllDraft().dll.trim() || !!dllValidation().error || !!dllDuplicateValidation()}
                             onClick={() => {
-                                if (dllDraft().dll) {
-                                    patchConfig((prev) => ({
-                                        ...prev,
-                                        winecfg: {
-                                            ...prev.winecfg,
-                                            dll_overrides: [
-                                                ...prev.winecfg.dll_overrides.filter((o) => o.dll !== dllDraft().dll.trim()),
-                                                { dll: dllDraft().dll.trim(), mode: dllDraft().mode }
-                                            ]
-                                        }
-                                    }))
-                                    setDllDraft({ dll: '', mode: 'builtin' })
-                                    setDllDialogOpen(false)
-                                }
+                                const draft = dllDraft()
+                                if (!draft.dll.trim() || dllValidation().error || dllDuplicateValidation()) return
+                                patchConfig((prev) => ({
+                                    ...prev,
+                                    winecfg: {
+                                        ...prev.winecfg,
+                                        dll_overrides: [
+                                            ...prev.winecfg.dll_overrides,
+                                            {
+                                                ...draft,
+                                                dll: draft.dll.trim()
+                                            }
+                                        ]
+                                    }
+                                }))
+                                setDllDraft({ dll: '', mode: 'builtin' })
+                                setDllDialogOpen(false)
                             }}
-                            disabled={!dllDraft().dll.trim()}
                         >
                             {tForm().add}
                         </Button>
@@ -402,24 +553,67 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             <label class="text-sm font-medium">{ct('luthier_dependency_name')}</label>
                             <Input
                                 value={extraDependencyDraft().name}
+                                class={extraDependencyDuplicateValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 onInput={(e) =>
                                     setExtraDependencyDraft({ ...extraDependencyDraft(), name: e.currentTarget.value })
                                 }
                                 placeholder="libgl1-mesa-glx"
                             />
+                            <Show when={extraDependencyDuplicateValidation()}>
+                                <p class="text-xs text-destructive">{extraDependencyDuplicateValidation()}</p>
+                            </Show>
                         </div>
                         <div class="grid gap-2">
                             <label class="text-sm font-medium">{ct('luthier_test_command_optional')}</label>
                             <Input
                                 value={extraDependencyDraft().command}
+                                class={extraDependencyCommandValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 onInput={(e) =>
                                     setExtraDependencyDraft({
                                         ...extraDependencyDraft(),
                                         command: e.currentTarget.value
                                     })
                                 }
-                                placeholder="glxinfo"
+                                placeholder={ct('luthier_terminal_command_e_g_mangohud')}
                             />
+                            <Show when={extraDependencyCommandValidation()}>
+                                <p class="text-xs text-destructive">{extraDependencyCommandValidation()}</p>
+                            </Show>
+                        </div>
+                        <div class="grid gap-2">
+                            <label class="text-sm font-medium">{ct('luthier_env_vars')}</label>
+                            <Input
+                                value={extraDependencyDraft().env_vars}
+                                class={extraDependencyEnvVarsValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
+                                onInput={(e) =>
+                                    setExtraDependencyDraft({
+                                        ...extraDependencyDraft(),
+                                        env_vars: e.currentTarget.value
+                                    })
+                                }
+                                placeholder={ct('luthier_environment_vars_comma_separated')}
+                            />
+                            <Show when={extraDependencyEnvVarsValidation()}>
+                                <p class="text-xs text-destructive">{extraDependencyEnvVarsValidation()}</p>
+                            </Show>
+                        </div>
+                        <div class="grid gap-2">
+                            <label class="text-sm font-medium">{ct('luthier_default_paths')}</label>
+                            <Input
+                                value={extraDependencyDraft().paths}
+                                class={extraDependencyPathsValidation() ? 'border-destructive focus-visible:ring-destructive' : ''}
+                                onInput={(e) =>
+                                    setExtraDependencyDraft({
+                                        ...extraDependencyDraft(),
+                                        paths: e.currentTarget.value
+                                    })
+                                }
+                                placeholder={ct('luthier_default_paths_comma_separated')}
+                            />
+                            <Show when={extraDependencyPathsValidation()}>
+                                <p class="text-xs text-destructive">{extraDependencyPathsValidation()}</p>
+                            </Show>
+
                         </div>
                     </div>
                     <DialogFooter>
@@ -432,26 +626,40 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                         </Button>
                         <Button
                             type="button"
+                            disabled={
+                                !extraDependencyDraft().name.trim() ||
+                                !!extraDependencyDuplicateValidation() ||
+                                !!extraDependencyCommandValidation() ||
+                                !!extraDependencyEnvVarsValidation() ||
+                                !!extraDependencyPathsValidation()
+                            }
                             onClick={() => {
-                                if (extraDependencyDraft().name) {
-                                    patchConfig((prev) => ({
-                                        ...prev,
-                                        extra_system_dependencies: [
-                                            ...prev.extra_system_dependencies,
-                                            {
-                                                name: extraDependencyDraft().name.trim(),
-                                                check_commands: extraDependencyDraft().command.trim() ? [extraDependencyDraft().command.trim()] : [],
-                                                check_env_vars: [] as string[],
-                                                check_paths: [] as string[],
-                                                state: 'Enabled' as FeatureState
-                                            }
-                                        ]
-                                    }))
-                                    setExtraDependencyDraft({ name: '', command: '', env_vars: '', paths: '' })
-                                    setExtraDependencyDialogOpen(false)
+                                const draft = extraDependencyDraft()
+                                if (
+                                    !draft.name.trim() ||
+                                    extraDependencyDuplicateValidation() ||
+                                    extraDependencyCommandValidation() ||
+                                    extraDependencyEnvVarsValidation() ||
+                                    extraDependencyPathsValidation()
+                                ) {
+                                    return
                                 }
+                                patchConfig((prev) => ({
+                                    ...prev,
+                                    extra_system_dependencies: [
+                                        ...prev.extra_system_dependencies,
+                                        {
+                                            name: draft.name.trim(),
+                                            check_commands: splitCommaList(draft.command),
+                                            check_env_vars: splitCommaList(draft.env_vars),
+                                            check_paths: splitCommaList(draft.paths),
+                                            state: 'Enabled' as FeatureState
+                                        }
+                                    ]
+                                }))
+                                setExtraDependencyDraft({ name: '', command: '', env_vars: '', paths: '' })
+                                setExtraDependencyDialogOpen(false)
                             }}
-                            disabled={!extraDependencyDraft().name.trim()}
                         >
                             {tForm().add}
                         </Button>
@@ -482,6 +690,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             <label class="text-sm font-medium">{ct('luthier_shortcut_name_optional')}</label>
                             <Input
                                 value={wineDesktopFolderDraft().shortcut_name}
+                                class={shortcutNameValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 onInput={(e) =>
                                     setWineDesktopFolderDraft({
                                         ...wineDesktopFolderDraft(),
@@ -490,19 +699,36 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                                 }
                                 placeholder="My Custom Desktop"
                             />
+                            <Show when={shortcutNameValidation().error || shortcutNameValidation().hint}>
+                                <p class={shortcutNameValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                    {shortcutNameValidation().error ?? shortcutNameValidation().hint}
+                                </p>
+                            </Show>
                         </div>
                         <div class="grid gap-2">
                             <label class="text-sm font-medium">{ct('luthier_target_relative_linux_path')}</label>
                             <Input
                                 value={wineDesktopFolderDraft().linux_path}
+                                class={desktopFolderLinuxPathValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 onInput={(e) =>
                                     setWineDesktopFolderDraft({
                                         ...wineDesktopFolderDraft(),
                                         linux_path: e.currentTarget.value
                                     })
                                 }
-                                placeholder="../drive_c/users/Public/Desktop"
+                                placeholder="/mnt/games/shared"
                             />
+                            <Show when={desktopFolderLinuxPathValidation().error || desktopFolderLinuxPathValidation().hint}>
+                                <p class={desktopFolderLinuxPathValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                    {desktopFolderLinuxPathValidation().error ?? desktopFolderLinuxPathValidation().hint}
+                                </p>
+                            </Show>
+                            <Show when={desktopFolderDuplicateValidation()}>
+                                <p class="text-xs text-destructive">{desktopFolderDuplicateValidation()}</p>
+                            </Show>
+                            <p class="text-xs text-muted-foreground">
+                                {ct('luthier_prefer_generic_paths_without_a_fixed_username_when_possi')}
+                            </p>
                         </div>
                     </div>
                     <DialogFooter>
@@ -515,32 +741,45 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                         </Button>
                         <Button
                             type="button"
+                            disabled={
+                                !wineDesktopFolderDraft().shortcut_name.trim() ||
+                                !wineDesktopFolderDraft().linux_path.trim() ||
+                                !!desktopFolderDuplicateValidation() ||
+                                !!shortcutNameValidation().error ||
+                                !!desktopFolderLinuxPathValidation().error
+                            }
                             onClick={() => {
                                 const draft = wineDesktopFolderDraft()
-                                if (draft.linux_path) {
-                                    patchConfig((prev) => ({
-                                        ...prev,
-                                        winecfg: {
-                                            ...prev.winecfg,
-                                            desktop_folders: [
-                                                ...prev.winecfg.desktop_folders.filter((f) => f.folder_key !== draft.folder_key),
-                                                {
-                                                    folder_key: draft.folder_key,
-                                                    shortcut_name: (draft.shortcut_name.trim() || null) as any,
-                                                    linux_path: draft.linux_path.trim()
-                                                }
-                                            ]
-                                        }
-                                    }))
-                                    setWineDesktopFolderDraft({
-                                        folder_key: 'desktop',
-                                        shortcut_name: '',
-                                        linux_path: ''
-                                    })
-                                    setWineDesktopFolderDialogOpen(false)
+                                if (
+                                    !draft.shortcut_name.trim() ||
+                                    !draft.linux_path.trim() ||
+                                    desktopFolderDuplicateValidation() ||
+                                    shortcutNameValidation().error ||
+                                    desktopFolderLinuxPathValidation().error
+                                ) {
+                                    return
                                 }
+                                patchConfig((prev) => ({
+                                    ...prev,
+                                    winecfg: {
+                                        ...prev.winecfg,
+                                        desktop_folders: [
+                                            ...prev.winecfg.desktop_folders.filter((f) => f.folder_key !== draft.folder_key),
+                                            {
+                                                folder_key: draft.folder_key,
+                                                shortcut_name: (draft.shortcut_name.trim() || null) as any,
+                                                linux_path: draft.linux_path.trim()
+                                            }
+                                        ]
+                                    }
+                                }))
+                                setWineDesktopFolderDraft({
+                                    folder_key: 'desktop',
+                                    shortcut_name: '',
+                                    linux_path: ''
+                                })
+                                setWineDesktopFolderDialogOpen(false)
                             }}
-                            disabled={!wineDesktopFolderDraft().linux_path.trim()}
                         >
                             {tForm().add}
                         </Button>
@@ -584,12 +823,49 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             <label class="text-sm font-medium">{ct('luthier_host_path')}</label>
                             <Input
                                 value={wineDriveDraft().host_path}
+                                class={wineDriveHostPathValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 onInput={(e) =>
                                     setWineDriveDraft({ ...wineDriveDraft(), host_path: e.currentTarget.value })
                                 }
                                 placeholder="/run/media/user/Disk"
                             />
+                            <Show when={wineDriveHostPathValidation().error || wineDriveHostPathValidation().hint}>
+                                <p class={wineDriveHostPathValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                    {wineDriveHostPathValidation().error ?? wineDriveHostPathValidation().hint}
+                                </p>
+                            </Show>
                         </div>
+                        <div class="grid gap-2 md:grid-cols-2 mt-2">
+                            <div class="grid gap-2">
+                                <label class="text-sm font-medium">{ct('luthier_label_optional')}</label>
+                                <Input
+                                    value={wineDriveDraft().label}
+                                    class={wineDriveLabelValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                                    onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, label: e.currentTarget.value }))}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <label class="text-sm font-medium">{ct('luthier_serial_optional')}</label>
+                                <Input
+                                    value={wineDriveDraft().serial}
+                                    class={wineDriveSerialValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                                    onInput={(e) => setWineDriveDraft((prev: any) => ({ ...prev, serial: e.currentTarget.value }))}
+                                />
+                            </div>
+                        </div>
+                        <Show when={wineDriveLabelValidation().error || wineDriveLabelValidation().hint}>
+                            <p class={wineDriveLabelValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                {wineDriveLabelValidation().error ?? wineDriveLabelValidation().hint}
+                            </p>
+                        </Show>
+                        <Show when={wineDriveSerialValidation().error || wineDriveSerialValidation().hint}>
+                            <p class={wineDriveSerialValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                                {wineDriveSerialValidation().error ?? wineDriveSerialValidation().hint}
+                            </p>
+                        </Show>
+                        <p class="text-xs text-muted-foreground mt-2">
+                            {ct('luthier_use_a_generic_linux_directory_when_possible_avoid_user_s')}
+                        </p>
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setWineDriveDialogOpen(false)}>
@@ -597,40 +873,58 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                         </Button>
                         <Button
                             type="button"
+                            disabled={
+                                !wineDriveDraft().letter.trim() ||
+                                !wineDriveDraft().host_path.trim() ||
+                                !!wineDriveHostPathValidation().error ||
+                                !!wineDriveLabelValidation().error ||
+                                !!wineDriveSerialValidation().error
+                            }
                             onClick={() => {
                                 const draft = wineDriveDraft()
-                                if (draft.letter && draft.host_path) {
-                                    patchConfig((prev) => ({
-                                        ...prev,
-                                        winecfg: {
-                                            ...prev.winecfg,
-                                            drives: [
-                                                ...prev.winecfg.drives.filter(
-                                                    (d) => d.letter.toUpperCase() !== draft.letter.toUpperCase()
-                                                ),
-                                                {
-                                                    letter: draft.letter,
-                                                    source_relative_path: '',
-                                                    state: 'Enabled' as FeatureState,
-                                                    host_path: draft.host_path.trim(),
-                                                    drive_type: (draft.drive_type !== 'auto' ? draft.drive_type : null) as any,
-                                                    label: null,
-                                                    serial: null
-                                                }
-                                            ]
-                                        }
-                                    }))
-                                    setWineDriveDraft({
-                                        letter: availableWineDriveLetters()[0] || 'D',
-                                        host_path: '',
-                                        drive_type: 'auto',
-                                        label: '',
-                                        serial: ''
-                                    })
-                                    setWineDriveDialogOpen(false)
+                                const letter = draft.letter.trim().toUpperCase()
+                                if (
+                                    !letter ||
+                                    !draft.host_path.trim() ||
+                                    wineDriveHostPathValidation().error ||
+                                    wineDriveLabelValidation().error ||
+                                    wineDriveSerialValidation().error
+                                ) {
+                                    return
                                 }
+                                if (config().winecfg.drives.some((item) => item.letter.trim().toUpperCase() === letter)) {
+                                    setStatusMessage(ct('luthier_that_drive_letter_is_already_in_use'))
+                                    return
+                                }
+                                patchConfig((prev) => ({
+                                    ...prev,
+                                    winecfg: {
+                                        ...prev.winecfg,
+                                        drives: [
+                                            ...prev.winecfg.drives.filter(
+                                                (d) => d.letter.toUpperCase() !== letter
+                                            ),
+                                            {
+                                                letter,
+                                                source_relative_path: '',
+                                                state: 'OptionalOn',
+                                                host_path: draft.host_path.trim(),
+                                                drive_type: (draft.drive_type !== 'auto' ? draft.drive_type : null) as any,
+                                                label: draft.label.trim() ? draft.label.trim() : null,
+                                                serial: draft.serial.trim() ? draft.serial.trim() : null
+                                            }
+                                        ]
+                                    }
+                                }))
+                                setWineDriveDraft({
+                                    letter: availableWineDriveLetters()[0] || 'D',
+                                    host_path: '',
+                                    drive_type: 'auto',
+                                    label: '',
+                                    serial: ''
+                                })
+                                setWineDriveDialogOpen(false)
                             }}
-                            disabled={!wineDriveDraft().letter || !wineDriveDraft().host_path.trim()}
                         >
                             {tForm().add}
                         </Button>
