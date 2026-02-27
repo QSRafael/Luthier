@@ -1,13 +1,13 @@
 /**
  * controller-build-actions.ts
  *
- * Actions for hashing, testing, and creating the final executable wrapper.
+ * Thin presentation adapter for build/hash/test/create actions.
  */
 
-import { isLikelyAbsolutePath } from './controller-utils'
 import type { createLuthierState } from './controller-state'
 import type { createLuthierComputed } from './controller-computed'
 import type { BackendCommandPort } from './application/ports'
+import { createBuildActionsUseCase } from './application/use-cases/build-actions'
 
 export function createLuthierBuildActions(
     state: ReturnType<typeof createLuthierState>,
@@ -17,78 +17,37 @@ export function createLuthierBuildActions(
     t: (key: string) => string,
     setStatusMessage: (msg: string) => void
 ) {
-    async function hashExecutablePath(absoluteExePath: string) {
-        if (!absoluteExePath.trim()) {
-            return
-        }
-
-        if (!isLikelyAbsolutePath(absoluteExePath)) {
-            return
-        }
-
-        try {
-            state.setHashingExePath(absoluteExePath)
-            state.setLastHashedExePath(absoluteExePath)
-            const result = await backend.hashExecutable(absoluteExePath)
-            if (state.exePath().trim() === absoluteExePath) {
-                state.patchConfig((prev) => ({ ...prev, exe_hash: result.sha256_hex }))
-            }
-        } catch (error) {
-            setStatusMessage(`${t('msgHashFail')} ${String(error)}`)
-        } finally {
-            if (state.hashingExePath() === absoluteExePath) {
-                state.setHashingExePath('')
-            }
-        }
-    }
-
-    const runHash = async () => {
-        await hashExecutablePath(state.exePath().trim())
-    }
-
-    const runTest = async () => {
-        try {
-            state.setTestingConfiguration(true)
-            const result = await backend.testConfiguration(computed.configPreview(), state.gameRoot())
-            state.setResultJson(JSON.stringify(result, null, 2))
-            setStatusMessage(t('msgTestOk'))
-        } catch (error) {
-            setStatusMessage(`${t('msgTestFail')} ${String(error)}`)
-        } finally {
-            state.setTestingConfiguration(false)
-        }
-    }
-
-    const runCreate = async () => {
-        const blockedReason = computed.createExecutableBlockedReason()
-        if (blockedReason) {
-            setStatusMessage(blockedReason)
-            return
-        }
-
-        try {
-            state.setCreatingExecutable(true)
-            const result = await backend.createExecutable({
-                baseBinaryPath: ORCHESTRATOR_BASE_PATH,
+    const useCase = createBuildActionsUseCase({
+        backend,
+        orchestratorBasePath: ORCHESTRATOR_BASE_PATH,
+        state: {
+            readState: () => ({
+                exePath: state.exePath(),
+                gameRoot: state.gameRoot(),
+                configPreview: computed.configPreview(),
                 outputPath: state.outputPath(),
-                configJson: computed.configPreview(),
-                backupExisting: true,
-                makeExecutable: true,
-                iconPngDataUrl: state.iconPreviewPath().trim() || null
-            })
-            state.setResultJson(JSON.stringify(result, null, 2))
-            setStatusMessage(t('msgCreateOk'))
-        } catch (error) {
-            setStatusMessage(`${t('msgCreateFail')} ${String(error)}`)
-        } finally {
-            state.setCreatingExecutable(false)
+                iconPreviewPath: state.iconPreviewPath(),
+                createExecutableBlockedReason: computed.createExecutableBlockedReason(),
+                hashingExePath: state.hashingExePath()
+            }),
+            setHashingExePath: state.setHashingExePath,
+            setLastHashedExePath: state.setLastHashedExePath,
+            setExeHash: (value: string) => {
+                state.patchConfig((prev) => ({ ...prev, exe_hash: value }))
+            },
+            setTestingConfiguration: state.setTestingConfiguration,
+            setCreatingExecutable: state.setCreatingExecutable,
+            setResultJson: state.setResultJson,
+            setStatusMessage
+        },
+        messages: {
+            hashFail: t('msgHashFail'),
+            testOk: t('msgTestOk'),
+            testFail: t('msgTestFail'),
+            createOk: t('msgCreateOk'),
+            createFail: t('msgCreateFail')
         }
-    }
+    })
 
-    return {
-        hashExecutablePath,
-        runHash,
-        runTest,
-        runCreate
-    }
+    return useCase
 }
