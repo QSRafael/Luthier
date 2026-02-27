@@ -62,20 +62,25 @@ pub fn draw_splash_background_with_options(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PrelaunchRenderContext<'a> {
+    pub countdown_left: i32,
+    pub gear_visible: bool,
+    pub gear_button: Rect,
+    pub start_button: Rect,
+    pub exit_button: Rect,
+    pub mode: SplashLaunchMode,
+    pub mouse: MouseSnapshot,
+    pub hero_background: Option<&'a HeroBackground>,
+}
+
 pub fn draw_prelaunch(
     buffer: &mut [u32],
     _window: &Window,
     state: &PrelaunchState,
-    countdown_left: i32,
-    gear_visible: bool,
-    gear_button: Rect,
-    start_button: Rect,
-    exit_button: Rect,
-    mode: SplashLaunchMode,
-    mouse: MouseSnapshot,
-    hero_background: Option<&HeroBackground>,
+    context: PrelaunchRenderContext<'_>,
 ) {
-    draw_splash_background_without_center_scrim(buffer, hero_background);
+    draw_splash_background_without_center_scrim(buffer, context.hero_background);
     stroke_rect(
         buffer,
         Rect {
@@ -94,35 +99,61 @@ pub fn draw_prelaunch(
     };
     draw_title_centered_fit_with_scrim(buffer, WIN_W as i32 / 2, 52, game_name, TEXT, 78);
 
-    let countdown_key = if countdown_left > 0 {
-        t(SplashTextKey::CountdownContinuing).replace("{n}", &countdown_left.to_string())
+    let countdown_key = if context.countdown_left > 0 {
+        t(SplashTextKey::CountdownContinuing).replace("{n}", &context.countdown_left.to_string())
     } else {
         t(SplashTextKey::CountdownContinuingNow).to_string()
     };
     draw_text_centered_with_scrim(buffer, WIN_W as i32 / 2, 146, &countdown_key, TEXT, 1, 56);
 
-    if gear_visible {
-        draw_button_secondary_clean(buffer, gear_button, gear_button.contains(mouse.x, mouse.y));
-        draw_button_label_centered(buffer, gear_button, t(SplashTextKey::ScreenConfig), TEXT, 1);
+    if context.gear_visible {
+        draw_button_secondary_clean(
+            buffer,
+            context.gear_button,
+            context
+                .gear_button
+                .contains(context.mouse.x, context.mouse.y),
+        );
+        draw_button_label_centered(
+            buffer,
+            context.gear_button,
+            t(SplashTextKey::ScreenConfig),
+            TEXT,
+            1,
+        );
     }
 
-    draw_button_secondary_clean(buffer, exit_button, exit_button.contains(mouse.x, mouse.y));
-    draw_button_label_centered(buffer, exit_button, t(SplashTextKey::ActionExit), TEXT, 1);
-
-    draw_button_primary_clean(
+    draw_button_secondary_clean(
         buffer,
-        start_button,
-        start_button.contains(mouse.x, mouse.y),
+        context.exit_button,
+        context
+            .exit_button
+            .contains(context.mouse.x, context.mouse.y),
     );
     draw_button_label_centered(
         buffer,
-        start_button,
+        context.exit_button,
+        t(SplashTextKey::ActionExit),
+        TEXT,
+        1,
+    );
+
+    draw_button_primary_clean(
+        buffer,
+        context.start_button,
+        context
+            .start_button
+            .contains(context.mouse.x, context.mouse.y),
+    );
+    draw_button_label_centered(
+        buffer,
+        context.start_button,
         t(SplashTextKey::ActionContinue),
         TEXT,
         1,
     );
 
-    let _ = mode;
+    let _ = context.mode;
 }
 
 pub fn draw_config(
@@ -902,40 +933,60 @@ pub fn measure_text_metrics(text: &str, scale: i32) -> TextMetrics {
 }
 
 pub fn draw_text(buffer: &mut [u32], x: i32, y: i32, text: &str, color: u32, scale: i32) {
-    let _ =
-        draw_text_wrapped_internal(buffer, x, y, i32::MAX / 4, i32::MAX / 4, text, color, scale);
+    let _ = draw_text_wrapped_internal(TextDrawInput {
+        buffer,
+        x,
+        y,
+        text,
+        options: TextDrawOptions {
+            max_width: i32::MAX / 4,
+            max_height: i32::MAX / 4,
+            color,
+            scale,
+        },
+    });
 }
 
-pub fn draw_text_wrapped_internal(
-    buffer: &mut [u32],
-    x: i32,
-    y: i32,
-    max_width: i32,
-    max_height: i32,
-    text: &str,
-    color: u32,
-    scale: i32,
-) -> i32 {
+#[derive(Debug, Clone, Copy)]
+pub struct TextDrawOptions {
+    pub max_width: i32,
+    pub max_height: i32,
+    pub color: u32,
+    pub scale: i32,
+}
+
+#[derive(Debug)]
+pub struct TextDrawInput<'a> {
+    pub buffer: &'a mut [u32],
+    pub x: i32,
+    pub y: i32,
+    pub text: &'a str,
+    pub options: TextDrawOptions,
+}
+
+pub fn draw_text_wrapped_internal(input: TextDrawInput<'_>) -> i32 {
     if let Some(font) = system_font() {
-        return draw_text_system_font(
-            buffer, x, y, max_width, max_height, text, color, scale, font,
-        );
+        return draw_text_system_font(input, font);
     }
-    draw_text_bitmap_fallback(buffer, x, y, max_width, max_height, text, color, scale)
+    draw_text_bitmap_fallback(input)
 }
 
-pub fn draw_text_system_font(
-    buffer: &mut [u32],
-    x: i32,
-    y: i32,
-    max_width: i32,
-    max_height: i32,
-    text: &str,
-    color: u32,
-    scale: i32,
-    font: &Font,
-) -> i32 {
+pub fn draw_text_system_font(input: TextDrawInput<'_>, font: &Font) -> i32 {
     use fontdue::layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle};
+
+    let TextDrawInput {
+        buffer,
+        x,
+        y,
+        text,
+        options,
+    } = input;
+    let TextDrawOptions {
+        max_width,
+        max_height,
+        color,
+        scale,
+    } = options;
 
     let px = text_px_size(scale);
     let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
@@ -991,16 +1042,21 @@ pub fn draw_text_system_font(
     bottom
 }
 
-pub fn draw_text_bitmap_fallback(
-    buffer: &mut [u32],
-    x: i32,
-    y: i32,
-    max_width: i32,
-    max_height: i32,
-    text: &str,
-    color: u32,
-    scale: i32,
-) -> i32 {
+pub fn draw_text_bitmap_fallback(input: TextDrawInput<'_>) -> i32 {
+    let TextDrawInput {
+        buffer,
+        x,
+        y,
+        text,
+        options,
+    } = input;
+    let TextDrawOptions {
+        max_width,
+        max_height,
+        color,
+        scale,
+    } = options;
+
     let scale = scale.max(1);
     let mut cx = x;
     let mut cy = y;

@@ -309,14 +309,16 @@ fn show_prelaunch_window(
             &mut buffer,
             &window,
             state,
-            countdown_left.max(0),
-            gear_visible,
-            rects.gear_button,
-            rects.start_button,
-            rects.exit_button,
-            mode,
-            mouse,
-            state.hero_background.as_deref(),
+            PrelaunchRenderContext {
+                countdown_left: countdown_left.max(0),
+                gear_visible,
+                gear_button: rects.gear_button,
+                start_button: rects.start_button,
+                exit_button: rects.exit_button,
+                mode,
+                mouse,
+                hero_background: state.hero_background.as_deref(),
+            },
         );
         window
             .update_with_buffer(&buffer, WIN_W, WIN_H)
