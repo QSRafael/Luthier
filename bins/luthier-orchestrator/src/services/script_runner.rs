@@ -1,4 +1,4 @@
-use luthier_orchestrator_core::process::{
+use crate::infrastructure::process_adapter::{
     execute_external_command, CommandExecutionResult, ExternalCommand,
 };
 

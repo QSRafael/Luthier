@@ -8,13 +8,17 @@ use std::{
 use anyhow::{anyhow, Context};
 use luthier_orchestrator_core::{
     doctor::DoctorReport,
-    process::{execute_external_command, CommandExecutionResult, ExternalCommand, StepStatus},
     DllOverrideRule, GameConfig, RuntimeCandidate, VirtualDesktopConfig, WinecfgConfig,
     WinecfgFeaturePolicy,
 };
 use sha2::{Digest, Sha256};
 
-use crate::services::launch_plan_builder::{build_winecfg_command, effective_prefix_path_for_runtime};
+use crate::{
+    infrastructure::process_adapter::{
+        execute_external_command, CommandExecutionResult, ExternalCommand, StepStatus,
+    },
+    services::launch_plan_builder::{build_winecfg_command, effective_prefix_path_for_runtime},
+};
 
 pub fn apply_winecfg_overrides_if_present(
     config: &GameConfig,
