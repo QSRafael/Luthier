@@ -10,7 +10,6 @@ use image::imageops::FilterType;
 use minifb::{Key, Scale, Window};
 use luthier_orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use luthier_orchestrator_core::GameConfig;
-use serde_json::Value;
 
 use crate::application::runtime_overrides::{
     apply_runtime_overrides, build_feature_view, load_runtime_overrides, save_runtime_overrides,
@@ -21,17 +20,21 @@ use crate::infrastructure::payload_loader::load_embedded_config_required;
 pub mod assets;
 pub mod child_process;
 pub mod input;
+pub mod progress_events;
 pub mod renderer;
+pub mod state;
 pub mod text;
 pub mod theme;
-pub mod state;
 
 use child_process::{spawn_play_child, ChildProcessEvent, ChildProcessStream};
 use input::*;
-use theme::*;
-pub use state::*;
+use progress_events::{
+    apply_progress_from_log_event, map_external_runtime_line_to_status, parse_ndjson_event,
+};
 use renderer::*;
-use text::{initialize_splash_locale, t_installing_winetricks, t_process_exit};
+pub use state::*;
+use text::{initialize_splash_locale, t_process_exit};
+use theme::*;
 pub(crate) use text::{t, SplashTextKey};
 
 #[derive(Debug, Clone, Copy)]
@@ -537,85 +540,6 @@ fn handle_child_event(progress: &mut ProgressViewState, event: ChildProcessEvent
             }
         }
     }
-}
-
-fn parse_ndjson_event(line: &str) -> Option<Value> {
-    if !line.starts_with('{') || !line.contains("\"event_code\"") {
-        return None;
-    }
-    serde_json::from_str::<Value>(line).ok()
-}
-
-fn apply_progress_from_log_event(progress: &mut ProgressViewState, event: &Value) {
-    let code = event
-        .get("event_code")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    let ctx = event.get("context");
-
-    match code {
-        "GO-CFG-020" => progress.set_status(t(SplashTextKey::StatusPreparingEnvironment)),
-        "GO-LN-010" => progress.set_status(t(SplashTextKey::StatusPreparingEnvironment)),
-        "GO-PF-020" => {
-            let needs_init = ctx
-                .and_then(|v| v.get("needs_init"))
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
-            let steps = ctx
-                .and_then(|v| v.get("steps"))
-                .and_then(Value::as_u64)
-                .unwrap_or(0);
-            if needs_init {
-                progress.set_status(t(SplashTextKey::StatusCreatingPrefix));
-            } else if steps > 0 {
-                progress.set_status(t(SplashTextKey::StatusPreparingPrefixDependencies));
-            } else {
-                progress.set_status(t(SplashTextKey::StatusPrefixAlreadyConfigured));
-            }
-        }
-        "GO-RG-020" => {
-            let status = ctx
-                .and_then(|v| v.get("status"))
-                .and_then(Value::as_str)
-                .unwrap_or("");
-            if status.eq_ignore_ascii_case("Skipped") {
-                progress.set_status(t(SplashTextKey::StatusRegistryAlreadyConfigured));
-            } else {
-                progress.set_status(t(SplashTextKey::StatusRegistryApplied));
-            }
-        }
-        "GO-WC-030" => {
-            let status = ctx
-                .and_then(|v| v.get("status"))
-                .and_then(Value::as_str)
-                .unwrap_or("");
-            if status.eq_ignore_ascii_case("Skipped") {
-                progress.set_status(t(SplashTextKey::StatusWinecfgAlreadyApplied));
-            } else {
-                progress.set_status(t(SplashTextKey::StatusWinecfgApplied));
-            }
-        }
-        "GO-MT-020" => progress.set_status(t(SplashTextKey::StatusMountingFolders)),
-        "GO-SC-020" => progress.set_status(t(SplashTextKey::StatusRunningPreparation)),
-        "GO-LN-015" => {
-            progress.game_command_started = true;
-            progress.set_status(t(SplashTextKey::StatusLaunchingGame));
-        }
-        _ => {}
-    }
-}
-
-fn map_external_runtime_line_to_status(line: &str) -> Option<String> {
-    if line.contains("Running winetricks verbs in prefix:") {
-        let verbs = line
-            .split("Running winetricks verbs in prefix:")
-            .nth(1)
-            .map(str::trim)
-            .unwrap_or("");
-        return Some(t_installing_winetricks(verbs));
-    }
-
-    None
 }
 
 // ── Asset loading ─────────────────────────────────────────────────────────────
