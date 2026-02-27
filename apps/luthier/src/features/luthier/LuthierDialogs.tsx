@@ -58,7 +58,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
         featureStateOptions
     } = view
 
-    const tForm = formControlsI18n
+    const tForm = () => formControlsI18n()
 
     return (
         <>
@@ -67,7 +67,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{ct('luthier_add_registry_key')}</DialogTitle>
-                        <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
+                        <DialogDescription>{tForm().addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
@@ -81,7 +81,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             />
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{tForm.keyPlaceholder}</label>
+                            <label class="text-sm font-medium">{tForm().keyPlaceholder}</label>
                             <Input
                                 value={registryDraft().name}
                                 onInput={(e) =>
@@ -103,7 +103,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             </Select>
                         </div>
                         <div class="grid gap-2">
-                            <label class="text-sm font-medium">{tForm.valuePlaceholder}</label>
+                            <label class="text-sm font-medium">{tForm().valuePlaceholder}</label>
                             <Input
                                 value={registryDraft().value}
                                 onInput={(e) =>
@@ -119,7 +119,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             variant="outline"
                             onClick={() => setRegistryDialogOpen(false)}
                         >
-                            {tForm.cancel}
+                            {tForm().cancel}
                         </Button>
                         <Button
                             type="button"
@@ -136,7 +136,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             }}
                             disabled={!registryDraft().path.trim() || !registryDraft().name.trim()}
                         >
-                            {tForm.add}
+                            {tForm().add}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -200,7 +200,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setMountDialogOpen(false)}>
-                            {tForm.cancel}
+                            {tForm().cancel}
                         </Button>
                         <Button
                             type="button"
@@ -221,7 +221,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             }}
                             disabled={!mountDraft().source_relative_path.trim() || !mountDraft().target_windows_path.trim()}
                         >
-                            {tForm.add}
+                            {tForm().add}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -232,7 +232,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{ct('luthier_add_dll_override')}</DialogTitle>
-                        <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
+                        <DialogDescription>{tForm().addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
@@ -257,7 +257,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setDllDialogOpen(false)}>
-                            {tForm.cancel}
+                            {tForm().cancel}
                         </Button>
                         <Button
                             type="button"
@@ -279,7 +279,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             }}
                             disabled={!dllDraft().dll.trim()}
                         >
-                            {tForm.add}
+                            {tForm().add}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -290,7 +290,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{ct('luthier_add_wrapper_command')}</DialogTitle>
-                        <DialogDescription>{tForm.addListDialogDescription}</DialogDescription>
+                        <DialogDescription>{tForm().addListDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
@@ -325,7 +325,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setWrapperDialogOpen(false)}>
-                            {tForm.cancel}
+                            {tForm().cancel}
                         </Button>
                         <Button
                             type="button"
@@ -355,7 +355,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             }}
                             disabled={!wrapperDraft().executable.trim()}
                         >
-                            {tForm.add}
+                            {tForm().add}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -366,7 +366,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{ct('luthier_add_extra_system_dependency')}</DialogTitle>
-                        <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
+                        <DialogDescription>{tForm().addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
@@ -399,7 +399,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             variant="outline"
                             onClick={() => setExtraDependencyDialogOpen(false)}
                         >
-                            {tForm.cancel}
+                            {tForm().cancel}
                         </Button>
                         <Button
                             type="button"
@@ -424,7 +424,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             }}
                             disabled={!extraDependencyDraft().name.trim()}
                         >
-                            {tForm.add}
+                            {tForm().add}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -435,7 +435,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{ct('luthier_add_wine_special_folder')}</DialogTitle>
-                        <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
+                        <DialogDescription>{tForm().addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid gap-2">
@@ -482,7 +482,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             variant="outline"
                             onClick={() => setWineDesktopFolderDialogOpen(false)}
                         >
-                            {tForm.cancel}
+                            {tForm().cancel}
                         </Button>
                         <Button
                             type="button"
@@ -497,7 +497,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                                                 ...prev.winecfg.desktop_folders.filter((f) => f.folder_key !== draft.folder_key),
                                                 {
                                                     folder_key: draft.folder_key,
-                                                    shortcut_name: draft.shortcut_name.trim() || null,
+                                                    shortcut_name: (draft.shortcut_name.trim() || null) as any,
                                                     linux_path: draft.linux_path.trim()
                                                 }
                                             ]
@@ -513,7 +513,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             }}
                             disabled={!wineDesktopFolderDraft().linux_path.trim()}
                         >
-                            {tForm.add}
+                            {tForm().add}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -524,7 +524,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{ct('luthier_add_wine_drive')}</DialogTitle>
-                        <DialogDescription>{tForm.addKeyValueDialogDescription}</DialogDescription>
+                        <DialogDescription>{tForm().addKeyValueDialogDescription}</DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 py-4">
                         <div class="grid grid-cols-2 gap-4">
@@ -564,7 +564,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setWineDriveDialogOpen(false)}>
-                            {tForm.cancel}
+                            {tForm().cancel}
                         </Button>
                         <Button
                             type="button"
@@ -584,7 +584,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                                                     source_relative_path: '',
                                                     state: 'Enabled' as FeatureState,
                                                     host_path: draft.host_path.trim(),
-                                                    drive_type: draft.drive_type !== 'auto' ? draft.drive_type : null,
+                                                    drive_type: (draft.drive_type !== 'auto' ? draft.drive_type : null) as any,
                                                     label: null,
                                                     serial: null
                                                 }
@@ -603,7 +603,7 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             }}
                             disabled={!wineDriveDraft().letter || !wineDriveDraft().host_path.trim()}
                         >
-                            {tForm.add}
+                            {tForm().add}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

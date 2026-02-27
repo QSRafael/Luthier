@@ -4,6 +4,8 @@ import { IconChevronDown } from '@tabler/icons-solidjs'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
 import { LuthierTab, FeatureState } from '../../models/config'
 import type { LuthierController } from './useLuthierController'
+import type { createLuthierPageDialogState } from './luthier-page-dialog-state'
+import type { createLuthierPageEffects } from './luthier-page-effects'
 import type { LuthierCopyKey } from './luthier-copy'
 
 export type ImportRegistryFileOutput = {
@@ -22,7 +24,10 @@ export type ListDirectoryEntriesOutput = {
   files: string[]
 }
 
-export type LuthierPageSectionView = LuthierController & Record<string, any>
+export type LuthierPageSectionView =
+  LuthierController &
+  ReturnType<typeof createLuthierPageDialogState> &
+  ReturnType<typeof createLuthierPageEffects>
 
 export type LuthierPageSectionProps = {
   view: LuthierPageSectionView
