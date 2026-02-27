@@ -33,8 +33,8 @@ import {
   relativeInsideBase,
   SwitchChoiceCard,
   type LuthierPageSectionProps
-} from '../luthier-page-shared'
-import { validatePositiveIntegerString } from '../luthier-field-validation'
+} from '../page-shared'
+import { validatePositiveIntegerString } from '../field-validation'
 
 export function PerformanceTabSection(props: LuthierPageSectionProps) {
     const {

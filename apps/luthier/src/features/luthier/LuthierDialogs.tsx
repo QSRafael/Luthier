@@ -10,7 +10,7 @@ import {
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
-import { type LuthierPageSectionProps } from './luthier-page-shared'
+import { type LuthierPageSectionProps } from './page-shared'
 import type { FeatureState } from '../../models/config'
 
 export function LuthierDialogs(props: LuthierPageSectionProps) {

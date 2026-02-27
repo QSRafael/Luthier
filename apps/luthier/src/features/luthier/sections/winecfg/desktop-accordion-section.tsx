@@ -8,9 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '../../../../components/ui/input'
 import { Select } from '../../../../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
-import { AccordionSection } from '../../luthier-page-shared'
+import { AccordionSection } from '../../page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
-import { validateLinuxPath, validateWindowsFriendlyName } from '../../luthier-field-validation'
+import { validateLinuxPath, validateWindowsFriendlyName } from '../../field-validation'
 
 export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionProps) {
   const {

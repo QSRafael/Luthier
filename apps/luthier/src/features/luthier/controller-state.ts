@@ -1,5 +1,5 @@
 /**
- * luthier-controller-state.ts
+ * controller-state.ts
  *
  * Base state (Signals) for the Luthier controller.
  * Extracts the primary reactive variables from `useLuthierController.ts`.

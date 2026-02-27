@@ -5,9 +5,9 @@ import { WinecfgFeatureStateField } from '../../../../components/form/FormContro
 import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/alert'
 import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
-import { AccordionSection } from '../../luthier-page-shared'
+import { AccordionSection } from '../../page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
-import { validatePositiveIntegerString } from '../../luthier-field-validation'
+import { validatePositiveIntegerString } from '../../field-validation'
 
 export function WinecfgGraphicsAccordionSection(props: WinecfgAccordionSectionProps) {
   const {

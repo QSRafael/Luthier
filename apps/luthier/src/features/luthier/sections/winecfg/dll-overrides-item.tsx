@@ -8,7 +8,7 @@ import { Input } from '../../../../components/ui/input'
 import { Select } from '../../../../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
 import type { WinecfgSectionViewProps } from './shared'
-import { validateDllName } from '../../luthier-field-validation'
+import { validateDllName } from '../../field-validation'
 
 export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
   const {

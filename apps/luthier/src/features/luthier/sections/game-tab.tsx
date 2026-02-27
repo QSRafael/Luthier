@@ -34,8 +34,8 @@ import {
   relativeInsideBase,
   SwitchChoiceCard,
   type LuthierPageSectionProps
-} from '../luthier-page-shared'
-import { validateRelativeGamePath, validateWindowsPath } from '../luthier-field-validation'
+} from '../page-shared'
+import { validateRelativeGamePath, validateWindowsPath } from '../field-validation'
 
 export function GameTabSection(props: LuthierPageSectionProps & { mode?: 'overview' | 'files' }) {
   const mode = props.mode ?? 'overview'

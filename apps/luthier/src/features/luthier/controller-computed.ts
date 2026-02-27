@@ -1,5 +1,5 @@
 /**
- * luthier-controller-computed.ts
+ * controller-computed.ts
  *
  * Computed values (createMemo) for the Luthier controller.
  * Extracts memoized state derivations from `useLuthierController.ts`.
@@ -8,7 +8,7 @@
 import { createMemo } from 'solid-js'
 import type { SelectOption } from '../../components/form/FormControls'
 import { translate } from '../../i18n'
-import { luthierFormat, luthierTranslate, type LuthierCopyKey } from './luthier-copy'
+import { luthierFormat, luthierTranslate, type LuthierCopyKey } from './copy'
 import {
     AUDIO_DRIVERS,
     basename,
@@ -26,14 +26,14 @@ import {
     type AudioDriverOption,
     type GamescopeWindowType,
     type UpscaleMethod
-} from './luthier-controller-utils'
+} from './controller-utils'
 import {
     type LuthierTab,
     type FeatureState,
     type RuntimePreference,
     type RuntimePrimary
 } from '../../models/config'
-import type { createLuthierState } from './luthier-controller-state'
+import type { createLuthierState } from './controller-state'
 import { getCreateExecutableValidationErrors } from './domain/create-executable-guards'
 
 export type StatusTone = 'info' | 'success' | 'error'

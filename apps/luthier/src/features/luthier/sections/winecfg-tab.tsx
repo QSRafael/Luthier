@@ -1,7 +1,7 @@
 import { IconAlertCircle } from '@tabler/icons-solidjs'
 
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert'
-import type { LuthierPageSectionProps } from '../luthier-page-shared'
+import type { LuthierPageSectionProps } from '../page-shared'
 import { WinecfgAudioAccordionSection } from './winecfg/audio-accordion-section'
 import { WinecfgDesktopAccordionSection } from './winecfg/desktop-accordion-section'
 import { WinecfgDllOverridesItem } from './winecfg/dll-overrides-item'

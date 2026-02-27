@@ -1,7 +1,7 @@
 /**
  * domain/page-shared-helpers.ts
  *
- * Pure domain helpers extracted from `luthier-page-shared.tsx`.
+ * Pure domain helpers extracted from `page-shared.tsx`.
  * These functions contain no JSX and do not depend on Solid.js,
  * keeping business logic decoupled from the view layer.
  */

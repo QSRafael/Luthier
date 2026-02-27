@@ -1,5 +1,5 @@
 import type { Locale } from '../../i18n'
-import { luthierFormat, luthierTranslate } from './luthier-copy'
+import { luthierFormat, luthierTranslate } from './copy'
 
 export type ValidationResult = {
   error?: string

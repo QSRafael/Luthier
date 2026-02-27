@@ -33,14 +33,14 @@ import {
   relativeInsideBase,
   SwitchChoiceCard,
   type LuthierPageSectionProps
-} from '../luthier-page-shared'
+} from '../page-shared'
 import {
   validateCommandToken,
   validateEnvVarName,
   validateLinuxPath,
   validateRegistryPath,
   validateRegistryValueType,
-} from '../luthier-field-validation'
+} from '../field-validation'
 
 export function DependenciesTabSection(props: LuthierPageSectionProps) {
     const {

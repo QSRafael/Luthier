@@ -32,7 +32,7 @@ import {
   relativeInsideBase,
   SwitchChoiceCard,
   type LuthierPageSectionProps
-} from '../luthier-page-shared'
+} from '../page-shared'
 
 export function ReviewTabSection(props: LuthierPageSectionProps) {
   const {

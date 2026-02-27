@@ -1,15 +1,15 @@
 /**
- * luthier-controller-status.ts
+ * controller-status.ts
  *
  * Status and health checks (createEffect) for the Luthier controller.
  * Enforces configuration validness and automatically derives readiness states.
  */
 
 import { createEffect, onCleanup, onMount } from 'solid-js'
-import { basename, dirname, hasWindowsLauncherExtension, isLikelyAbsolutePath, relativeFromRoot, stripLauncherExtension } from './luthier-controller-utils'
+import { basename, dirname, hasWindowsLauncherExtension, isLikelyAbsolutePath, relativeFromRoot, stripLauncherExtension } from './controller-utils'
 import type { FeatureState } from '../../models/config'
-import type { createLuthierState } from './luthier-controller-state'
-import type { createLuthierComputed } from './luthier-controller-computed'
+import type { createLuthierState } from './controller-state'
+import type { createLuthierComputed } from './controller-computed'
 
 export function createLuthierStatus(
     state: ReturnType<typeof createLuthierState>,

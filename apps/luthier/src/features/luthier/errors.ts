@@ -1,5 +1,5 @@
 /**
- * luthier-errors.ts
+ * errors.ts
  *
  * Centralized error types and normalization helpers for the `luthier` feature.
  *

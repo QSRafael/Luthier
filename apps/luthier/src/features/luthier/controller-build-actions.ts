@@ -1,12 +1,12 @@
 /**
- * luthier-controller-build-actions.ts
+ * controller-build-actions.ts
  *
  * Actions for hashing, testing, and creating the final executable wrapper.
  */
 
-import { isLikelyAbsolutePath } from './luthier-controller-utils'
-import type { createLuthierState } from './luthier-controller-state'
-import type { createLuthierComputed } from './luthier-controller-computed'
+import { isLikelyAbsolutePath } from './controller-utils'
+import type { createLuthierState } from './controller-state'
+import type { createLuthierComputed } from './controller-computed'
 
 export function createLuthierBuildActions(
     state: ReturnType<typeof createLuthierState>,

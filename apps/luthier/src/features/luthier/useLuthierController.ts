@@ -4,7 +4,7 @@ import { toast } from 'solid-sonner'
 import { invokeCommand, pickFile, pickFolder } from '../../api/tauri'
 import type { SelectOption } from '../../components/form/FormControls'
 import { detectLocale, Locale, translate } from '../../i18n'
-import { luthierFormat, luthierTranslate, type LuthierCopyKey } from './luthier-copy'
+import { luthierFormat, luthierTranslate, type LuthierCopyKey } from './copy'
 import {
   AUDIO_DRIVERS,
   basename,
@@ -30,7 +30,7 @@ import {
   type AudioDriverOption,
   type GamescopeWindowType,
   type UpscaleMethod
-} from './luthier-controller-utils'
+} from './controller-utils'
 import {
   validateCommandToken,
   validateDllName,
@@ -44,7 +44,7 @@ import {
   validateWindowsFriendlyName,
   validateWindowsPath,
   validateWrapperExecutable,
-} from './luthier-field-validation'
+} from './field-validation'
 import {
   LuthierTab,
   defaultGameConfig,
@@ -53,14 +53,14 @@ import {
   RuntimePreference,
   RuntimePrimary
 } from '../../models/config'
-import { createLuthierState } from './luthier-controller-state'
-import { createLuthierComputed } from './luthier-controller-computed'
-import { createLuthierStatus } from './luthier-controller-status'
-import { createLuthierHeroActions } from './luthier-controller-hero-actions'
-import { createLuthierWinetricksActions } from './luthier-controller-winetricks-actions'
-import { createLuthierFileActions } from './luthier-controller-file-actions'
-import { createLuthierBuildActions } from './luthier-controller-build-actions'
-import { createLuthierConfigActions } from './luthier-controller-config-actions'
+import { createLuthierState } from './controller-state'
+import { createLuthierComputed } from './controller-computed'
+import { createLuthierStatus } from './controller-status'
+import { createLuthierHeroActions } from './controller-hero-actions'
+import { createLuthierWinetricksActions } from './controller-winetricks-actions'
+import { createLuthierFileActions } from './controller-file-actions'
+import { createLuthierBuildActions } from './controller-build-actions'
+import { createLuthierConfigActions } from './controller-config-actions'
 
 type WinetricksAvailableOutput = {
   source: string

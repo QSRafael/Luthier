@@ -10,7 +10,7 @@
  */
 
 import type { GameConfig } from '../../../models/config'
-import type { LuthierCopyKey } from '../luthier-copy'
+import type { LuthierCopyKey } from '../copy'
 
 // Minimal subset of feature state needed for summary
 function featureStateEnabled(state: string): boolean {

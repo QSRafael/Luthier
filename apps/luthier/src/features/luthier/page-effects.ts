@@ -11,7 +11,7 @@ import { Toaster, toast } from 'solid-sonner'
 import { invokeCommand } from '../../api/tauri'
 import { LuthierTab } from '../../models/config'
 import type { useLuthierController } from './useLuthierController'
-import type { createLuthierPageDialogState } from './luthier-page-dialog-state'
+import type { createLuthierPageDialogState } from './page-dialog-state'
 
 import {
     buildAncestorPathsFromExe,
@@ -24,7 +24,7 @@ import {
     ListDirectoryEntriesOutput,
     parseWxH,
     relativeInsideBase
-} from './luthier-page-shared'
+} from './page-shared'
 import { useTheme } from '../../components/theme-provider'
 
 export function createLuthierPageEffects(

@@ -1,4 +1,4 @@
-import type { LuthierPageSectionView } from '../../luthier-page-shared'
+import type { LuthierPageSectionView } from '../../page-shared'
 
 export type WinecfgSectionViewProps = {
   view: LuthierPageSectionView

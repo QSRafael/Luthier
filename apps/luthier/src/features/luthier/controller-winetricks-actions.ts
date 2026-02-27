@@ -1,12 +1,12 @@
 /**
- * luthier-controller-winetricks-actions.ts
+ * controller-winetricks-actions.ts
  *
  * Actions for handling Winetricks (loading catalog, adding/removing verbs, searching).
  */
 
 import { toast } from 'solid-sonner'
-import type { createLuthierState } from './luthier-controller-state'
-import type { createLuthierComputed } from './luthier-controller-computed'
+import type { createLuthierState } from './controller-state'
+import type { createLuthierComputed } from './controller-computed'
 
 type WinetricksAvailableOutput = {
     source: string

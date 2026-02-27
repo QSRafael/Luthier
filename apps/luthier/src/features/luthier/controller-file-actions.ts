@@ -1,5 +1,5 @@
 /**
- * luthier-controller-file-actions.ts
+ * controller-file-actions.ts
  *
  * Actions for handling file system picking (executables, folders, registry, icons).
  */
@@ -12,9 +12,9 @@ import {
     isLikelyAbsolutePath,
     relativeFromRoot,
     replaceAt
-} from './luthier-controller-utils'
-import type { createLuthierState } from './luthier-controller-state'
-import type { createLuthierComputed } from './luthier-controller-computed'
+} from './controller-utils'
+import type { createLuthierState } from './controller-state'
+import type { createLuthierComputed } from './controller-computed'
 import type { ExtractExecutableIconOutput } from '../../api/tauri'
 
 export function createLuthierFileActions(

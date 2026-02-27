@@ -1,8 +1,8 @@
 import type { Locale } from '../../i18n'
-import { luthierMessagesEnUS } from './luthier-copy.en-US'
-import { luthierMessagesPtBR } from './luthier-copy.pt-BR'
-import { luthierValidationMessagesEnUS } from './luthier-copy.validation.en-US'
-import { luthierValidationMessagesPtBR } from './luthier-copy.validation.pt-BR'
+import { luthierMessagesEnUS } from './copy.en-US'
+import { luthierMessagesPtBR } from './copy.pt-BR'
+import { luthierValidationMessagesEnUS } from './copy.validation.en-US'
+import { luthierValidationMessagesPtBR } from './copy.validation.pt-BR'
 
 export const luthierMessages = {
   'pt-BR': {

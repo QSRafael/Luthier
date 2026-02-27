@@ -32,8 +32,8 @@ import {
   relativeInsideBase,
   SwitchChoiceCard,
   type LuthierPageSectionProps
-} from '../luthier-page-shared'
-import { validateEnvVarName, validateWrapperExecutable } from '../luthier-field-validation'
+} from '../page-shared'
+import { validateEnvVarName, validateWrapperExecutable } from '../field-validation'
 
 export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
     const {

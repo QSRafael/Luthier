@@ -26,9 +26,9 @@ import {
     validateWindowsFriendlyName,
     validateWindowsPath,
     validateWrapperExecutable
-} from '../luthier-field-validation'
+} from '../field-validation'
 import type { Locale } from '../../../i18n'
-import type { LuthierCopyKey } from '../luthier-copy'
+import type { LuthierCopyKey } from '../copy'
 
 // Dependencies that were previously in controller utils
 function isLikelyAbsolutePath(path: string): boolean {

@@ -4,7 +4,7 @@ import { IconAlertCircle } from '@tabler/icons-solidjs'
 import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/alert'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMain, ItemTitle } from '../../../../components/ui/item'
 import { Tabs, TabsList, TabsTrigger } from '../../../../components/ui/tabs'
-import { AccordionSection } from '../../luthier-page-shared'
+import { AccordionSection } from '../../page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 
 export function WinecfgAudioAccordionSection(props: WinecfgAccordionSectionProps) {

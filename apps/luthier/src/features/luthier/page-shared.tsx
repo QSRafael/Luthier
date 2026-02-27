@@ -4,9 +4,9 @@ import { IconChevronDown } from '@tabler/icons-solidjs'
 import { Switch, SwitchControl, SwitchInput, SwitchThumb } from '../../components/ui/switch'
 import { LuthierTab, FeatureState } from '../../models/config'
 import type { LuthierController } from './useLuthierController'
-import type { createLuthierPageDialogState } from './luthier-page-dialog-state'
-import type { createLuthierPageEffects } from './luthier-page-effects'
-import type { LuthierCopyKey } from './luthier-copy'
+import type { createLuthierPageDialogState } from './page-dialog-state'
+import type { createLuthierPageEffects } from './page-effects'
+import type { LuthierCopyKey } from './copy'
 
 export type ImportRegistryFileOutput = {
   entries: Array<{ path: string; name: string; value_type: string; value: string }>

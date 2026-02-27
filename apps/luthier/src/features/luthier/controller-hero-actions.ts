@@ -1,13 +1,13 @@
 /**
- * luthier-controller-hero-actions.ts
+ * controller-hero-actions.ts
  *
  * Actions for handling Hero Image (fetching, preparing, searching, cache).
  */
 
 import { toast } from 'solid-sonner'
-import { dedupeUrls } from './luthier-controller-utils'
-import type { createLuthierState } from './luthier-controller-state'
-import type { createLuthierComputed } from './luthier-controller-computed'
+import { dedupeUrls } from './controller-utils'
+import type { createLuthierState } from './controller-state'
+import type { createLuthierComputed } from './controller-computed'
 import type { PrepareHeroImageOutput, SearchHeroImageOutput } from '../../api/tauri'
 
 export function createLuthierHeroActions(

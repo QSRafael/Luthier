@@ -1,12 +1,12 @@
 /**
- * luthier-controller-config-actions.ts
+ * controller-config-actions.ts
  *
  * Actions for modifying the main game configuration (environment, requirements, runtimes)
  * and UI tabs.
  */
 
 import type { LuthierTab, FeatureState, RuntimePrimary } from '../../models/config'
-import type { createLuthierState } from './luthier-controller-state'
+import type { createLuthierState } from './controller-state'
 
 export function createLuthierConfigActions(
     state: ReturnType<typeof createLuthierState>,
