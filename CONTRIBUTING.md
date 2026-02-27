@@ -5,8 +5,8 @@ Thanks for contributing.
 ## Before You Start
 
 - Read [README.md](./README.md) for setup and project structure.
-- Check [context.md](./context.md) (Portuguese) for product rules and architecture.
-- Check [debito.md](./debito.md) for known gaps and priorities.
+- Check [docs/planning/context.md](./docs/planning/context.md) (Portuguese) for product rules and architecture.
+- Check [docs/planning/debito.md](./docs/planning/debito.md) for known gaps and priorities.
 
 ## Development Workflow
 

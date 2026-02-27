@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APP_DIR="$ROOT_DIR/apps/luthier"
 RELEASE_DIR="$APP_DIR/src-tauri/target/release"
 ORCH_RESOURCE_DIR="$APP_DIR/src-tauri/resources/luthier-orchestrator-base"

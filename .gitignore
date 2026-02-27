@@ -51,5 +51,11 @@ Thumbs.db
 *.tar.gz
 *.tar.xz
 
+# Local planning/audit docs (private workflow)
+/docs/planning/
+/docs/audits/
+/docs/archive/
+
 # Local references (kept out of public repo by default)
 /Referencia
+/Referencias

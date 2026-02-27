@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APP_DIR="$ROOT_DIR/apps/luthier"
 PORT="${PORT:-1420}"
 HOST="${HOST:-0.0.0.0}"
@@ -53,7 +54,7 @@ if port_in_use; then
     echo "Processo(s) escutando na porta $PORT:" >&2
     lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P >&2 || true
   fi
-  echo "Feche o processo antigo ou use: PORT=1421 ./rodar-luthier-lan.sh" >&2
+  echo "Feche o processo antigo ou use: PORT=1421 ./scripts/dev/run-luthier-lan.sh" >&2
   exit 1
 fi
 
@@ -66,4 +67,3 @@ fi
 echo
 
 exec "$MISE_BIN" exec -- npm run dev -- --host "$HOST" --port "$PORT"
-

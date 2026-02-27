@@ -13,8 +13,8 @@ This repository is actively developed and already supports an end-to-end local w
 - use a splash screen with pre-launch progress, optional quick config, and post-game feedback UI
 
 Open work is tracked in:
-- [context.md](./context.md) (product/spec, Portuguese)
-- [debito.md](./debito.md) (current gaps, technical debt, and recommended next steps)
+- [docs/planning/context.md](./docs/planning/context.md) (product/spec, Portuguese)
+- [docs/planning/debito.md](./docs/planning/debito.md) (current gaps, technical debt, and recommended next steps)
 
 ## High-Level Architecture
 
@@ -47,10 +47,12 @@ bins/luthier-orchestrator-injector/
 crates/luthier-core/             # Local backend logic shared by app/CLI
 crates/luthier-orchestrator-core/# Shared runtime models and execution utilities
 scripts/                         # Quality checks and local tooling
+scripts/dev/                     # Local dev convenience scripts
 .github/workflows/ci.yml         # CI (frontend + Rust core)
-docs/                            # Technical logs/checkpoints (mostly Portuguese)
-context.md                       # Product spec / architecture / acceptance criteria
-debito.md                        # Current debt / missing work vs spec
+docs/planning/                   # Product planning/spec and debt tracking
+docs/audits/                     # Point-in-time architecture audit reports
+docs/archive/                    # Historical logs/checkpoints
+docs_ia/                         # AI operational docs and quality gates
 ```
 
 ## Prerequisites (Linux)
@@ -99,13 +101,13 @@ npm run tauri:dev
 
 ### 4. Build the Luthier desktop app (no bundle)
 ```bash
-./build-luthier-e-abrir.sh
+./scripts/dev/build-luthier-and-open.sh
 ```
 
 ### 5. Run the frontend on LAN (UI-only testing)
 ```bash
-./rodar-luthier-lan.sh
-# Optional: PORT=1421 ./rodar-luthier-lan.sh
+./scripts/dev/run-luthier-lan.sh
+# Optional: PORT=1421 ./scripts/dev/run-luthier-lan.sh
 ```
 
 ## Common Developer Workflows
@@ -133,8 +135,8 @@ cd apps/luthier
 
 - The project brand is **Luthier**.
 - `orchestrator` remains the internal technical name for the generated runtime binary/component.
-- `context.md` and most technical planning/checkpoint docs are in Portuguese.
-- `debito.md` tracks gaps vs the planned MVP and post-MVP scope.
+- `docs/planning/context.md` and most technical planning/checkpoint docs are in Portuguese.
+- `docs/planning/debito.md` tracks gaps vs the planned MVP and post-MVP scope.
 
 ## Contributing
 
