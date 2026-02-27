@@ -1,11 +1,11 @@
 use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Context};
-use luthier_orchestrator_core::{FeatureState, GameConfig};
 use luthier_orchestrator_core::prefix::compact_exe_hash_key;
+use luthier_orchestrator_core::{FeatureState, GameConfig};
 use serde::{Deserialize, Serialize};
 
-use crate::cli::OptionalToggle;
+use crate::{cli::OptionalToggle, domain::feature_policy};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct RuntimeOverrides {
@@ -34,11 +34,11 @@ pub struct ConfigFeatureView {
 }
 
 pub fn feature_enabled(state: FeatureState) -> bool {
-    matches!(state, FeatureState::MandatoryOn | FeatureState::OptionalOn)
+    feature_policy::enabled(state)
 }
 
 pub fn feature_overridable(state: FeatureState) -> bool {
-    matches!(state, FeatureState::OptionalOn | FeatureState::OptionalOff)
+    feature_policy::overridable(state)
 }
 
 pub fn build_feature_view(
@@ -49,9 +49,9 @@ pub fn build_feature_view(
     ConfigFeatureView {
         feature,
         policy_state,
-        overridable: feature_overridable(policy_state),
-        default_enabled: feature_default_enabled(policy_state),
-        effective_enabled: effective_feature_enabled(policy_state, override_value),
+        overridable: feature_policy::overridable(policy_state),
+        default_enabled: feature_policy::default_enabled(policy_state),
+        effective_enabled: feature_policy::effective_enabled(policy_state, override_value),
         override_value,
     }
 }
@@ -66,7 +66,7 @@ pub fn apply_toggle_request(
         return Ok(false);
     };
 
-    if !feature_overridable(state) {
+    if !feature_policy::overridable(state) {
         return Err(anyhow!(
             "feature '{}' is not overridable with current policy",
             feature_name
@@ -162,24 +162,12 @@ pub fn apply_runtime_overrides(config: &mut GameConfig, overrides: &RuntimeOverr
     );
 }
 
-fn feature_default_enabled(state: FeatureState) -> bool {
-    matches!(state, FeatureState::MandatoryOn | FeatureState::OptionalOn)
-}
-
-fn effective_feature_enabled(state: FeatureState, override_value: Option<bool>) -> bool {
-    if feature_overridable(state) {
-        override_value.unwrap_or_else(|| feature_default_enabled(state))
-    } else {
-        feature_default_enabled(state)
-    }
-}
-
 fn apply_optional_override(state: &mut FeatureState, override_value: Option<bool>) {
     let Some(override_value) = override_value else {
         return;
     };
 
-    if !feature_overridable(*state) {
+    if !feature_policy::overridable(*state) {
         return;
     }
 
