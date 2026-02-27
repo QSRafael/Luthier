@@ -5,7 +5,10 @@ use luthier_orchestrator_core::GameConfig;
 
 use crate::application::{ports::LuthierCorePort, use_cases};
 use crate::error::BackendResult;
-use crate::infrastructure::{fs_repo::LocalFileSystemRepository, logging::StderrJsonBackendLogger};
+use crate::infrastructure::{
+    fs_repo::LocalFileSystemRepository, image_codec::ImageRsCodec, logging::StderrJsonBackendLogger,
+    pe_icon_reader::PelitePeIconReader,
+};
 
 pub use crate::models::dto::{
     CreateExecutableInput, CreateExecutableOutput, ExtractExecutableIconInput,
@@ -59,7 +62,17 @@ pub fn hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {
 pub fn extract_executable_icon(
     input: ExtractExecutableIconInput,
 ) -> Result<ExtractExecutableIconOutput, String> {
-    use_cases::extract_icon::extract_executable_icon_command(input)
+    let file_system = LocalFileSystemRepository::new();
+    let pe_icon_reader = PelitePeIconReader::new();
+    let image_codec = ImageRsCodec::new();
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::extract_icon::extract_executable_icon_command(
+        input,
+        &file_system,
+        &pe_icon_reader,
+        &image_codec,
+        &logger,
+    )
 }
 
 pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageOutput, String> {
