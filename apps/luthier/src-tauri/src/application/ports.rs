@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use luthier_core::{CreateOrchestratorRequest, CreateOrchestratorResult};
-use luthier_orchestrator_core::{doctor::DoctorReport, prefix::PrefixSetupPlan, GameConfig};
+use luthier_orchestrator_core::{
+    doctor::DoctorReport, prefix::PrefixSetupPlan, GameConfig, RegistryKey,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::error::BackendResult;
@@ -144,6 +146,17 @@ pub trait ImageCodecPort: Send + Sync {
 
 pub trait PeIconReaderPort: Send + Sync {
     fn read_ico_icon_groups(&self, executable_bytes: &[u8]) -> BackendResult<Vec<Vec<u8>>>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RegistryParseOutput {
+    pub entries: Vec<RegistryKey>,
+    pub warnings: Vec<String>,
+}
+
+pub trait RegistryParserPort: Send + Sync {
+    fn decode_text(&self, bytes: &[u8]) -> BackendResult<String>;
+    fn parse_entries(&self, raw: &str) -> RegistryParseOutput;
 }
 
 pub trait WinetricksCatalogParserPort: Send + Sync {

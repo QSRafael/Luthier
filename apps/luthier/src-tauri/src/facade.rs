@@ -8,7 +8,8 @@ use luthier_orchestrator_core::{doctor::DoctorReport, prefix::PrefixSetupPlan, G
 use crate::application::{
     ports::{
         ExternalCommandOutput, ExternalCommandRequest, JsonCodecPort, LuthierCorePort,
-        OrchestratorRuntimeInspectorPort, ProcessRunnerPort, RuntimeEnvironmentPort,
+        OrchestratorRuntimeInspectorPort, ProcessRunnerPort, RegistryParseOutput,
+        RegistryParserPort, RuntimeEnvironmentPort,
     },
     use_cases,
 };
@@ -20,6 +21,7 @@ use crate::infrastructure::{
     image_codec::ImageRsCodec,
     logging::StderrJsonBackendLogger,
     pe_icon_reader::PelitePeIconReader,
+    registry_parser,
     winetricks_catalog::WinetricksCatalogParser,
 };
 use crate::models::hero::HeroSearchResult;
@@ -182,6 +184,20 @@ impl ProcessRunnerPort for NativeProcessRunnerAdapter {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct NativeRegistryParserAdapter;
+
+impl RegistryParserPort for NativeRegistryParserAdapter {
+    fn decode_text(&self, bytes: &[u8]) -> BackendResult<String> {
+        registry_parser::decode_reg_file_text(bytes).map_err(Into::into)
+    }
+
+    fn parse_entries(&self, raw: &str) -> RegistryParseOutput {
+        let (entries, warnings) = registry_parser::parse_reg_file_entries(raw);
+        RegistryParseOutput { entries, warnings }
+    }
+}
+
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
     let luthier_core = NativeLuthierCoreAdapter;
     let base_binary_resolver = NativeBaseBinaryResolverAdapter;
@@ -281,7 +297,10 @@ pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
 pub fn import_registry_file(
     input: ImportRegistryFileInput,
 ) -> Result<ImportRegistryFileOutput, String> {
-    use_cases::import_registry::import_registry_file_command(input)
+    let file_system = LocalFileSystemRepository::new();
+    let parser = NativeRegistryParserAdapter;
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::import_registry::import_registry_file_command(input, &file_system, &parser, &logger)
 }
 
 pub fn list_child_directories(
