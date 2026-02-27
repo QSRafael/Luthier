@@ -1,9 +1,8 @@
-import type { FeatureState, RuntimePreference, RuntimePrimary } from '../../models/config'
+import type { FeatureState, RuntimePrimary } from '../../models/config'
 
 export const ORCHESTRATOR_BASE_PATH = './target/debug/luthier-orchestrator'
 
 export const RUNTIME_CANDIDATES: RuntimePrimary[] = ['ProtonUmu', 'ProtonNative', 'Wine']
-export const RUNTIME_PREFERENCES: RuntimePreference[] = ['Auto', 'Proton', 'Wine']
 export const DLL_MODES = [
   'builtin',
   'native',
@@ -14,7 +13,7 @@ export const DLL_MODES = [
 export const AUDIO_DRIVERS = ['__none__', 'pipewire', 'pulseaudio', 'alsa'] as const
 export const UPSCALE_METHODS = ['fsr', 'nis', 'integer', 'stretch'] as const
 export const WINDOW_TYPES = ['fullscreen', 'borderless', 'windowed'] as const
-export const PREFIX_HASH_KEY_LENGTH = 12
+const PREFIX_HASH_KEY_LENGTH = 12
 
 export type AudioDriverOption = (typeof AUDIO_DRIVERS)[number]
 export type UpscaleMethod = (typeof UPSCALE_METHODS)[number]
@@ -138,17 +137,4 @@ export function prefixHashKey(rawHash: string): string {
   if (trimmed.length <= PREFIX_HASH_KEY_LENGTH) return trimmed
 
   return trimmed.slice(0, PREFIX_HASH_KEY_LENGTH)
-}
-
-export function dedupeUrls(rawUrls: (string | null | undefined)[]): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const value of rawUrls) {
-    if (!value) continue
-    const trimmed = value.trim()
-    if (!trimmed || seen.has(trimmed)) continue
-    seen.add(trimmed)
-    out.push(trimmed)
-  }
-  return out
 }

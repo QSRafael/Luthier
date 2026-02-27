@@ -46,14 +46,6 @@ function hasWindowsLauncherExtension(path: string): boolean {
   )
 }
 
-export function posixDirname(path: string): string {
-  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
-  if (!normalized || normalized === '/') return '/'
-  const idx = normalized.lastIndexOf('/')
-  if (idx <= 0) return '/'
-  return normalized.slice(0, idx)
-}
-
 function relativeInsideBase(base: string, target: string): string | null {
   const b = base.replace(/\\/g, '/').replace(/\/+$/, '')
   const t = target.replace(/\\/g, '/').replace(/\/+$/, '')

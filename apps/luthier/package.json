@@ -10,7 +10,7 @@
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "format:check": "prettier --check .",
     "knip": "knip",
-    "depcruise": "depcruise --include-only \"^src\" src",
+    "depcruise": "depcruise --config dependency-cruiser.cjs --include-only \"^src\" src",
     "madge:circular": "madge --circular --extensions ts,tsx src",
     "quality": "npm run typecheck && npm run build",
     "quality:strict": "npm run typecheck && npm run lint && npm run format:check && npm run knip && npm run depcruise && npm run madge:circular && npm run build",

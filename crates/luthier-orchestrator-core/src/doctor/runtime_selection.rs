@@ -19,15 +19,10 @@ pub(super) fn evaluate_runtime(
         let candidates = effective_runtime_candidates(cfg);
 
         let selected_runtime = if strict {
-            if let Some(primary) = candidates.first().copied() {
-                if candidate_available(primary, has_proton, has_wine, has_umu) {
-                    Some(primary)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+            candidates
+                .first()
+                .copied()
+                .filter(|&primary| candidate_available(primary, has_proton, has_wine, has_umu))
         } else {
             candidates
                 .into_iter()
@@ -89,35 +84,38 @@ pub(super) fn evaluate_runtime(
             None
         };
 
-        let (runtime_status, runtime_note) = if let Some(selected) = selected_runtime {
-            if matches!(
-                selected,
-                RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu
-            ) {
-                match (requested_proton_version, proton.as_deref(), proton_version_matched) {
-                    (Some(requested), Some(selected_path), true) => (
-                        CheckStatus::OK,
-                        format!(
-                            "runtime discovered (requested proton version '{requested}' found at {selected_path})"
+        let (runtime_status, runtime_note) = selected_runtime.map_or_else(
+            || {
+                (
+                    CheckStatus::WARN,
+                    "no runtime discovered (doctor without embedded config)".to_string(),
+                )
+            },
+            |selected| {
+                if matches!(
+                    selected,
+                    RuntimeCandidate::ProtonNative | RuntimeCandidate::ProtonUmu
+                ) {
+                    match (requested_proton_version, proton.as_deref(), proton_version_matched) {
+                        (Some(requested), Some(selected_path), true) => (
+                            CheckStatus::OK,
+                            format!(
+                                "runtime discovered (requested proton version '{requested}' found at {selected_path})"
+                            ),
                         ),
-                    ),
-                    (Some(requested), Some(selected_path), false) => (
-                        CheckStatus::WARN,
-                        format!(
-                            "runtime discovered but requested proton version '{requested}' was not found; using {selected_path}"
+                        (Some(requested), Some(selected_path), false) => (
+                            CheckStatus::WARN,
+                            format!(
+                                "runtime discovered but requested proton version '{requested}' was not found; using {selected_path}"
+                            ),
                         ),
-                    ),
-                    _ => (CheckStatus::OK, "runtime discovered".to_string()),
+                        _ => (CheckStatus::OK, "runtime discovered".to_string()),
+                    }
+                } else {
+                    (CheckStatus::OK, "runtime discovered".to_string())
                 }
-            } else {
-                (CheckStatus::OK, "runtime discovered".to_string())
-            }
-        } else {
-            (
-                CheckStatus::WARN,
-                "no runtime discovered (doctor without embedded config)".to_string(),
-            )
-        };
+            },
+        );
 
         RuntimeDiscovery {
             proton,

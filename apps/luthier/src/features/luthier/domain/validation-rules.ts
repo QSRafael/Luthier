@@ -33,9 +33,7 @@ function hasControlChars(raw: string) {
   return /[\u0000-\u001f]/.test(raw)
 }
 
-export function detectPathStyle(
-  raw: string
-): 'empty' | 'linux' | 'windows' | 'relative' | 'unknown' {
+function detectPathStyle(raw: string): 'empty' | 'linux' | 'windows' | 'relative' | 'unknown' {
   const value = raw.trim()
   if (!value) return 'empty'
   if (value.startsWith('/')) return 'linux'
@@ -64,11 +62,11 @@ function linuxToWineZPathSuggestion(raw: string) {
   return `Z:${value.replace(/\//g, '\\')}`
 }
 
-export function sanitizeDigits(raw: string): string {
+function sanitizeDigits(raw: string): string {
   return raw.replace(/[^\d]/g, '')
 }
 
-export function parsePositiveIntStrict(raw: string): number | null {
+function parsePositiveIntStrict(raw: string): number | null {
   const value = raw.trim()
   if (!/^\d+$/.test(value)) return null
   const parsed = Number.parseInt(value, 10)
@@ -406,7 +404,7 @@ export function validateWindowsDriveSerial(raw: string, locale: Locale): Validat
   return {}
 }
 
-export function validateFileOrFolderName(
+function validateFileOrFolderName(
   raw: string,
   locale: Locale,
   kind: 'file' | 'folder'
