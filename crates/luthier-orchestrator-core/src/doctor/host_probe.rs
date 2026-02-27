@@ -1,0 +1,303 @@
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+pub(super) fn discover_umu() -> Option<PathBuf> {
+    if let Some(from_env) = env::var_os("UMU_RUNTIME") {
+        let candidate = PathBuf::from(from_env);
+        if is_executable_file(&candidate) {
+            return Some(candidate);
+        }
+    }
+
+    find_in_path("umu-run")
+}
+
+pub(super) fn discover_wine() -> Option<PathBuf> {
+    if let Some(from_env) = env::var_os("WINE") {
+        let candidate = PathBuf::from(from_env);
+        if is_executable_file(&candidate) {
+            return Some(candidate);
+        }
+    }
+
+    find_in_path("wine")
+        .or_else(|| existing_executable_path("/usr/bin/wine"))
+        .or_else(|| existing_executable_path("/usr/local/bin/wine"))
+        .or_else(|| home_relative_executable(".local/bin/wine"))
+}
+
+pub(super) fn discover_proton_with_preference(
+    requested_version: Option<&str>,
+) -> (Option<PathBuf>, bool) {
+    let requested_version = requested_version.map(str::trim).filter(|v| !v.is_empty());
+
+    if let Some(requested) = requested_version {
+        if let Some(found) = find_proton_by_requested_version(requested) {
+            return (Some(found), true);
+        }
+
+        return (discover_latest_proton(), false);
+    }
+
+    (discover_latest_proton(), false)
+}
+
+fn discover_latest_proton() -> Option<PathBuf> {
+    if let Some(from_env) = env::var_os("PROTONPATH") {
+        if let Some(path) = proton_from_path(PathBuf::from(from_env)) {
+            return Some(path);
+        }
+    }
+
+    if let Some(paths) = env::var_os("STEAM_COMPAT_TOOL_PATHS") {
+        for p in env::split_paths(&paths) {
+            if let Some(path) = proton_from_path(p) {
+                return Some(path);
+            }
+        }
+    }
+
+    for root in known_proton_roots() {
+        if let Some(found) = find_latest_proton_from_root(&root) {
+            return Some(found);
+        }
+    }
+
+    None
+}
+
+fn find_proton_by_requested_version(requested_version: &str) -> Option<PathBuf> {
+    if let Some(direct) = proton_from_path(PathBuf::from(requested_version)) {
+        return Some(direct);
+    }
+
+    if let Some(from_env) = env::var_os("PROTONPATH") {
+        if let Some(path) = proton_from_path(PathBuf::from(from_env)) {
+            if proton_path_matches_requested_version(&path, requested_version) {
+                return Some(path);
+            }
+        }
+    }
+
+    if let Some(paths) = env::var_os("STEAM_COMPAT_TOOL_PATHS") {
+        for p in env::split_paths(&paths) {
+            if let Some(path) = proton_from_path(p) {
+                if proton_path_matches_requested_version(&path, requested_version) {
+                    return Some(path);
+                }
+            }
+        }
+    }
+
+    let mut exact: Option<(SystemTime, PathBuf)> = None;
+    let mut fuzzy: Option<(SystemTime, PathBuf)> = None;
+
+    for root in known_proton_roots() {
+        let entries = match fs::read_dir(&root) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            let proton_path = match proton_from_path(entry_path) {
+                Some(path) => path,
+                None => continue,
+            };
+
+            let parent_name = proton_path
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            let requested_lower = requested_version.to_ascii_lowercase();
+            let modified = path_modified_or_epoch(&proton_path);
+
+            if parent_name == requested_lower {
+                match &exact {
+                    Some((best_modified, best_path))
+                        if modified < *best_modified
+                            || (modified == *best_modified && proton_path <= *best_path) => {}
+                    _ => exact = Some((modified, proton_path)),
+                }
+                continue;
+            }
+
+            if proton_path_matches_requested_version(&proton_path, requested_version) {
+                match &fuzzy {
+                    Some((best_modified, best_path))
+                        if modified < *best_modified
+                            || (modified == *best_modified && proton_path <= *best_path) => {}
+                    _ => fuzzy = Some((modified, proton_path)),
+                }
+            }
+        }
+    }
+
+    exact.or(fuzzy).map(|(_, path)| path)
+}
+
+fn known_proton_roots() -> Vec<PathBuf> {
+    let mut out = Vec::new();
+
+    if let Some(home) = env::var_os("HOME") {
+        let home = PathBuf::from(home);
+        // Heroic (native package)
+        out.push(home.join(".config/heroic/tools/proton"));
+        // Heroic (Flatpak)
+        out.push(home.join(".var/app/com.heroicgameslauncher.hgl/config/heroic/tools/proton"));
+
+        out.push(home.join(".local/share/Steam/compatibilitytools.d"));
+        out.push(home.join(".steam/root/compatibilitytools.d"));
+        out.push(home.join(".steam/steam/compatibilitytools.d"));
+        out.push(home.join(".local/share/Steam/steamapps/common"));
+        out.push(home.join(".steam/root/steamapps/common"));
+        out.push(home.join(".steam/steam/steamapps/common"));
+    }
+
+    out
+}
+
+fn proton_from_path(path: PathBuf) -> Option<PathBuf> {
+    if is_executable_file(&path) {
+        return Some(path);
+    }
+
+    let proton = path.join("proton");
+    if is_executable_file(&proton) {
+        return Some(proton);
+    }
+
+    None
+}
+
+fn proton_path_matches_requested_version(proton_path: &Path, requested_version: &str) -> bool {
+    let requested = requested_version.trim();
+    if requested.is_empty() {
+        return false;
+    }
+
+    let requested_lower = requested.to_ascii_lowercase();
+    let proton_path_string = proton_path.to_string_lossy().to_ascii_lowercase();
+
+    if proton_path_string == requested_lower {
+        return true;
+    }
+
+    if proton_path_string.contains(&requested_lower) {
+        return true;
+    }
+
+    // Heroic commonly exposes "GE-Proton-latest" as a symlink. Match against the canonical
+    // target path too so a request like "GE-Proton10-32" resolves correctly.
+    if let Ok(canonical) = proton_path.canonicalize() {
+        let canonical_string = canonical.to_string_lossy().to_ascii_lowercase();
+        if canonical_string == requested_lower || canonical_string.contains(&requested_lower) {
+            return true;
+        }
+
+        let canonical_parent = canonical
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        if canonical_parent == requested_lower || canonical_parent.contains(&requested_lower) {
+            return true;
+        }
+    }
+
+    let parent_name = proton_path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    parent_name == requested_lower || parent_name.contains(&requested_lower)
+}
+
+fn find_latest_proton_from_root(root: &Path) -> Option<PathBuf> {
+    let entries = fs::read_dir(root).ok()?;
+    let mut best: Option<(SystemTime, PathBuf)> = None;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if let Some(proton) = proton_from_path(path) {
+            let modified = path_modified_or_epoch(&proton);
+            match &best {
+                Some((best_modified, best_path))
+                    if modified < *best_modified
+                        || (modified == *best_modified && proton <= *best_path) => {}
+                _ => best = Some((modified, proton)),
+            }
+        }
+    }
+
+    best.map(|(_, path)| path)
+}
+
+pub(super) fn find_in_path(bin_name: &str) -> Option<PathBuf> {
+    let paths = env::var_os("PATH")?;
+
+    for dir in env::split_paths(&paths) {
+        let candidate = dir.join(bin_name);
+        if is_executable_file(&candidate) {
+            return Some(candidate);
+        }
+    }
+
+    None
+}
+
+fn existing_executable_path(path: &str) -> Option<PathBuf> {
+    let path = PathBuf::from(path);
+    if is_executable_file(&path) {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+fn home_relative_executable(path: &str) -> Option<PathBuf> {
+    let home = env::var_os("HOME")?;
+    let full = PathBuf::from(home).join(path);
+    if is_executable_file(&full) {
+        Some(full)
+    } else {
+        None
+    }
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    if !path.is_file() {
+        return false;
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::metadata(path)
+            .map(|meta| meta.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
+fn path_modified_or_epoch(path: &Path) -> SystemTime {
+    path.parent()
+        .and_then(|parent| fs::metadata(parent).ok())
+        .and_then(|meta| meta.modified().ok())
+        .unwrap_or(UNIX_EPOCH)
+}
+
+pub(super) fn path_to_string(path: PathBuf) -> String {
+    path.to_string_lossy().into_owned()
+}
