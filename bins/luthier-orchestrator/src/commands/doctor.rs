@@ -1,55 +1,17 @@
 use anyhow::Context;
 use luthier_orchestrator_core::{
-    doctor::{run_doctor, CheckStatus, DoctorReport},
-    observability::LogLevel,
-    prefix::build_prefix_setup_plan,
+    doctor::{CheckStatus, DoctorReport},
 };
 
-use crate::{infrastructure::payload_loader::try_load_embedded_config, logging::log_event};
+use crate::application::doctor_flow::execute_doctor_flow;
 
 pub fn run_doctor_command(trace_id: &str, verbose: bool) -> anyhow::Result<()> {
-    let embedded_config =
-        try_load_embedded_config().context("failed to inspect embedded config")?;
-    let prefix_plan = embedded_config
-        .as_ref()
-        .map(build_prefix_setup_plan)
-        .transpose()
-        .context("failed to build prefix setup plan")?;
-
-    if embedded_config.is_none() {
-        log_event(
-            trace_id,
-            LogLevel::Warn,
-            "doctor",
-            "GO-DR-002",
-            "doctor_running_without_embedded_config",
-            serde_json::json!({}),
-        );
-    }
-
-    let report = run_doctor(embedded_config.as_ref());
-
-    log_event(
-        trace_id,
-        LogLevel::Info,
-        "doctor",
-        "GO-DR-003",
-        "doctor_finished",
-        serde_json::json!({
-            "summary": report.summary,
-            "has_embedded_config": report.has_embedded_config,
-        }),
-    );
-
-    print_doctor_human_summary(&report, prefix_plan.as_ref());
+    let execution = execute_doctor_flow(trace_id)?;
+    print_doctor_human_summary(&execution.report, execution.prefix_setup_plan.as_ref());
 
     if verbose {
-        let output = serde_json::json!({
-            "doctor": report,
-            "prefix_setup_plan": prefix_plan,
-        });
-        let pretty =
-            serde_json::to_string_pretty(&output).context("failed to serialize doctor report")?;
+        let pretty = serde_json::to_string_pretty(&execution.as_verbose_payload())
+            .context("failed to serialize doctor report")?;
         println!();
         println!("{pretty}");
     }
