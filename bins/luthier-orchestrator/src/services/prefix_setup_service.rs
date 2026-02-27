@@ -10,7 +10,10 @@ use luthier_orchestrator_core::{
     GameConfig, RuntimeCandidate,
 };
 
-use crate::{launch::PrefixSetupExecutionContext, overrides::feature_enabled};
+use crate::{
+    application::runtime_overrides::feature_enabled,
+    domain::models::PrefixSetupExecutionContext,
+};
 
 pub fn build_prefix_setup_execution_context(
     config: &GameConfig,

@@ -11,7 +11,11 @@ use luthier_orchestrator_core::{
     FeatureState, GameConfig, RuntimeCandidate,
 };
 
-use crate::{launch::LaunchCommandPlan, overrides::feature_enabled, paths::resolve_relative_path};
+use crate::{
+    application::runtime_overrides::feature_enabled,
+    domain::models::LaunchCommandPlan,
+    infrastructure::paths::resolve_relative_path,
+};
 
 pub fn build_launch_command(
     config: &GameConfig,

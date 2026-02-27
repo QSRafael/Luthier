@@ -15,11 +15,11 @@ use luthier_orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use luthier_orchestrator_core::GameConfig;
 use serde_json::Value;
 
-use crate::overrides::{
+use crate::application::runtime_overrides::{
     apply_runtime_overrides, build_feature_view, load_runtime_overrides, save_runtime_overrides,
     RuntimeOverrides,
 };
-use crate::payload::load_embedded_config_required;
+use crate::infrastructure::payload_loader::load_embedded_config_required;
 
 pub mod input;
 pub mod renderer;

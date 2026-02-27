@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context};
 use minifb::{Icon, MouseButton, MouseMode, Scale, Window, WindowOptions};
 
-use crate::overrides::RuntimeOverrides;
+use crate::application::runtime_overrides::RuntimeOverrides;
 use crate::splash::state::{MouseSnapshot, Rect};
 use crate::splash::SplashWindowScale;
 use crate::splash::theme::{FPS, WIN_H, WIN_W};

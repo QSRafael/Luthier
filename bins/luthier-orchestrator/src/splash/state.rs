@@ -5,7 +5,7 @@ use minifb::Window;
 use luthier_orchestrator_core::doctor::DoctorReport;
 use luthier_orchestrator_core::GameConfig;
 
-use crate::overrides::RuntimeOverrides;
+use crate::application::runtime_overrides::RuntimeOverrides;
 use crate::splash::{t, SplashTextKey};
 
 #[derive(Debug, Clone, Copy)]

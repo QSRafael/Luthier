@@ -11,17 +11,23 @@ use luthier_orchestrator_core::{
 use serde_json::Value;
 
 use crate::{
+    application::runtime_overrides::{apply_runtime_overrides, load_runtime_overrides},
     instance_lock::acquire_instance_lock,
-    launch::{
-        apply_registry_keys_if_present, apply_winecfg_overrides_if_present, build_launch_command,
-        build_prefix_setup_execution_context, dry_run_enabled, execute_script_if_present,
-        validate_integrity,
+    infrastructure::{
+        mounts_adapter::{apply_folder_mounts, MountStatus},
+        paths::{resolve_game_root, resolve_relative_path},
+        payload_loader::load_embedded_config_required,
     },
     logging::log_event,
-    mounts::{apply_folder_mounts, MountStatus},
-    overrides::{apply_runtime_overrides, load_runtime_overrides},
-    paths::{resolve_game_root, resolve_relative_path},
-    payload::load_embedded_config_required,
+    services::{
+        integrity_service::validate_integrity,
+        launch_plan_builder::build_launch_command,
+        prefix_setup_service::build_prefix_setup_execution_context,
+        registry_apply_service::apply_registry_keys_if_present,
+        runtime_flags::dry_run_enabled,
+        script_runner::execute_script_if_present,
+        winecfg_apply_service::apply_winecfg_overrides_if_present,
+    },
 };
 
 #[derive(Debug)]

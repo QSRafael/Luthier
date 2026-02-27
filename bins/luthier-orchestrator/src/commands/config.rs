@@ -2,13 +2,13 @@ use anyhow::{anyhow, Context};
 use luthier_orchestrator_core::observability::LogLevel;
 
 use crate::{
-    cli::Cli,
-    logging::log_event,
-    overrides::{
+    application::runtime_overrides::{
         apply_toggle_request, build_feature_view, feature_overridable, load_runtime_overrides,
         runtime_overrides_path, save_runtime_overrides, set_optional_override,
     },
-    payload::load_embedded_config_required,
+    cli::Cli,
+    infrastructure::payload_loader::load_embedded_config_required,
+    logging::log_event,
 };
 
 pub fn run_config_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
