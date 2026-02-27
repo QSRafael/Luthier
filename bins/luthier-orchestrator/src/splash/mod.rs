@@ -79,7 +79,7 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
             buffer,
         } => {
             let outcome = show_runtime_progress_window(
-                window,
+                *window,
                 buffer,
                 &prelaunch.config.game_name,
                 prelaunch.hero_background.clone(),
@@ -300,7 +300,7 @@ fn show_prelaunch_window(
         {
             return Ok(PrelaunchDecision::Start {
                 overrides: state.overrides.clone(),
-                window,
+                window: Box::new(window),
                 buffer,
             });
         }

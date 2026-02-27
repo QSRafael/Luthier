@@ -47,9 +47,7 @@ CLIPPY_LINT_ARGS=(
   -W clippy::expect_used
   -W clippy::manual_filter
   -A dead_code
-  -A clippy::redundant_pub_crate
   -A clippy::too_many_arguments
-  -A clippy::large_enum_variant
 )
 
 echo "[rust] fmt --check"

@@ -39,7 +39,7 @@ pub struct PrelaunchState {
 pub enum PrelaunchDecision {
     Start {
         overrides: RuntimeOverrides,
-        window: Window,
+        window: Box<Window>,
         buffer: Vec<u32>,
     },
     Exit,
