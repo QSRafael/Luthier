@@ -2,28 +2,28 @@
 all-features = true
 
 [advisories]
-version = 2
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/RustSec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
-yanked = "warn"
-notice = "warn"
-ignore = []
+ignore = [
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error is pulled transitively by GTK3/Tauri v1 stack" },
+  { id = "RUSTSEC-2024-0384", reason = "instant is transitive in current desktop stack (tao/minifb)" },
+  { id = "RUSTSEC-2024-0411", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0412", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0413", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0414", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0415", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0416", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0418", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0419", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2024-0420", reason = "GTK3 ecosystem advisory; current Tauri v1 stack depends on it" },
+  { id = "RUSTSEC-2025-0057", reason = "fxhash is transitive through selectors in current HTML parsing stack" },
+]
 
 [licenses]
-version = 2
-unlicensed = "deny"
-allow-osi-fsf-free = "either"
-copyleft = "deny"
-default = "deny"
-confidence-threshold = 0.8
 allow = [
   "Apache-2.0",
   "Apache-2.0 WITH LLVM-exception",
   "BSD-2-Clause",
   "BSD-3-Clause",
+  "CDLA-Permissive-2.0",
   "CC0-1.0",
   "ISC",
   "MIT",
@@ -33,12 +33,21 @@ allow = [
   "Unlicense",
   "Zlib",
 ]
+confidence-threshold = 0.8
 exceptions = []
+
+[licenses.private]
+ignore = false
+registries = []
 
 [bans]
 multiple-versions = "warn"
 wildcards = "warn"
 highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+allow = []
+allow-workspace = false
 deny = []
 skip = []
 skip-tree = []
@@ -48,3 +57,8 @@ unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = []
+
+[sources.allow-org]
+github = []
+gitlab = []
+bitbucket = []

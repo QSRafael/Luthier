@@ -25,15 +25,9 @@ require_cargo_subcommand() {
 }
 
 DENY_CONFIG="$ROOT_DIR/deny.toml"
-AUDIT_CONFIG="$ROOT_DIR/.cargo/audit.toml"
 
 if [[ ! -f "$DENY_CONFIG" ]]; then
   echo "[rust-security] error: missing config file $DENY_CONFIG" >&2
-  exit 2
-fi
-
-if [[ ! -f "$AUDIT_CONFIG" ]]; then
-  echo "[rust-security] error: missing config file $AUDIT_CONFIG" >&2
   exit 2
 fi
 
@@ -41,9 +35,9 @@ require_cargo_subcommand "deny" "install with: cargo install cargo-deny"
 require_cargo_subcommand "audit" "install with: cargo install cargo-audit"
 
 echo "[rust-security] cargo deny (advisories, licenses, bans, sources)"
-"$CARGO_BIN" deny --config "$DENY_CONFIG" check advisories licenses bans sources
+"$CARGO_BIN" deny -L error check --config "$DENY_CONFIG" advisories licenses bans sources
 
 echo "[rust-security] cargo audit"
-"$CARGO_BIN" audit --config "$AUDIT_CONFIG"
+"$CARGO_BIN" audit
 
 echo "[rust-security] ok"
