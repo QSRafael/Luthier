@@ -1,5 +1,6 @@
-use luthier_orchestrator_core::RegistryKey;
 use serde::{Deserialize, Serialize};
+
+pub use super::registry::{ImportRegistryFileInput, ImportRegistryFileOutput};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateExecutableInput {
@@ -91,17 +92,6 @@ pub struct TestConfigurationOutput {
 pub struct WinetricksAvailableOutput {
     pub source: String,
     pub components: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ImportRegistryFileInput {
-    pub path: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ImportRegistryFileOutput {
-    pub entries: Vec<RegistryKey>,
-    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
