@@ -1,7 +1,4 @@
 
-
-use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
@@ -22,12 +19,14 @@ use crate::application::runtime_overrides::{
 use crate::infrastructure::payload_loader::load_embedded_config_required;
 
 pub mod assets;
+pub mod child_process;
 pub mod input;
 pub mod renderer;
 pub mod text;
 pub mod theme;
 pub mod state;
 
+use child_process::{spawn_play_child, ChildProcessEvent, ChildProcessStream};
 use input::*;
 use theme::*;
 pub use state::*;
@@ -389,7 +388,7 @@ fn show_runtime_progress_window(
     game_name: &str,
     hero_background: Option<Arc<HeroBackground>>,
 ) -> anyhow::Result<ChildRunOutcome> {
-    let (tx, rx) = mpsc::channel::<ChildEvent>();
+    let (tx, rx) = mpsc::channel::<ChildProcessEvent>();
     spawn_play_child(tx)?;
     let mut last_left_down = false;
     let mut progress = ProgressViewState::new(game_name.to_string(), hero_background.clone());
@@ -509,71 +508,9 @@ fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<Fe
 
 // ── Child process management ──────────────────────────────────────────────────
 
-fn spawn_play_child(tx: mpsc::Sender<ChildEvent>) -> anyhow::Result<()> {
-    let current_exe = std::env::current_exe().context("failed to locate current executable")?;
-    let mut child = Command::new(&current_exe)
-        .arg("--play")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .with_context(|| format!("failed to spawn '{}' --play", current_exe.display()))?;
-
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
-
-    if let Some(stdout) = stdout {
-        let tx_out = tx.clone();
-        thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        let _ = tx_out.send(ChildEvent::Line(ChildStream::Stdout, line));
-                    }
-                    Err(err) => {
-                        let _ = tx_out.send(ChildEvent::Line(
-                            ChildStream::Stdout,
-                            format!("(stdout read error: {err})"),
-                        ));
-                        break;
-                    }
-                }
-            }
-        });
-    }
-
-    if let Some(stderr) = stderr {
-        let tx_err = tx.clone();
-        thread::spawn(move || {
-            let reader = BufReader::new(stderr);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        let _ = tx_err.send(ChildEvent::Line(ChildStream::Stderr, line));
-                    }
-                    Err(err) => {
-                        let _ = tx_err.send(ChildEvent::Line(
-                            ChildStream::Stderr,
-                            format!("(stderr read error: {err})"),
-                        ));
-                        break;
-                    }
-                }
-            }
-        });
-    }
-
-    thread::spawn(move || {
-        let code = child.wait().ok().and_then(|status| status.code());
-        let _ = tx.send(ChildEvent::Exited(code));
-    });
-
-    Ok(())
-}
-
-fn handle_child_event(progress: &mut ProgressViewState, event: ChildEvent) {
+fn handle_child_event(progress: &mut ProgressViewState, event: ChildProcessEvent) {
     match event {
-        ChildEvent::Exited(code) => {
+        ChildProcessEvent::Exited(code) => {
             progress.exit_code = code;
             progress.child_finished = true;
             if code == Some(0) {
@@ -582,14 +519,14 @@ fn handle_child_event(progress: &mut ProgressViewState, event: ChildEvent) {
                 progress.push_message(t_process_exit(code));
             }
         }
-        ChildEvent::Line(stream, line) => {
+        ChildProcessEvent::Line(stream, line) => {
             if let Some(event) = parse_ndjson_event(&line) {
                 apply_progress_from_log_event(progress, &event);
                 return;
             }
 
             match stream {
-                ChildStream::Stdout | ChildStream::Stderr => {
+                ChildProcessStream::Stdout | ChildProcessStream::Stderr => {
                     if let Some(msg) = map_external_runtime_line_to_status(&line) {
                         progress.set_status(msg);
                     }
