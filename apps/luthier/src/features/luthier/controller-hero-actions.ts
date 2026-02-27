@@ -1,187 +1,97 @@
 /**
  * controller-hero-actions.ts
  *
- * Actions for handling Hero Image (fetching, preparing, searching, cache).
+ * Thin presentation adapter for Hero Image actions.
  */
 
-import { dedupeUrls } from './controller-utils'
 import type { createLuthierState } from './controller-state'
 import type { createLuthierComputed } from './controller-computed'
 import type { BackendCommandPort, NotifierPort } from './application/ports'
+import { createHeroImageUseCase } from './application/use-cases/hero-image'
 
 export function createLuthierHeroActions(
     state: ReturnType<typeof createLuthierState>,
-    computed: ReturnType<typeof createLuthierComputed>,
+    _computed: ReturnType<typeof createLuthierComputed>,
     backend: BackendCommandPort,
     notifier: NotifierPort,
     ct: (key: any) => string,
     ctf: (key: any, params: any) => string,
     setStatusMessage: (msg: string) => void
 ) {
-    const clearHeroImageSearchCache = () => {
-        state.setHeroImageSearchCacheGameName('')
-        state.setHeroImageSearchCacheGameId(null)
-        state.setHeroImageSearchCandidates([])
-        state.setHeroImageSearchIndex(0)
-    }
-
-    const setHeroImageUrl = (value: string) => {
-        const normalized = value.trim()
-        const index = state.heroImageSearchCandidates().findIndex((candidate) => candidate === normalized)
-        if (index >= 0) {
-            state.setHeroImageSearchIndex(index)
-        }
-        state.patchConfig((prev) => ({
-            ...prev,
-            splash: {
-                ...prev.splash,
-                hero_image_url: value
+    const useCase = createHeroImageUseCase({
+        backend,
+        notifier,
+        state: {
+            readState: () => ({
+                gameName: state.config().game_name,
+                heroImageUrl: state.config().splash.hero_image_url,
+                heroImageDataUrl: state.config().splash.hero_image_data_url,
+                lastPreparedHeroImageUrl: state.lastPreparedHeroImageUrl(),
+                searchCacheGameName: state.heroImageSearchCacheGameName(),
+                searchCacheGameId: state.heroImageSearchCacheGameId(),
+                searchCandidates: state.heroImageSearchCandidates(),
+                searchIndex: state.heroImageSearchIndex()
+            }),
+            setHeroImageSearchCache: ({ gameName, gameId, candidates, index }) => {
+                state.setHeroImageSearchCacheGameName(gameName)
+                state.setHeroImageSearchCacheGameId(gameId)
+                state.setHeroImageSearchCandidates(candidates)
+                state.setHeroImageSearchIndex(index)
+            },
+            setHeroImageSearchIndex: state.setHeroImageSearchIndex,
+            setHeroImageUrl: (value: string) => {
+                state.patchConfig((prev) => ({
+                    ...prev,
+                    splash: {
+                        ...prev.splash,
+                        hero_image_url: value
+                    }
+                }))
+            },
+            setHeroImageDataUrl: (value: string) => {
+                state.patchConfig((prev) => ({
+                    ...prev,
+                    splash: {
+                        ...prev.splash,
+                        hero_image_data_url: value
+                    }
+                }))
+            },
+            setLastPreparedHeroImageUrl: state.setLastPreparedHeroImageUrl,
+            setHeroImageProcessing: state.setHeroImageProcessing,
+            setHeroImageAutoSearching: state.setHeroImageAutoSearching,
+            setStatusMessage,
+            restoreHeroImageSnapshot: (snapshot) => {
+                state.patchConfig((prev) => ({
+                    ...prev,
+                    splash: {
+                        ...prev.splash,
+                        hero_image_url: snapshot.hero_image_url,
+                        hero_image_data_url: snapshot.hero_image_data_url
+                    }
+                }))
+                state.setLastPreparedHeroImageUrl(snapshot.lastPreparedHeroImageUrl)
+                state.setHeroImageSearchIndex(snapshot.searchIndex)
             }
-        }))
-    }
-
-    const prepareHeroImageFromUrl = async (rawUrl?: string) => {
-        const imageUrl = (rawUrl ?? state.config().splash.hero_image_url).trim()
-
-        if (!imageUrl) {
-            state.patchConfig((prev) => ({
-                ...prev,
-                splash: {
-                    ...prev.splash,
-                    hero_image_data_url: ''
-                }
-            }))
-            state.setLastPreparedHeroImageUrl('')
-            return
-        }
-
-        if (imageUrl === state.lastPreparedHeroImageUrl() && state.config().splash.hero_image_data_url.trim()) {
-            return
-        }
-
-        try {
-            state.setHeroImageProcessing(true)
-            setStatusMessage(ct('luthier_processing_hero_image'))
-            const result = await backend.prepareHeroImage(imageUrl)
-            state.patchConfig((prev) => ({
-                ...prev,
-                splash: {
-                    ...prev.splash,
-                    hero_image_url: result.source_url,
-                    hero_image_data_url: result.data_url
-                }
-            }))
-            state.setLastPreparedHeroImageUrl(result.source_url)
-            setStatusMessage(
+        },
+        messages: {
+            processingHeroImage: ct('luthier_processing_hero_image'),
+            heroImageReadySize: ({ width, height }) =>
                 ctf('luthier_hero_image_ready_size', {
-                    width: result.width,
-                    height: result.height
-                })
-            )
-        } catch (error) {
-            state.patchConfig((prev) => ({
-                ...prev,
-                splash: {
-                    ...prev.splash,
-                    hero_image_data_url: ''
-                }
-            }))
-            setStatusMessage(ctf('luthier_failed_to_prepare_hero_image_error', { error: String(error) }))
-        } finally {
-            state.setHeroImageProcessing(false)
+                    width,
+                    height
+                }),
+            failedToPrepareHeroImageError: ({ error }) =>
+                ctf('luthier_failed_to_prepare_hero_image_error', { error }),
+            typeGameNameBeforeSearchingHeroImage: ct('luthier_type_game_name_before_searching_hero_image'),
+            searchingHeroImage: ct('luthier_searching_hero_image'),
+            heroImageFoundProcessingPreview: ct('luthier_hero_image_found_processing_preview'),
+            heroImageUpdated: ct('luthier_hero_image_updated'),
+            undo: ct('luthier_undo'),
+            failedToSearchHeroImageError: ({ error }) =>
+                ctf('luthier_failed_to_search_hero_image_error', { error })
         }
-    }
+    })
 
-    const searchHeroImageAutomatically = async () => {
-        const gameName = state.config().game_name.trim()
-        if (!gameName) {
-            setStatusMessage(ct('luthier_type_game_name_before_searching_hero_image'))
-            return
-        }
-
-        const normalizedGameName = gameName.toLowerCase()
-        const cachedCandidates = state.heroImageSearchCandidates()
-        const previousHeroSnapshot = {
-            hero_image_url: state.config().splash.hero_image_url,
-            hero_image_data_url: state.config().splash.hero_image_data_url,
-            lastPreparedHeroImageUrl: state.lastPreparedHeroImageUrl(),
-            searchIndex: state.heroImageSearchIndex()
-        }
-
-        if (computed.canSearchAnotherHeroImage() && state.heroImageSearchCacheGameName() === normalizedGameName) {
-            const currentUrl = state.config().splash.hero_image_url.trim()
-            const currentIndex = cachedCandidates.findIndex((candidate) => candidate === currentUrl)
-            const baseIndex = currentIndex >= 0 ? currentIndex : state.heroImageSearchIndex()
-            const nextIndex = (baseIndex + 1) % cachedCandidates.length
-            const nextUrl = cachedCandidates[nextIndex]
-            state.setHeroImageSearchIndex(nextIndex)
-            setHeroImageUrl(nextUrl)
-            setStatusMessage(ct('luthier_hero_image_found_processing_preview'))
-            await prepareHeroImageFromUrl(nextUrl)
-            notifier.notify(ct('luthier_hero_image_updated'), {
-                action: {
-                    label: ct('luthier_undo'),
-                    onClick: () => {
-                        state.patchConfig((prev) => ({
-                            ...prev,
-                            splash: {
-                                ...prev.splash,
-                                hero_image_url: previousHeroSnapshot.hero_image_url,
-                                hero_image_data_url: previousHeroSnapshot.hero_image_data_url
-                            }
-                        }))
-                        state.setLastPreparedHeroImageUrl(previousHeroSnapshot.lastPreparedHeroImageUrl)
-                        state.setHeroImageSearchIndex(previousHeroSnapshot.searchIndex)
-                    }
-                }
-            })
-            return
-        }
-
-        try {
-            state.setHeroImageAutoSearching(true)
-            setStatusMessage(ct('luthier_searching_hero_image'))
-            const search = await backend.searchHeroImage(gameName)
-            const candidates = dedupeUrls([
-                ...(search.candidate_image_urls ?? []),
-                search.image_url
-            ])
-            const selectedIndex = Math.max(0, candidates.findIndex((candidate) => candidate === search.image_url))
-            state.setHeroImageSearchCacheGameName(normalizedGameName)
-            state.setHeroImageSearchCacheGameId(search.game_id ?? null)
-            state.setHeroImageSearchCandidates(candidates)
-            state.setHeroImageSearchIndex(selectedIndex)
-            setHeroImageUrl(search.image_url)
-            setStatusMessage(ct('luthier_hero_image_found_processing_preview'))
-            await prepareHeroImageFromUrl(search.image_url)
-            notifier.notify(ct('luthier_hero_image_updated'), {
-                action: {
-                    label: ct('luthier_undo'),
-                    onClick: () => {
-                        state.patchConfig((prev) => ({
-                            ...prev,
-                            splash: {
-                                ...prev.splash,
-                                hero_image_url: previousHeroSnapshot.hero_image_url,
-                                hero_image_data_url: previousHeroSnapshot.hero_image_data_url
-                            }
-                        }))
-                        state.setLastPreparedHeroImageUrl(previousHeroSnapshot.lastPreparedHeroImageUrl)
-                        state.setHeroImageSearchIndex(previousHeroSnapshot.searchIndex)
-                    }
-                }
-            })
-        } catch (error) {
-            setStatusMessage(ctf('luthier_failed_to_search_hero_image_error', { error: String(error) }))
-        } finally {
-            state.setHeroImageAutoSearching(false)
-        }
-    }
-
-    return {
-        clearHeroImageSearchCache,
-        setHeroImageUrl,
-        prepareHeroImageFromUrl,
-        searchHeroImageAutomatically
-    }
+    return useCase
 }
