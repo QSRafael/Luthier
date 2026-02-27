@@ -10,14 +10,65 @@ use std::path::Path;
 
 use luthier_orchestrator_core::GameConfig;
 
+use crate::application::ports::{
+    OrchestratorBinaryReaderPort, OrchestratorPayloadInjectionRequest,
+    OrchestratorPayloadInjectionResult, OrchestratorPayloadInjectorPort,
+};
+use crate::infrastructure::injector_adapter::{
+    OrchestratorInjectionOptions, OrchestratorInjectionRequest,
+};
+
 pub use error::ConfigValidationIssue;
 pub use error::LuthierError;
 pub use models::{CreateOrchestratorRequest, CreateOrchestratorResult};
 
+#[derive(Debug, Clone, Copy, Default)]
+struct LocalOrchestratorBinaryReaderAdapter;
+
+impl OrchestratorBinaryReaderPort for LocalOrchestratorBinaryReaderAdapter {
+    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, LuthierError> {
+        infrastructure::file_io::read_bytes(path)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct LocalOrchestratorPayloadInjectorAdapter;
+
+impl OrchestratorPayloadInjectorPort for LocalOrchestratorPayloadInjectorAdapter {
+    fn inject_orchestrator_payload(
+        &self,
+        request: OrchestratorPayloadInjectionRequest<'_>,
+    ) -> Result<OrchestratorPayloadInjectionResult, LuthierError> {
+        let result = infrastructure::injector_adapter::inject_orchestrator_payload(
+            OrchestratorInjectionRequest {
+                base_bytes: request.base_bytes,
+                config_bytes: request.config_bytes,
+                output_path: request.output_path,
+                options: OrchestratorInjectionOptions {
+                    backup_existing: request.options.backup_existing,
+                    make_executable: request.options.make_executable,
+                },
+            },
+        )?;
+
+        Ok(OrchestratorPayloadInjectionResult {
+            output_path: result.output_path,
+            config_len: result.config_len,
+            config_sha256_hex: result.config_sha256_hex,
+        })
+    }
+}
+
 pub fn create_orchestrator_binary(
     request: &CreateOrchestratorRequest,
 ) -> Result<CreateOrchestratorResult, LuthierError> {
-    application::create_orchestrator_binary::create_orchestrator_binary(request)
+    let binary_reader = LocalOrchestratorBinaryReaderAdapter;
+    let payload_injector = LocalOrchestratorPayloadInjectorAdapter;
+    application::create_orchestrator_binary::create_orchestrator_binary(
+        request,
+        &binary_reader,
+        &payload_injector,
+    )
 }
 
 pub fn sha256_file(path: &Path) -> Result<String, LuthierError> {
