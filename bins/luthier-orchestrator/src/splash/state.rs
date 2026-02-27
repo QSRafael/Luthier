@@ -56,18 +56,6 @@ pub struct ChildRunOutcome {
     pub hero_background: Option<Arc<HeroBackground>>,
 }
 
-#[derive(Debug)]
-pub enum ChildStream {
-    Stdout,
-    Stderr,
-}
-
-#[derive(Debug)]
-pub enum ChildEvent {
-    Line(ChildStream, String),
-    Exited(Option<i32>),
-}
-
 #[derive(Debug, Clone)]
 pub struct ProgressViewState {
     pub game_name: String,

@@ -18,24 +18,3 @@ pub struct CreateOrchestratorResult {
     pub config_size_bytes: usize,
     pub config_sha256_hex: String,
 }
-
-#[derive(Debug, Clone)]
-pub struct Sha256FileRequest {
-    pub path: PathBuf,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Sha256FileResult {
-    pub sha256_hex: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ToRelativeInsideGameRootRequest {
-    pub game_root: PathBuf,
-    pub candidate: PathBuf,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ToRelativeInsideGameRootResult {
-    pub relative_path: String,
-}
