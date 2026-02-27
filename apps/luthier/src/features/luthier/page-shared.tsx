@@ -8,22 +8,6 @@ import type { createLuthierPageDialogState } from './page-dialog-state'
 import type { createLuthierPageEffects } from './page-effects'
 import type { LuthierCopyKey } from './copy'
 
-export type ImportRegistryFileOutput = {
-  entries: Array<{ path: string; name: string; value_type: string; value: string }>
-  warnings: string[]
-}
-
-export type ListChildDirectoriesOutput = {
-  path: string
-  directories: string[]
-}
-
-export type ListDirectoryEntriesOutput = {
-  path: string
-  directories: string[]
-  files: string[]
-}
-
 export type LuthierPageSectionView =
   LuthierController &
   ReturnType<typeof createLuthierPageDialogState> &

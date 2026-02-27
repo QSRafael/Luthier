@@ -27,8 +27,16 @@ import type { NotifierPort, NotifyOptions } from '../application/ports'
  */
 export const sonnerNotifier: NotifierPort = {
     notify(message: string, options?: NotifyOptions): void {
+        const tone = options?.tone ?? 'info'
+        const emit =
+            tone === 'error'
+                ? toast.error
+                : tone === 'success'
+                  ? toast.success
+                  : toast.info
+
         if (!options) {
-            toast(message)
+            emit(message)
             return
         }
 
@@ -45,6 +53,6 @@ export const sonnerNotifier: NotifierPort = {
             }
         }
 
-        toast(message, toastOptions)
+        emit(message, toastOptions)
     }
 }

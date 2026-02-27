@@ -4,16 +4,16 @@
  * Actions for handling Hero Image (fetching, preparing, searching, cache).
  */
 
-import { toast } from 'solid-sonner'
 import { dedupeUrls } from './controller-utils'
 import type { createLuthierState } from './controller-state'
 import type { createLuthierComputed } from './controller-computed'
-import type { PrepareHeroImageOutput, SearchHeroImageOutput } from '../../api/tauri'
+import type { BackendCommandPort, NotifierPort } from './application/ports'
 
 export function createLuthierHeroActions(
     state: ReturnType<typeof createLuthierState>,
     computed: ReturnType<typeof createLuthierComputed>,
-    invokeCommand: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>,
+    backend: BackendCommandPort,
+    notifier: NotifierPort,
     ct: (key: any) => string,
     ctf: (key: any, params: any) => string,
     setStatusMessage: (msg: string) => void
@@ -62,9 +62,7 @@ export function createLuthierHeroActions(
         try {
             state.setHeroImageProcessing(true)
             setStatusMessage(ct('luthier_processing_hero_image'))
-            const result = await invokeCommand<PrepareHeroImageOutput>('cmd_prepare_hero_image', {
-                image_url: imageUrl
-            })
+            const result = await backend.prepareHeroImage(imageUrl)
             state.patchConfig((prev) => ({
                 ...prev,
                 splash: {
@@ -120,7 +118,7 @@ export function createLuthierHeroActions(
             setHeroImageUrl(nextUrl)
             setStatusMessage(ct('luthier_hero_image_found_processing_preview'))
             await prepareHeroImageFromUrl(nextUrl)
-            toast(ct('luthier_hero_image_updated'), {
+            notifier.notify(ct('luthier_hero_image_updated'), {
                 action: {
                     label: ct('luthier_undo'),
                     onClick: () => {
@@ -143,9 +141,7 @@ export function createLuthierHeroActions(
         try {
             state.setHeroImageAutoSearching(true)
             setStatusMessage(ct('luthier_searching_hero_image'))
-            const search = await invokeCommand<SearchHeroImageOutput>('cmd_search_hero_image', {
-                game_name: gameName
-            })
+            const search = await backend.searchHeroImage(gameName)
             const candidates = dedupeUrls([
                 ...(search.candidate_image_urls ?? []),
                 search.image_url
@@ -158,7 +154,7 @@ export function createLuthierHeroActions(
             setHeroImageUrl(search.image_url)
             setStatusMessage(ct('luthier_hero_image_found_processing_preview'))
             await prepareHeroImageFromUrl(search.image_url)
-            toast(ct('luthier_hero_image_updated'), {
+            notifier.notify(ct('luthier_hero_image_updated'), {
                 action: {
                     label: ct('luthier_undo'),
                     onClick: () => {

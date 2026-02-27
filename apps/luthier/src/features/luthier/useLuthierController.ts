@@ -1,4 +1,3 @@
-import { invokeCommand } from '../../api/tauri'
 import { createLuthierBuildActions } from './controller-build-actions'
 import { createLuthierComputed } from './controller-computed'
 import { createLuthierConfigActions } from './controller-config-actions'
@@ -18,6 +17,8 @@ import {
   type UpscaleMethod,
 } from './controller-utils'
 import { createLuthierWinetricksActions } from './controller-winetricks-actions'
+import { luthierBackendApi } from './infrastructure/luthier-backend-api'
+import { sonnerNotifier } from './infrastructure/sonner-notifier'
 
 export function useLuthierController() {
   const state = createLuthierState()
@@ -93,7 +94,8 @@ export function useLuthierController() {
   const { setHeroImageUrl, prepareHeroImageFromUrl, searchHeroImageAutomatically } = createLuthierHeroActions(
     state,
     computed,
-    invokeCommand,
+    luthierBackendApi,
+    sonnerNotifier,
     ct,
     ctf,
     setStatusMessage
@@ -102,7 +104,7 @@ export function useLuthierController() {
   const { hashExecutablePath, runHash, runTest, runCreate } = createLuthierBuildActions(
     state,
     computed,
-    invokeCommand,
+    luthierBackendApi,
     ORCHESTRATOR_BASE_PATH,
     t,
     setStatusMessage
@@ -116,10 +118,10 @@ export function useLuthierController() {
     pickMountFolder,
     pickMountSourceRelative,
     extractExecutableIcon,
-  } = createLuthierFileActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
+  } = createLuthierFileActions(state, computed, luthierBackendApi, ct, ctf, setStatusMessage)
 
   const { loadWinetricksCatalog, addWinetricksVerb, removeWinetricksVerb, addWinetricksFromSearch } =
-    createLuthierWinetricksActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
+    createLuthierWinetricksActions(state, computed, luthierBackendApi, sonnerNotifier, ct, ctf, setStatusMessage)
 
   const {
     setGamescopeState,

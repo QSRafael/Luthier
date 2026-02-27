@@ -19,13 +19,15 @@ import { invokeCommand, pickFile as tauriPickFile, pickFolder as tauriPickFolder
 import type {
     BackendCommandPort,
     CreateExecutableParams,
-    ImportRegistryOutput,
     PickFileOptions,
     PickFolderOptions
 } from '../application/ports'
 import type {
     ExtractExecutableIconOutput,
     HashExecutableOutput,
+    ImportRegistryFileOutput,
+    ListChildDirectoriesOutput,
+    ListDirectoryEntriesOutput,
     PrepareHeroImageOutput,
     SearchHeroImageOutput,
     WinetricksAvailableOutput
@@ -116,9 +118,21 @@ export const luthierBackendApi: BackendCommandPort = {
     // Registry import
     // -------------------------------------------------------------------------
 
-    async importRegistry(registryFilePath: string): Promise<ImportRegistryOutput> {
-        return invokeCommand<ImportRegistryOutput>('cmd_import_registry', {
-            registry_file_path: registryFilePath
+    async importRegistryFile(path: string): Promise<ImportRegistryFileOutput> {
+        return invokeCommand<ImportRegistryFileOutput>('cmd_import_registry_file', {
+            path
+        })
+    },
+
+    async listChildDirectories(path: string): Promise<ListChildDirectoriesOutput> {
+        return invokeCommand<ListChildDirectoriesOutput>('cmd_list_child_directories', {
+            path
+        })
+    },
+
+    async listDirectoryEntries(path: string): Promise<ListDirectoryEntriesOutput> {
+        return invokeCommand<ListDirectoryEntriesOutput>('cmd_list_directory_entries', {
+            path
         })
     },
 

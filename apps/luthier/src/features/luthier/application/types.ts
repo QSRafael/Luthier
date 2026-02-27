@@ -94,6 +94,41 @@ export type HashExecutableOutput = {
     sha256_hex: string
 }
 
+/**
+ * A single registry entry decoded from a `.reg` file.
+ */
+export type RegistryImportEntry = {
+    path: string
+    name: string
+    value_type: string
+    value: string
+}
+
+/**
+ * Output of the `cmd_import_registry_file` Tauri command.
+ */
+export type ImportRegistryFileOutput = {
+    entries: RegistryImportEntry[]
+    warnings: string[]
+}
+
+/**
+ * Output of the `cmd_list_child_directories` Tauri command.
+ */
+export type ListChildDirectoriesOutput = {
+    path: string
+    directories: string[]
+}
+
+/**
+ * Output of the `cmd_list_directory_entries` Tauri command.
+ */
+export type ListDirectoryEntriesOutput = {
+    path: string
+    directories: string[]
+    files: string[]
+}
+
 // ---------------------------------------------------------------------------
 // Shared UI-state value types
 // ---------------------------------------------------------------------------

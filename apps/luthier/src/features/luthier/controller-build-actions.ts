@@ -7,11 +7,12 @@
 import { isLikelyAbsolutePath } from './controller-utils'
 import type { createLuthierState } from './controller-state'
 import type { createLuthierComputed } from './controller-computed'
+import type { BackendCommandPort } from './application/ports'
 
 export function createLuthierBuildActions(
     state: ReturnType<typeof createLuthierState>,
     computed: ReturnType<typeof createLuthierComputed>,
-    invokeCommand: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>,
+    backend: BackendCommandPort,
     ORCHESTRATOR_BASE_PATH: string,
     t: (key: string) => string,
     setStatusMessage: (msg: string) => void
@@ -28,9 +29,7 @@ export function createLuthierBuildActions(
         try {
             state.setHashingExePath(absoluteExePath)
             state.setLastHashedExePath(absoluteExePath)
-            const result = await invokeCommand<{ sha256_hex: string }>('cmd_hash_executable', {
-                executable_path: absoluteExePath
-            })
+            const result = await backend.hashExecutable(absoluteExePath)
             if (state.exePath().trim() === absoluteExePath) {
                 state.patchConfig((prev) => ({ ...prev, exe_hash: result.sha256_hex }))
             }
@@ -50,10 +49,7 @@ export function createLuthierBuildActions(
     const runTest = async () => {
         try {
             state.setTestingConfiguration(true)
-            const result = await invokeCommand<unknown>('cmd_test_configuration', {
-                config_json: computed.configPreview(),
-                game_root: state.gameRoot()
-            })
+            const result = await backend.testConfiguration(computed.configPreview(), state.gameRoot())
             state.setResultJson(JSON.stringify(result, null, 2))
             setStatusMessage(t('msgTestOk'))
         } catch (error) {
@@ -72,13 +68,13 @@ export function createLuthierBuildActions(
 
         try {
             state.setCreatingExecutable(true)
-            const result = await invokeCommand<unknown>('cmd_create_executable', {
-                base_binary_path: ORCHESTRATOR_BASE_PATH,
-                output_path: state.outputPath(),
-                config_json: computed.configPreview(),
-                backup_existing: true,
-                make_executable: true,
-                icon_png_data_url: state.iconPreviewPath().trim() || null
+            const result = await backend.createExecutable({
+                baseBinaryPath: ORCHESTRATOR_BASE_PATH,
+                outputPath: state.outputPath(),
+                configJson: computed.configPreview(),
+                backupExisting: true,
+                makeExecutable: true,
+                iconPngDataUrl: state.iconPreviewPath().trim() || null
             })
             state.setResultJson(JSON.stringify(result, null, 2))
             setStatusMessage(t('msgCreateOk'))

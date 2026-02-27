@@ -4,7 +4,6 @@
  * Actions for handling file system picking (executables, folders, registry, icons).
  */
 
-import { pickFile, pickFolder } from '../../api/tauri'
 import {
     basename,
     dirname,
@@ -15,12 +14,12 @@ import {
 } from './controller-utils'
 import type { createLuthierState } from './controller-state'
 import type { createLuthierComputed } from './controller-computed'
-import type { ExtractExecutableIconOutput } from '../../api/tauri'
+import type { BackendCommandPort } from './application/ports'
 
 export function createLuthierFileActions(
     state: ReturnType<typeof createLuthierState>,
     computed: ReturnType<typeof createLuthierComputed>,
-    invokeCommand: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>,
+    backend: BackendCommandPort,
     ct: (key: any) => string,
     ctf: (key: any, params: any) => string,
     setStatusMessage: (msg: string) => void
@@ -34,7 +33,7 @@ export function createLuthierFileActions(
             return undefined
         })()
 
-        const selected = await pickFile({
+        const selected = await backend.pickFile({
             title: ct('luthier_select_game_executable'),
             filters: [{ name: 'Windows Launchers', extensions: ['exe', 'bat', 'cmd', 'com'] }],
             defaultPath: defaultPathCandidate
@@ -63,7 +62,7 @@ export function createLuthierFileActions(
     }
 
     const pickRegistryFile = async () => {
-        const selected = await pickFile({
+        const selected = await backend.pickFile({
             title: ct('luthier_select_reg_file'),
             filters: [{ name: 'Registry file', extensions: ['reg'] }]
         })
@@ -73,7 +72,7 @@ export function createLuthierFileActions(
     }
 
     const pickGameRootOverride = async () => {
-        const selected = await pickFolder({
+        const selected = await backend.pickFolder({
             title: ct('luthier_select_game_root_folder'),
             defaultPath: (isLikelyAbsolutePath(computed.exeDirectory()) ? computed.exeDirectory() : undefined) ?? undefined
         })
@@ -89,7 +88,7 @@ export function createLuthierFileActions(
     }
 
     const pickIntegrityFileRelative = async () => {
-        const selected = await pickFile({
+        const selected = await backend.pickFile({
             title: ct('luthier_select_required_file'),
             defaultPath: state.gameRoot() || undefined
         })
@@ -109,7 +108,7 @@ export function createLuthierFileActions(
     }
 
     const pickMountFolder = async (index: number) => {
-        const selected = await pickFolder({
+        const selected = await backend.pickFolder({
             title: ct('luthier_select_folder_to_mount')
         })
         if (!selected) return
@@ -129,7 +128,7 @@ export function createLuthierFileActions(
     }
 
     const pickMountSourceRelative = async () => {
-        const selected = await pickFolder({
+        const selected = await backend.pickFolder({
             title: ct('luthier_select_folder_to_mount')
         })
         if (!selected) return null
@@ -159,9 +158,7 @@ export function createLuthierFileActions(
         try {
             state.setExtractingExecutableIcon(true)
             setStatusMessage(ct('luthier_extracting_icon_from_executable'))
-            const result = await invokeCommand<ExtractExecutableIconOutput>('cmd_extract_executable_icon', {
-                executable_path: currentExe
-            })
+            const result = await backend.extractExecutableIcon(currentExe)
             state.setIconPreviewPath(result.data_url)
             setStatusMessage(
                 ctf('luthier_executable_icon_extracted_size', {

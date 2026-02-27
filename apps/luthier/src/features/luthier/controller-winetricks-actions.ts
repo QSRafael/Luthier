@@ -4,19 +4,15 @@
  * Actions for handling Winetricks (loading catalog, adding/removing verbs, searching).
  */
 
-import { toast } from 'solid-sonner'
 import type { createLuthierState } from './controller-state'
 import type { createLuthierComputed } from './controller-computed'
-
-type WinetricksAvailableOutput = {
-    source: string
-    components: string[]
-}
+import type { BackendCommandPort, NotifierPort } from './application/ports'
 
 export function createLuthierWinetricksActions(
     state: ReturnType<typeof createLuthierState>,
     computed: ReturnType<typeof createLuthierComputed>,
-    invokeCommand: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>,
+    backend: BackendCommandPort,
+    notifier: NotifierPort,
     ct: (key: any) => string,
     ctf: (key: any, params: any) => string,
     setStatusMessage: (msg: string) => void
@@ -25,7 +21,7 @@ export function createLuthierWinetricksActions(
         if (state.winetricksLoading()) return
         try {
             state.setWinetricksLoading(true)
-            const result = await invokeCommand<WinetricksAvailableOutput>('cmd_winetricks_available')
+            const result = await backend.winetricksAvailable()
             state.setWinetricksAvailable(result.components)
             state.setWinetricksSource(result.source)
             state.setWinetricksCatalogError(false)
@@ -57,12 +53,9 @@ export function createLuthierWinetricksActions(
             return { ...prev, dependencies: [...prev.dependencies, verb] }
         })
         if (!added) return
-        toast(ct('luthier_winetricks_verb_added'), {
+        notifier.notify(ct('luthier_winetricks_verb_added'), {
             description: verb,
-            action: {
-                label: ct('luthier_undo'),
-                onClick: () => removeWinetricksVerb(verb)
-            }
+            action: { label: ct('luthier_undo'), onClick: () => removeWinetricksVerb(verb) },
         })
     }
 

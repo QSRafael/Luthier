@@ -6,22 +6,24 @@
  */
 
 import { createEffect, createMemo } from 'solid-js'
-import { Toaster, toast } from 'solid-sonner'
 
-import { invokeCommand } from '../../api/tauri'
 import { LuthierTab } from '../../models/config'
 import type { useLuthierController } from './useLuthierController'
 import type { createLuthierPageDialogState } from './page-dialog-state'
+import { luthierBackendApi } from './infrastructure/luthier-backend-api'
+import { sonnerNotifier } from './infrastructure/sonner-notifier'
+import type {
+    ImportRegistryFileOutput,
+    ListChildDirectoriesOutput,
+    ListDirectoryEntriesOutput,
+} from './application/types'
 
 import {
     buildAncestorPathsFromExe,
     buildWxH,
     featureStateEnabled,
-    ImportRegistryFileOutput,
     isLikelyAbsolutePath,
     isTauriLocalRuntime,
-    ListChildDirectoriesOutput,
-    ListDirectoryEntriesOutput,
     parseWxH,
     relativeInsideBase
 } from './page-shared'
@@ -245,9 +247,7 @@ export function createLuthierPageEffects(
                 return
             }
 
-            const result = await invokeCommand<ImportRegistryFileOutput>('cmd_import_registry_file', {
-                path: selected
-            })
+            const result: ImportRegistryFileOutput = await luthierBackendApi.importRegistryFile(selected)
 
             const existingKeys = new Set(
                 config().registry_keys.map((item) =>
@@ -283,7 +283,7 @@ export function createLuthierPageEffects(
                 const importedSignatures = new Set(
                     deduped.map((item) => [item.path, item.name, item.value_type, item.value].join('\u0000'))
                 )
-                toast.success(successMessage, {
+                sonnerNotifier.notify(successMessage, {
                     description: selected,
                     action: {
                         label: ct('luthier_undo'),
@@ -295,12 +295,12 @@ export function createLuthierPageEffects(
                                     return !importedSignatures.has(signature)
                                 })
                             }))
-                            toast.info(ct('luthier_registry_import_undone'))
+                            sonnerNotifier.notify(ct('luthier_registry_import_undone'))
                         }
                     }
                 })
             } else {
-                toast.info(successMessage, { description: selected })
+                sonnerNotifier.notify(successMessage, { description: selected })
             }
 
             setRegistryImportWarnings(result.warnings)
@@ -329,9 +329,7 @@ export function createLuthierPageEffects(
         }
         setMountBrowserLoading(true)
         try {
-            const result = await invokeCommand<ListChildDirectoriesOutput>('cmd_list_child_directories', {
-                path: absolutePath
-            })
+            const result: ListChildDirectoriesOutput = await luthierBackendApi.listChildDirectories(absolutePath)
             setMountBrowserPath(result.path)
             setMountBrowserDirs(result.directories)
         } catch (error) {
@@ -350,9 +348,7 @@ export function createLuthierPageEffects(
         }
         setIntegrityBrowserLoading(true)
         try {
-            const result = await invokeCommand<ListDirectoryEntriesOutput>('cmd_list_directory_entries', {
-                path: absolutePath
-            })
+            const result: ListDirectoryEntriesOutput = await luthierBackendApi.listDirectoryEntries(absolutePath)
             setIntegrityBrowserPath(result.path)
             setIntegrityBrowserDirs(result.directories)
             setIntegrityBrowserFiles(result.files)
@@ -537,15 +533,7 @@ export function createLuthierPageEffects(
         const readyEn = 'Ready.'
         if (message === readyPt || message === readyEn) return
 
-        if (statusTone() === 'error') {
-            toast.error(message)
-            return
-        }
-        if (statusTone() === 'success') {
-            toast.success(message)
-            return
-        }
-        toast.info(message)
+        sonnerNotifier.notify(message, { tone: statusTone() })
     })
 
     return {

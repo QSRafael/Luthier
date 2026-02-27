@@ -18,6 +18,9 @@
 import type {
     ExtractExecutableIconOutput,
     HashExecutableOutput,
+    ImportRegistryFileOutput,
+    ListChildDirectoriesOutput,
+    ListDirectoryEntriesOutput,
     PrepareHeroImageOutput,
     SearchHeroImageOutput,
     WinetricksAvailableOutput
@@ -102,10 +105,22 @@ export type BackendCommandPort = {
     createExecutable(params: CreateExecutableParams): Promise<unknown>
 
     /**
-     * Parse a Windows registry `.reg` file and return its decoded entries.
-     * Maps to Tauri command `cmd_import_registry`.
+     * Parse a Windows registry `.reg` file and return decoded entries/warnings.
+     * Maps to Tauri command `cmd_import_registry_file`.
      */
-    importRegistry(registryFilePath: string): Promise<ImportRegistryOutput>
+    importRegistryFile(path: string): Promise<ImportRegistryFileOutput>
+
+    /**
+     * List only child directories of the given absolute path.
+     * Maps to Tauri command `cmd_list_child_directories`.
+     */
+    listChildDirectories(path: string): Promise<ListChildDirectoriesOutput>
+
+    /**
+     * List child directories and files of the given absolute path.
+     * Maps to Tauri command `cmd_list_directory_entries`.
+     */
+    listDirectoryEntries(path: string): Promise<ListDirectoryEntriesOutput>
 
     /**
      * Open a native file-picker dialog and return the selected path, or `null`
@@ -141,23 +156,6 @@ export type CreateExecutableParams = {
     iconPngDataUrl: string | null
 }
 
-/**
- * A single key-value entry parsed from a `.reg` file.
- */
-export type RegistryEntry = {
-    path: string
-    name: string
-    value_type: string
-    value: string
-}
-
-/**
- * Return value of `BackendCommandPort.importRegistry`.
- */
-export type ImportRegistryOutput = {
-    entries: RegistryEntry[]
-}
-
 // ---------------------------------------------------------------------------
 // Notifier port
 // ---------------------------------------------------------------------------
@@ -176,6 +174,8 @@ export type NotificationAction = {
  * Options for `NotifierPort.notify`.
  */
 export type NotifyOptions = {
+    /** Visual tone for the notification. Defaults to `"info"`. */
+    tone?: 'info' | 'success' | 'error'
     /** Short secondary text shown below the main message. */
     description?: string
     /** Optional action button. */
