@@ -21,6 +21,7 @@ use crate::application::runtime_overrides::{
 };
 use crate::infrastructure::payload_loader::load_embedded_config_required;
 
+pub mod assets;
 pub mod input;
 pub mod renderer;
 pub mod theme;

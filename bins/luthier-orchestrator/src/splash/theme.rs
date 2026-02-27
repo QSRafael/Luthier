@@ -2,6 +2,8 @@ use std::sync::OnceLock;
 use fontdb::{Database, Family, Query, Source, Style, Weight};
 use fontdue::{Font, FontSettings};
 
+use super::assets::embedded_splash_font_bytes;
+
 pub const WIN_W: usize = 960;
 pub const WIN_H: usize = 310;
 pub const FPS: u64 = 60;
@@ -17,7 +19,6 @@ pub const BTN_HOVER: u32 = 0x181818;
 pub const SEPARATOR: u32 = 0x1f1f1f;
 
 static SYSTEM_FONT: OnceLock<Option<Font>> = OnceLock::new();
-const EMBEDDED_SPLASH_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/NotoSans-Regular.ttf");
 
 pub fn system_font() -> Option<&'static Font> {
     SYSTEM_FONT
@@ -26,7 +27,7 @@ pub fn system_font() -> Option<&'static Font> {
 }
 
 fn load_embedded_splash_font() -> Option<Font> {
-    Font::from_bytes(EMBEDDED_SPLASH_FONT_BYTES, FontSettings::default()).ok()
+    Font::from_bytes(embedded_splash_font_bytes(), FontSettings::default()).ok()
 }
 
 fn load_system_font() -> Option<Font> {
