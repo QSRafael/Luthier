@@ -2,13 +2,9 @@ mod application;
 mod cli;
 mod commands;
 mod domain;
+mod infrastructure;
 mod instance_lock;
-mod launch;
 mod logging;
-mod mounts;
-mod overrides;
-mod paths;
-mod payload;
 mod services;
 mod splash;
 
@@ -18,10 +14,11 @@ use luthier_orchestrator_core::observability::{new_trace_id, LogLevel};
 
 use crate::cli::Cli;
 use crate::commands::{
-    run_config_command, run_doctor_command, run_play, run_show_embedded_config, run_winecfg_command,
+    run_config_command, run_doctor_command, run_play, run_show_embedded_config,
+    run_winecfg_command,
 };
+use crate::infrastructure::payload_loader::try_load_embedded_config;
 use crate::logging::log_event;
-use crate::payload::try_load_embedded_config;
 use crate::splash::{run_splash_flow, SplashLaunchMode};
 
 #[tokio::main]
