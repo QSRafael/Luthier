@@ -3,21 +3,26 @@ use luthier_orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
     observability::LogLevel,
     prefix::build_prefix_setup_plan,
-    process::{
-        execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
-        ExternalCommand, StepStatus,
-    },
 };
 use serde_json::Value;
 
 use crate::{
-    launch::{
-        apply_registry_keys_if_present, apply_winecfg_overrides_if_present,
-        build_prefix_setup_execution_context, build_winecfg_command, dry_run_enabled,
+    infrastructure::{
+        paths::resolve_game_root,
+        payload_loader::load_embedded_config_required,
+        process_adapter::{
+            execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
+            ExternalCommand, StepStatus,
+        },
     },
     logging::log_event,
-    paths::resolve_game_root,
-    payload::load_embedded_config_required,
+    services::{
+        launch_plan_builder::build_winecfg_command,
+        prefix_setup_service::build_prefix_setup_execution_context,
+        registry_apply_service::apply_registry_keys_if_present,
+        runtime_flags::dry_run_enabled,
+        winecfg_apply_service::apply_winecfg_overrides_if_present,
+    },
 };
 
 #[derive(Debug)]

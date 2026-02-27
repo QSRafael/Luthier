@@ -3,10 +3,6 @@ use luthier_orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
     observability::LogLevel,
     prefix::build_prefix_setup_plan,
-    process::{
-        execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
-        ExternalCommand, StepStatus,
-    },
 };
 use serde_json::Value;
 
@@ -17,6 +13,10 @@ use crate::{
         mounts_adapter::{apply_folder_mounts, MountStatus},
         paths::{resolve_game_root, resolve_relative_path},
         payload_loader::load_embedded_config_required,
+        process_adapter::{
+            execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
+            ExternalCommand, StepStatus,
+        },
     },
     logging::log_event,
     services::{
