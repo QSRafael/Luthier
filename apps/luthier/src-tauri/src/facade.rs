@@ -6,8 +6,8 @@ use luthier_orchestrator_core::GameConfig;
 use crate::application::{ports::LuthierCorePort, use_cases};
 use crate::error::BackendResult;
 use crate::infrastructure::{
-    fs_repo::LocalFileSystemRepository, image_codec::ImageRsCodec, logging::StderrJsonBackendLogger,
-    pe_icon_reader::PelitePeIconReader,
+    fs_repo::LocalFileSystemRepository, http_client::ReqwestBlockingHttpClient,
+    image_codec::ImageRsCodec, logging::StderrJsonBackendLogger, pe_icon_reader::PelitePeIconReader,
 };
 
 pub use crate::models::dto::{
@@ -80,7 +80,15 @@ pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageO
 }
 
 pub fn prepare_hero_image(input: PrepareHeroImageInput) -> Result<PrepareHeroImageOutput, String> {
-    use_cases::prepare_hero::prepare_hero_image_command(input)
+    let http_client = ReqwestBlockingHttpClient::new();
+    let image_codec = ImageRsCodec::new();
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::prepare_hero::prepare_hero_image_command(
+        input,
+        &http_client,
+        &image_codec,
+        &logger,
+    )
 }
 
 pub fn test_configuration(
