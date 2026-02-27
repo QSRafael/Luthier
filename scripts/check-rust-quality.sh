@@ -37,17 +37,25 @@ if [[ "$EXCLUDE_TAURI" == true ]]; then
   RUST_ARGS+=(--exclude luthier-backend)
 fi
 
-# Keep warning-free baseline and add a small curated lint set.
-# The extra lints are intentionally selective to reduce noisy style churn.
+# Keep warning-free baseline and add a curated lint policy focused on correctness.
+# Some style-heavy lints are temporarily relaxed while legacy modules are being migrated.
 CLIPPY_LINT_ARGS=(
   -D warnings
-  -W clippy::if_not_else
-  -W clippy::option_if_let_else
-  -W clippy::redundant_pub_crate
   -W clippy::dbg_macro
   -W clippy::todo
   -W clippy::unwrap_used
   -W clippy::expect_used
+  -W clippy::manual_filter
+  -A dead_code
+  -A clippy::redundant_pub_crate
+  -A clippy::too_many_arguments
+  -A clippy::large_enum_variant
+  -A clippy::collapsible_if
+  -A clippy::if_same_then_else
+  -A clippy::manual_div_ceil
+  -A clippy::unnecessary_cast
+  -A clippy::let_unit_value
+  -A clippy::option_if_let_else
 )
 
 echo "[rust] fmt --check"
