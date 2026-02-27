@@ -14,10 +14,18 @@ run_npm() {
   fi
 }
 
+run_gate() {
+  local gate_name="$1"
+  echo "[frontend] $gate_name"
+  run_npm run "$gate_name"
+}
+
 cd "$APP_DIR"
 
-echo "[frontend] typecheck"
-run_npm run typecheck
-
-echo "[frontend] build"
-run_npm run build
+run_gate "typecheck"
+run_gate "lint"
+run_gate "format:check"
+run_gate "knip"
+run_gate "depcruise"
+run_gate "madge:circular"
+run_gate "build"
