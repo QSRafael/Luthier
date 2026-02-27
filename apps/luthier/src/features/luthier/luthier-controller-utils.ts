@@ -131,3 +131,16 @@ export function prefixHashKey(rawHash: string): string {
 
   return trimmed.slice(0, PREFIX_HASH_KEY_LENGTH)
 }
+
+export function dedupeUrls(rawUrls: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const value of rawUrls) {
+    if (!value) continue
+    const trimmed = value.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    out.push(trimmed)
+  }
+  return out
+}

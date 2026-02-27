@@ -1,5 +1,17 @@
 import type { OpenDialogOptions } from '@tauri-apps/api/dialog'
 
+export type PrepareHeroImageOutput = {
+  source_url: string
+  data_url: string
+  width: number
+  height: number
+}
+
+export type SearchHeroImageOutput = {
+  game_id?: number
+  image_url: string
+  candidate_image_urls?: string[]
+}
 function isTauriRuntime(): boolean {
   if (typeof window === 'undefined') return false
   const w = window as unknown as Record<string, unknown>
