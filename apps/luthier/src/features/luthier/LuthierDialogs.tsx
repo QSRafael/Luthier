@@ -1,4 +1,4 @@
-import { For } from 'solid-js'
+import { For, Show } from 'solid-js'
 import {
     Dialog,
     DialogContent,
@@ -10,7 +10,8 @@ import {
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
-import { type LuthierPageSectionProps } from './page-shared'
+import { Spinner } from '../../components/ui/spinner'
+import { type LuthierPageSectionProps, basenamePath, relativeInsideBase } from './page-shared'
 import type { FeatureState } from '../../models/config'
 
 export function LuthierDialogs(props: LuthierPageSectionProps) {
@@ -55,7 +56,35 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
         availableWineDriveLetters,
         formControlsI18n,
         dllModeOptions,
-        featureStateOptions
+        featureStateOptions,
+        // game root chooser
+        gameRoot,
+        exePath,
+        setGameRoot,
+        setGameRootManualOverride,
+        setGameRootChooserOpen,
+        gameRootChooserOpen,
+        gameRootAncestorCandidates,
+        pickGameRootOverride,
+        ctf,
+        // integrity file browser
+        integrityFileBrowserOpen,
+        setIntegrityFileBrowserOpen,
+        integrityBrowserPath,
+        integrityBrowserDirs,
+        integrityBrowserFiles,
+        integrityBrowserLoading,
+        integrityFileBrowserSegments,
+        loadIntegrityBrowserEntries,
+        resolveIntegrityFileBrowser,
+        // mount source browser
+        mountSourceBrowserOpen,
+        setMountSourceBrowserOpen,
+        mountBrowserDirs,
+        mountBrowserLoading,
+        mountSourceBrowserSegments,
+        mountSourceBrowserCurrentRelative,
+        loadMountBrowserDirs,
     } = view
 
     const tForm = () => formControlsI18n()
@@ -604,6 +633,386 @@ export function LuthierDialogs(props: LuthierPageSectionProps) {
                             disabled={!wineDriveDraft().letter || !wineDriveDraft().host_path.trim()}
                         >
                             {tForm().add}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ─── Game Root Chooser Dialog ─── */}
+            <Dialog open={gameRootChooserOpen()} onOpenChange={setGameRootChooserOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{ct('luthier_choose_game_root_folder')}</DialogTitle>
+                        <DialogDescription>
+                            {ct('luthier_the_game_root_must_be_an_ancestor_of_the_folder_that_con')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <Show
+                        when={gameRootAncestorCandidates().length > 0}
+                        fallback={
+                            <div class="grid gap-3">
+                                <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                                    {ct('luthier_this_guided_flow_requires_an_absolute_executable_path_lo')}
+                                </div>
+                                <div class="flex justify-end">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={async () => {
+                                            setGameRootChooserOpen(false)
+                                            await pickGameRootOverride()
+                                        }}
+                                    >
+                                        {ct('luthier_use_system_picker')}
+                                    </Button>
+                                </div>
+                            </div>
+                        }
+                    >
+                        <div class="grid gap-3">
+                            <div class="rounded-md border border-border/60 bg-muted/25 p-3">
+                                <p class="mb-2 text-xs font-medium text-muted-foreground">
+                                    {ct('luthier_executable_folder_breadcrumb')}
+                                </p>
+                                <nav class="overflow-x-auto" aria-label={ct('luthier_executable_path')}>
+                                    <ol class="flex min-w-max items-center gap-1 text-xs">
+                                        <For each={gameRootAncestorCandidates()}>
+                                            {(candidate, index) => (
+                                                <>
+                                                    <Show when={index() > 0}>
+                                                        <li class="text-muted-foreground">/</li>
+                                                    </Show>
+                                                    <li>
+                                                        <Button
+                                                            type="button"
+                                                            variant={gameRoot() === candidate ? 'secondary' : 'ghost'}
+                                                            size="sm"
+                                                            class="h-7 px-2"
+                                                            onClick={() => {
+                                                                const exeDir = basenamePath(exePath())
+                                                                setGameRootManualOverride(candidate !== exeDir)
+                                                                setGameRoot(candidate)
+                                                                setGameRootChooserOpen(false)
+                                                            }}
+                                                        >
+                                                            {basenamePath(candidate) || '/'}
+                                                        </Button>
+                                                    </li>
+                                                </>
+                                            )}
+                                        </For>
+                                    </ol>
+                                </nav>
+                            </div>
+
+                            <div class="grid gap-2">
+                                <p class="text-xs font-medium text-muted-foreground">
+                                    {ct('luthier_select_which_ancestor_level_should_be_the_game_root')}
+                                </p>
+                                <div class="grid gap-2">
+                                    <For each={[...gameRootAncestorCandidates()].reverse()}>
+                                        {(candidate) => {
+                                            const isAutoRoot = candidate === basenamePath(exePath())
+                                            const relativeToExe = relativeInsideBase(candidate, exePath())
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    class={
+                                                        'grid gap-1 rounded-md border px-3 py-2 text-left transition-colors ' +
+                                                        (gameRoot() === candidate
+                                                            ? 'border-primary/40 bg-muted/45'
+                                                            : 'border-border/60 bg-muted/20 hover:bg-muted/35')
+                                                    }
+                                                    onClick={() => {
+                                                        setGameRootManualOverride(!isAutoRoot)
+                                                        setGameRoot(candidate)
+                                                        setGameRootChooserOpen(false)
+                                                    }}
+                                                >
+                                                    <span class="text-sm font-medium">{candidate}</span>
+                                                    <span class="text-xs text-muted-foreground">
+                                                        {isAutoRoot
+                                                            ? ct('luthier_same_directory_as_executable_automatic')
+                                                            : ctf('luthier_executable_lives_in_relative_path', { path: relativeToExe ?? '' })}
+                                                    </span>
+                                                </button>
+                                            )
+                                        }}
+                                    </For>
+                                </div>
+                            </div>
+                        </div>
+                    </Show>
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setGameRootChooserOpen(false)}>
+                            {ct('luthier_close')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ─── Integrity File Browser Dialog ─── */}
+            <Dialog
+                open={integrityFileBrowserOpen?.() ?? false}
+                onOpenChange={(open: boolean) => {
+                    setIntegrityFileBrowserOpen?.(open)
+                    if (!open) resolveIntegrityFileBrowser?.(null)
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{ct('luthier_select_file_inside_game')}</DialogTitle>
+                        <DialogDescription>
+                            {ct('luthier_mini_file_browser_restricted_to_the_game_root_to_prevent')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="grid gap-3">
+                        <div class="rounded-md border border-border/60 bg-muted/25 p-3">
+                            <p class="mb-2 text-xs font-medium text-muted-foreground">
+                                {ct('luthier_current_path')}
+                            </p>
+                            <nav class="overflow-x-auto" aria-label={ct('luthier_folder_breadcrumb')}>
+                                <ol class="flex min-w-max items-center gap-1 text-xs">
+                                    <Show when={gameRoot().trim()}>
+                                        <li>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-7 px-2"
+                                                onClick={() => void loadIntegrityBrowserEntries?.(gameRoot())}
+                                            >
+                                                {basenamePath(gameRoot()) || '/'}
+                                            </Button>
+                                        </li>
+                                    </Show>
+                                    <For each={integrityFileBrowserSegments?.() ?? []}>
+                                        {(segment) => (
+                                            <>
+                                                <li class="text-muted-foreground">/</li>
+                                                <li>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        class="h-7 px-2"
+                                                        onClick={() => void loadIntegrityBrowserEntries?.(segment.path)}
+                                                    >
+                                                        {segment.label}
+                                                    </Button>
+                                                </li>
+                                            </>
+                                        )}
+                                    </For>
+                                </ol>
+                            </nav>
+                        </div>
+
+                        <div class="rounded-md border border-border/60 bg-background/40">
+                            <Show
+                                when={!(integrityBrowserLoading?.() ?? false)}
+                                fallback={
+                                    <div class="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                                        <Spinner class="size-3" />
+                                        {ct('luthier_loading_files')}
+                                    </div>
+                                }
+                            >
+                                <div class="grid gap-2 p-2">
+                                    <div class="grid gap-1">
+                                        <p class="px-1 text-xs font-medium text-muted-foreground">{ct('luthier_folders')}</p>
+                                        <Show
+                                            when={(integrityBrowserDirs?.() ?? []).length > 0}
+                                            fallback={
+                                                <div class="px-2 py-1 text-xs text-muted-foreground">
+                                                    {ct('luthier_no_subfolder_found')}
+                                                </div>
+                                            }
+                                        >
+                                            <For each={integrityBrowserDirs?.() ?? []}>
+                                                {(dir) => (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        class="justify-start text-left"
+                                                        onClick={() => void loadIntegrityBrowserEntries?.(dir)}
+                                                    >
+                                                        {basenamePath(dir)}
+                                                    </Button>
+                                                )}
+                                            </For>
+                                        </Show>
+                                    </div>
+
+                                    <div class="grid gap-1 border-t border-border/60 pt-2">
+                                        <p class="px-1 text-xs font-medium text-muted-foreground">{ct('luthier_files')}</p>
+                                        <Show
+                                            when={(integrityBrowserFiles?.() ?? []).length > 0}
+                                            fallback={
+                                                <div class="px-2 py-1 text-xs text-muted-foreground">
+                                                    {ct('luthier_no_file_found_in_current_folder')}
+                                                </div>
+                                            }
+                                        >
+                                            <For each={integrityBrowserFiles?.() ?? []}>
+                                                {(file) => {
+                                                    const relative = relativeInsideBase(gameRoot().trim(), file)
+                                                    return (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            class="justify-start text-left"
+                                                            onClick={() => {
+                                                                if (!relative) return
+                                                                resolveIntegrityFileBrowser?.(`./${relative}`)
+                                                                setIntegrityFileBrowserOpen?.(false)
+                                                            }}
+                                                        >
+                                                            {basenamePath(file)}
+                                                        </Button>
+                                                    )
+                                                }}
+                                            </For>
+                                        </Show>
+                                    </div>
+                                </div>
+                            </Show>
+                        </div>
+
+                        <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                            {ct('luthier_select_a_file_to_fill_this_field_automatically')}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setIntegrityFileBrowserOpen?.(false)
+                                resolveIntegrityFileBrowser?.(null)
+                            }}
+                        >
+                            {ct('luthier_close')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ─── Mount Source Browser Dialog ─── */}
+            <Dialog open={mountSourceBrowserOpen()} onOpenChange={setMountSourceBrowserOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{ct('luthier_select_folder_inside_game')}</DialogTitle>
+                        <DialogDescription>
+                            {ct('luthier_mini_browser_restricted_to_the_game_root_to_prevent_moun')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="grid gap-3">
+                        <div class="rounded-md border border-border/60 bg-muted/25 p-3">
+                            <p class="mb-2 text-xs font-medium text-muted-foreground">
+                                {ct('luthier_current_path')}
+                            </p>
+                            <nav class="overflow-x-auto" aria-label={ct('luthier_folder_breadcrumb')}>
+                                <ol class="flex min-w-max items-center gap-1 text-xs">
+                                    <Show when={gameRoot().trim()}>
+                                        <li>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-7 px-2"
+                                                onClick={() => void loadMountBrowserDirs(gameRoot())}
+                                            >
+                                                {basenamePath(gameRoot()) || '/'}
+                                            </Button>
+                                        </li>
+                                    </Show>
+                                    <For each={mountSourceBrowserSegments()}>
+                                        {(segment) => (
+                                            <>
+                                                <li class="text-muted-foreground">/</li>
+                                                <li>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        class="h-7 px-2"
+                                                        onClick={() => void loadMountBrowserDirs(segment.path)}
+                                                    >
+                                                        {segment.label}
+                                                    </Button>
+                                                </li>
+                                            </>
+                                        )}
+                                    </For>
+                                </ol>
+                            </nav>
+                        </div>
+
+                        <div class="rounded-md border border-border/60 bg-background/40">
+                            <Show
+                                when={!mountBrowserLoading()}
+                                fallback={
+                                    <div class="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                                        <Spinner class="size-3" />
+                                        {ct('luthier_loading_folders')}
+                                    </div>
+                                }
+                            >
+                                <Show
+                                    when={mountBrowserDirs().length > 0}
+                                    fallback={
+                                        <div class="px-3 py-2 text-xs text-muted-foreground">
+                                            {ct('luthier_no_subfolder_found')}
+                                        </div>
+                                    }
+                                >
+                                    <div class="grid gap-1 p-1">
+                                        <For each={mountBrowserDirs()}>
+                                            {(dir) => (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    class="justify-start text-left"
+                                                    onClick={() => void loadMountBrowserDirs(dir)}
+                                                >
+                                                    {basenamePath(dir)}
+                                                </Button>
+                                            )}
+                                        </For>
+                                    </div>
+                                </Show>
+                            </Show>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+                            <div class="min-w-0">
+                                <p class="text-xs font-medium text-muted-foreground">{ct('luthier_select_this_folder')}</p>
+                                <p class="truncate text-xs">{mountSourceBrowserCurrentRelative() || './'}</p>
+                            </div>
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    setMountDraft((prev: any) => ({
+                                        ...prev,
+                                        source_relative_path: mountSourceBrowserCurrentRelative() || './'
+                                    }))
+                                    setMountSourceBrowserOpen(false)
+                                }}
+                            >
+                                {ct('luthier_use_this_folder')}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setMountSourceBrowserOpen(false)}>
+                            {ct('luthier_close')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

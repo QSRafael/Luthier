@@ -3,7 +3,6 @@ import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
 
 import { FieldShell } from '../../../../components/form/FormControls'
 import { Button } from '../../../../components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../../components/ui/dialog'
 import { Input } from '../../../../components/ui/input'
 import { Select } from '../../../../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
@@ -36,161 +35,86 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
   })
 
   return (
-            <FieldShell
-              label={ct('luthier_dll_overrides')}
-              help={ct('luthier_configures_per_dll_overrides_such_as_native_builtin')}
-              controlClass="flex justify-end"
-              footer={
-                <Show
-                  when={config().winecfg.dll_overrides.length > 0}
-                  fallback={
-                    <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      {ct('luthier_no_override_added')}
-                    </div>
-                  }
-                >
-                  <div class="max-h-[20rem] overflow-auto rounded-md border border-border/60 bg-background/40">
-                    <Table>
-                      <TableHeader>
-                        <TableRow class="hover:bg-transparent">
-                          <TableHead>{ct('luthier_dll')}</TableHead>
-                          <TableHead>{ct('luthier_mode')}</TableHead>
-                          <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <For each={config().winecfg.dll_overrides}>
-                          {(item, index) => (
-                            <TableRow>
-                              <TableCell class="max-w-[260px] truncate font-medium">{item.dll}</TableCell>
-                              <TableCell class="w-[220px]">
-                                <Select
-                                  value={item.mode}
-                                  onInput={(e) =>
-                                    patchConfig((prev) => ({
-                                      ...prev,
-                                      winecfg: {
-                                        ...prev.winecfg,
-                                        dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
-                                          ...prev.winecfg.dll_overrides[index()],
-                                          mode: e.currentTarget.value
-                                        })
-                                      }
-                                    }))
-                                  }
-                                >
-                                  <For each={dllModeOptions()}>
-                                    {(option) => <option value={option.value}>{option.label}</option>}
-                                  </For>
-                                </Select>
-                              </TableCell>
-                              <TableCell class="text-right">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                  onClick={() =>
-                                    patchConfig((prev) => ({
-                                      ...prev,
-                                      winecfg: {
-                                        ...prev.winecfg,
-                                        dll_overrides: removeAt(prev.winecfg.dll_overrides, index())
-                                      }
-                                    }))
-                                  }
-                                  title={ct('luthier_label_remove')}
-                                >
-                                  <IconTrash class="size-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </For>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </Show>
-              }
-            >
-              <Dialog open={dllDialogOpen()} onOpenChange={setDllDialogOpen}>
-                <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setDllDialogOpen(true)}>
-                  <IconPlus class="size-4" />
-                  {ct('luthier_add_dll_override')}
-                </Button>
-
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{ct('luthier_add_dll_override')}</DialogTitle>
-                    <DialogDescription>
-                      {ct('luthier_set_the_dll_name_and_override_mode')}
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div class="grid gap-2">
-                    <Input
-                      value={dllDraft().dll}
-                      placeholder="d3dcompiler_47"
-                      class={dllValidation().error ? 'border-destructive focus-visible:ring-destructive' : ''}
-                      onInput={(e) =>
-                        setDllDraft((prev: any) => ({
-                          ...prev,
-                          dll: e.currentTarget.value
-                        }))
-                      }
-                    />
-                    <Show when={dllValidation().error || dllValidation().hint}>
-                      <p class={dllValidation().error ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
-                        {dllValidation().error ?? dllValidation().hint}
-                      </p>
-                    </Show>
-                    <Show when={dllDuplicateValidation()}>
-                      <p class="text-xs text-destructive">{dllDuplicateValidation()}</p>
-                    </Show>
-                    <Select
-                      value={dllDraft().mode}
-                      onInput={(e) =>
-                        setDllDraft((prev: any) => ({
-                          ...prev,
-                          mode: e.currentTarget.value
-                        }))
-                      }
-                    >
-                      <For each={dllModeOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
-                    </Select>
-                  </div>
-
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setDllDialogOpen(false)}>
-                      {ct('luthier_label_cancel')}
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={!dllDraft().dll.trim() || !!dllValidation().error || !!dllDuplicateValidation()}
-                      onClick={() => {
-                        const draft = dllDraft()
-                        if (!draft.dll.trim() || dllValidation().error || dllDuplicateValidation()) return
-                        patchConfig((prev) => ({
-                          ...prev,
-                          winecfg: {
-                            ...prev.winecfg,
-                            dll_overrides: [
-                              ...prev.winecfg.dll_overrides,
-                              {
-                                ...draft,
-                                dll: draft.dll.trim()
+    <FieldShell
+      label={ct('luthier_dll_overrides')}
+      help={ct('luthier_configures_per_dll_overrides_such_as_native_builtin')}
+      controlClass="flex justify-end"
+      footer={
+        <Show
+          when={config().winecfg.dll_overrides.length > 0}
+          fallback={
+            <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+              {ct('luthier_no_override_added')}
+            </div>
+          }
+        >
+          <div class="max-h-[20rem] overflow-auto rounded-md border border-border/60 bg-background/40">
+            <Table>
+              <TableHeader>
+                <TableRow class="hover:bg-transparent">
+                  <TableHead>{ct('luthier_dll')}</TableHead>
+                  <TableHead>{ct('luthier_mode')}</TableHead>
+                  <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <For each={config().winecfg.dll_overrides}>
+                  {(item, index) => (
+                    <TableRow>
+                      <TableCell class="max-w-[260px] truncate font-medium">{item.dll}</TableCell>
+                      <TableCell class="w-[220px]">
+                        <Select
+                          value={item.mode}
+                          onInput={(e) =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              winecfg: {
+                                ...prev.winecfg,
+                                dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
+                                  ...prev.winecfg.dll_overrides[index()],
+                                  mode: e.currentTarget.value
+                                })
                               }
-                            ]
+                            }))
                           }
-                        }))
-                        setDllDraft({ dll: '', mode: 'builtin' })
-                        setDllDialogOpen(false)
-                      }}
-                    >
-                      {ct('luthier_label_confirm')}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </FieldShell>
+                        >
+                          <For each={dllModeOptions()}>
+                            {(option) => <option value={option.value}>{option.label}</option>}
+                          </For>
+                        </Select>
+                      </TableCell>
+                      <TableCell class="text-right">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() =>
+                            patchConfig((prev) => ({
+                              ...prev,
+                              winecfg: {
+                                ...prev.winecfg,
+                                dll_overrides: removeAt(prev.winecfg.dll_overrides, index())
+                              }
+                            }))
+                          }
+                          title={ct('luthier_label_remove')}
+                        >
+                          <IconTrash class="size-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </For>
+              </TableBody>
+            </Table>
+          </div>
+        </Show>
+      }
+    >
+      <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setDllDialogOpen(true)}>
+        <IconPlus class="size-4" />
+        {ct('luthier_add_dll_override')}
+      </Button>
+    </FieldShell>
   )
 }
