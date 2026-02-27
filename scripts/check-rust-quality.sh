@@ -37,11 +37,24 @@ if [[ "$EXCLUDE_TAURI" == true ]]; then
   RUST_ARGS+=(--exclude luthier-backend)
 fi
 
+# Keep warning-free baseline and add a small curated lint set.
+# The extra lints are intentionally selective to reduce noisy style churn.
+CLIPPY_LINT_ARGS=(
+  -D warnings
+  -W clippy::if_not_else
+  -W clippy::option_if_let_else
+  -W clippy::redundant_pub_crate
+  -W clippy::dbg_macro
+  -W clippy::todo
+  -W clippy::unwrap_used
+  -W clippy::expect_used
+)
+
 echo "[rust] fmt --check"
 "$CARGO_BIN" fmt --all -- --check
 
-echo "[rust] clippy -D warnings"
-"$CARGO_BIN" clippy "${RUST_ARGS[@]}" -- -D warnings
+echo "[rust] clippy -D warnings + selective pedantic/nursery"
+"$CARGO_BIN" clippy "${RUST_ARGS[@]}" -- "${CLIPPY_LINT_ARGS[@]}"
 
 if [[ "$RUN_TESTS" == true ]]; then
   echo "[rust] test"
