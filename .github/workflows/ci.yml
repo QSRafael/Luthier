@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  frontend:
+  frontend-strict-quality:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -20,22 +20,69 @@ jobs:
           cache-dependency-path: apps/luthier/package-lock.json
       - name: Install dependencies
         run: npm ci
-      - name: Typecheck
-        run: npm run typecheck
+      - name: Frontend strict quality gate
+        run: ../../scripts/check-frontend-quality.sh
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/luthier
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/luthier/package-lock.json
+      - name: Install dependencies
+        run: npm ci
       - name: Build frontend
         run: npm run build
 
-  rust-core:
+  rust-quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Rust
+      - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Cargo fmt (check)
-        run: cargo fmt --all -- --check
-      - name: Cargo test (workspace sem Tauri backend)
-        run: cargo test --workspace --all-targets --exclude luthier-backend
-      - name: Cargo clippy
-        run: cargo clippy --workspace --all-targets --exclude luthier-backend -- -D warnings
+      - name: Rust quality gate
+        run: ./scripts/check-rust-quality.sh --exclude-tauri --with-tests
+
+  rust-architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust architecture gate
+        run: ./scripts/check-rust-architecture.sh
+
+  rust-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-deny and cargo-audit
+        run: |
+          cargo install --locked cargo-deny
+          cargo install --locked cargo-audit
+      - name: Rust security gate
+        run: ./scripts/check-rust-security.sh
+
+  rust-dead-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install nightly toolchain for cargo-udeps fallback
+        run: rustup toolchain install nightly --profile minimal --component rust-src
+      - name: Install cargo-machete and cargo-udeps
+        run: |
+          cargo install --locked cargo-machete
+          cargo install --locked cargo-udeps
+      - name: Rust dead dependency gate
+        run: ./scripts/check-rust-deadcode.sh --exclude-tauri
