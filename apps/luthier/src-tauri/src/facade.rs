@@ -1,10 +1,16 @@
+use std::env;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use luthier_core::{CreateOrchestratorRequest, CreateOrchestratorResult};
 use luthier_orchestrator_core::{doctor::DoctorReport, prefix::PrefixSetupPlan, GameConfig};
 
 use crate::application::{
-    ports::{JsonCodecPort, LuthierCorePort, OrchestratorRuntimeInspectorPort},
+    ports::{
+        ExternalCommandOutput, ExternalCommandRequest, JsonCodecPort, LuthierCorePort,
+        OrchestratorRuntimeInspectorPort, ProcessRunnerPort, RuntimeEnvironmentPort,
+    },
     use_cases,
 };
 use crate::error::{BackendError, BackendResult};
@@ -15,6 +21,7 @@ use crate::infrastructure::{
     image_codec::ImageRsCodec,
     logging::StderrJsonBackendLogger,
     pe_icon_reader::PelitePeIconReader,
+    winetricks_catalog::WinetricksCatalogParser,
 };
 use crate::models::hero::HeroSearchResult;
 
@@ -139,6 +146,66 @@ impl JsonCodecPort for NativeJsonCodecAdapter {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct NativeRuntimeEnvironmentAdapter;
+
+impl RuntimeEnvironmentPort for NativeRuntimeEnvironmentAdapter {
+    fn var(&self, key: &str) -> Option<String> {
+        env::var(key).ok()
+    }
+
+    fn current_dir(&self) -> BackendResult<PathBuf> {
+        env::current_dir().map_err(Into::into)
+    }
+
+    fn current_exe(&self) -> BackendResult<PathBuf> {
+        env::current_exe().map_err(Into::into)
+    }
+
+    fn path_entries(&self) -> Vec<PathBuf> {
+        env::var_os("PATH")
+            .map(|value| env::split_paths(&value).collect())
+            .unwrap_or_default()
+    }
+
+    fn process_id(&self) -> u32 {
+        std::process::id()
+    }
+
+    fn unix_time_ms(&self) -> u128 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_millis())
+            .unwrap_or_default()
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct NativeProcessRunnerAdapter;
+
+impl ProcessRunnerPort for NativeProcessRunnerAdapter {
+    fn run(&self, request: &ExternalCommandRequest) -> BackendResult<ExternalCommandOutput> {
+        let mut command = Command::new(&request.program);
+        command.args(&request.args);
+
+        if let Some(current_dir) = &request.current_dir {
+            command.current_dir(current_dir);
+        }
+
+        for (key, value) in &request.env {
+            command.env(key, value);
+        }
+
+        let output = command.output().map_err(BackendError::from)?;
+        Ok(ExternalCommandOutput {
+            success: output.status.success(),
+            status_code: output.status.code(),
+            stdout: output.stdout,
+            stderr: output.stderr,
+        })
+    }
+}
+
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
     let luthier_core = NativeLuthierCoreAdapter;
     let base_binary_resolver = NativeBaseBinaryResolverAdapter;
@@ -226,7 +293,18 @@ pub fn test_configuration(
 }
 
 pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {
-    use_cases::winetricks_available::winetricks_available_command()
+    let process_runner = NativeProcessRunnerAdapter;
+    let runtime_environment = NativeRuntimeEnvironmentAdapter;
+    let file_system = LocalFileSystemRepository::new();
+    let winetricks_catalog_parser = WinetricksCatalogParser::new();
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::winetricks_available::winetricks_available_command(
+        &process_runner,
+        &runtime_environment,
+        &file_system,
+        &winetricks_catalog_parser,
+        &logger,
+    )
 }
 
 pub fn import_registry_file(
