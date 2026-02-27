@@ -1,0 +1,18 @@
+{
+  "fileExtensions": ["ts", "tsx"],
+  "tsConfig": "./tsconfig.json",
+  "excludeRegExp": [
+    "^node_modules/",
+    "^dist/",
+    "^src-tauri/",
+    "\\.d\\.ts$"
+  ],
+  "detectiveOptions": {
+    "ts": {
+      "skipTypeImports": true
+    },
+    "tsx": {
+      "skipTypeImports": true
+    }
+  }
+}
