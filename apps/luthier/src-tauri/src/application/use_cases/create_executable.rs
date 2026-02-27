@@ -1,18 +1,42 @@
 use std::path::PathBuf;
 
-use luthier_core::{create_orchestrator_binary, CreateOrchestratorRequest};
+use luthier_core::CreateOrchestratorRequest;
 use luthier_orchestrator_core::GameConfig;
 
-use crate::error::{BackendResult, BackendResultExt, CommandStringResult};
-use crate::infrastructure::{fs_repo, logging::log_backend_event};
+use crate::application::ports::{BackendLogEvent, BackendLogLevel, BackendLoggerPort, LuthierCorePort};
+use crate::error::{BackendError, BackendResult, BackendResultExt, CommandStringResult};
 use crate::models::dto::{CreateExecutableInput, CreateExecutableOutput};
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct CreateExecutableUseCase;
+pub trait BaseBinaryResolverPort: Send + Sync {
+    fn resolve_base_orchestrator_binary(
+        &self,
+        requested: &str,
+        extra_hints: &[PathBuf],
+    ) -> BackendResult<PathBuf>;
+    fn collect_base_orchestrator_binary_candidates(
+        &self,
+        requested: &str,
+        extra_hints: &[PathBuf],
+    ) -> Vec<PathBuf>;
+}
 
-impl CreateExecutableUseCase {
-    pub fn new() -> Self {
-        Self
+pub struct CreateExecutableUseCase<'a> {
+    luthier_core: &'a dyn LuthierCorePort,
+    base_binary_resolver: &'a dyn BaseBinaryResolverPort,
+    logger: &'a dyn BackendLoggerPort,
+}
+
+impl<'a> CreateExecutableUseCase<'a> {
+    pub fn new(
+        luthier_core: &'a dyn LuthierCorePort,
+        base_binary_resolver: &'a dyn BaseBinaryResolverPort,
+        logger: &'a dyn BackendLoggerPort,
+    ) -> Self {
+        Self {
+            luthier_core,
+            base_binary_resolver,
+            logger,
+        }
     }
 
     pub fn execute(&self, input: CreateExecutableInput) -> BackendResult<CreateExecutableOutput> {
@@ -24,8 +48,7 @@ impl CreateExecutableUseCase {
         input: CreateExecutableInput,
         base_binary_hints: &[PathBuf],
     ) -> BackendResult<CreateExecutableOutput> {
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-001",
             "create_executable_requested",
             serde_json::json!({
@@ -39,14 +62,14 @@ impl CreateExecutableUseCase {
         );
 
         let config: GameConfig = serde_json::from_str(&input.config_json)
-            .map_err(|err| format!("invalid config JSON: {err}"))?;
+            .map_err(|err| BackendError::internal(format!("invalid config JSON: {err}")))?;
 
         self.log_base_orchestrator_resolution_attempts(&input.base_binary_path, base_binary_hints);
-        let resolved_base_binary_path =
-            fs_repo::resolve_base_orchestrator_binary(&input.base_binary_path, base_binary_hints)?;
+        let resolved_base_binary_path = self
+            .base_binary_resolver
+            .resolve_base_orchestrator_binary(&input.base_binary_path, base_binary_hints)?;
 
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-010",
             "base_orchestrator_binary_resolved",
             serde_json::json!({
@@ -62,38 +85,24 @@ impl CreateExecutableUseCase {
             make_executable: input.make_executable,
         };
 
-        let result = create_orchestrator_binary(&request).map_err(|err| {
-            let message = err.to_string();
-            let validation_issues = err.validation_issues().map(|issues| {
-                issues
-                    .iter()
-                    .map(|issue| {
-                        serde_json::json!({
-                            "code": issue.code,
-                            "field": issue.field,
-                            "message": issue.message,
-                        })
-                    })
-                    .collect::<Vec<serde_json::Value>>()
-            });
-            log_backend_event(
-                "ERROR",
-                "GO-CR-090",
-                "create_executable_failed",
-                serde_json::json!({
-                    "error": message,
-                    "base_binary_path": &request.base_binary_path,
-                    "output_path": &request.output_path,
-                    "validation_issues": validation_issues,
-                }),
-            );
-            err
-        })?;
+        self.luthier_core
+            .validate_game_config(&request.config)
+            .map_err(|err| {
+                self.log_create_failed(&err, &request.base_binary_path, &request.output_path);
+                err
+            })?;
+
+        let result = self
+            .luthier_core
+            .create_orchestrator_binary(&request)
+            .map_err(|err| {
+                self.log_create_failed(&err, &request.base_binary_path, &request.output_path);
+                err
+            })?;
 
         let icon_sidecar_path = None;
 
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-020",
             "create_executable_completed",
             serde_json::json!({
@@ -131,14 +140,14 @@ impl CreateExecutableUseCase {
     }
 
     fn log_base_orchestrator_resolution_attempts(&self, requested: &str, extra_hints: &[PathBuf]) {
-        let attempted =
-            fs_repo::collect_base_orchestrator_binary_candidates(requested, extra_hints)
-                .into_iter()
-                .map(|path| path.to_string_lossy().into_owned())
-                .collect::<Vec<_>>();
+        let attempted = self
+            .base_binary_resolver
+            .collect_base_orchestrator_binary_candidates(requested, extra_hints)
+            .into_iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
 
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-011",
             "resolving_base_orchestrator_binary",
             serde_json::json!({
@@ -148,28 +157,96 @@ impl CreateExecutableUseCase {
             }),
         );
     }
+
+    fn log_create_failed(&self, err: &BackendError, base_binary_path: &std::path::Path, output_path: &std::path::Path) {
+        self.log_error(
+            "GO-CR-090",
+            "create_executable_failed",
+            serde_json::json!({
+                "error": err.to_string(),
+                "base_binary_path": base_binary_path,
+                "output_path": output_path,
+                "validation_issues": Self::validation_issues_from_error(err),
+            }),
+        );
+    }
+
+    fn validation_issues_from_error(err: &BackendError) -> Option<Vec<serde_json::Value>> {
+        err.details()
+            .and_then(|details| details.get("validation_issues"))
+            .and_then(|issues| issues.as_array())
+            .map(|issues| {
+                issues
+                    .iter()
+                    .map(|issue| {
+                        serde_json::json!({
+                            "code": issue.get("code").cloned().unwrap_or(serde_json::Value::Null),
+                            "field": issue.get("field").cloned().unwrap_or(serde_json::Value::Null),
+                            "message": issue
+                                .get("message")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null),
+                        })
+                    })
+                    .collect::<Vec<serde_json::Value>>()
+            })
+    }
+
+    fn log_info(&self, event_code: &str, message: &str, context: serde_json::Value) {
+        self.log(BackendLogLevel::Info, event_code, message, context);
+    }
+
+    fn log_error(&self, event_code: &str, message: &str, context: serde_json::Value) {
+        self.log(BackendLogLevel::Error, event_code, message, context);
+    }
+
+    fn log(&self, level: BackendLogLevel, event_code: &str, message: &str, context: serde_json::Value) {
+        let _ = self.logger.log(&BackendLogEvent {
+            level,
+            event_code: event_code.to_string(),
+            message: message.to_string(),
+            context,
+        });
+    }
 }
 
-pub fn create_executable(input: CreateExecutableInput) -> BackendResult<CreateExecutableOutput> {
-    CreateExecutableUseCase::new().execute(input)
+pub fn create_executable(
+    input: CreateExecutableInput,
+    luthier_core: &dyn LuthierCorePort,
+    base_binary_resolver: &dyn BaseBinaryResolverPort,
+    logger: &dyn BackendLoggerPort,
+) -> BackendResult<CreateExecutableOutput> {
+    CreateExecutableUseCase::new(luthier_core, base_binary_resolver, logger).execute(input)
 }
 
 pub fn create_executable_with_base_hints(
     input: CreateExecutableInput,
     base_binary_hints: &[PathBuf],
+    luthier_core: &dyn LuthierCorePort,
+    base_binary_resolver: &dyn BaseBinaryResolverPort,
+    logger: &dyn BackendLoggerPort,
 ) -> BackendResult<CreateExecutableOutput> {
-    CreateExecutableUseCase::new().execute_with_base_hints(input, base_binary_hints)
+    CreateExecutableUseCase::new(luthier_core, base_binary_resolver, logger)
+        .execute_with_base_hints(input, base_binary_hints)
 }
 
 pub fn create_executable_command(
     input: CreateExecutableInput,
+    luthier_core: &dyn LuthierCorePort,
+    base_binary_resolver: &dyn BaseBinaryResolverPort,
+    logger: &dyn BackendLoggerPort,
 ) -> CommandStringResult<CreateExecutableOutput> {
-    CreateExecutableUseCase::new().execute_command_string(input)
+    CreateExecutableUseCase::new(luthier_core, base_binary_resolver, logger)
+        .execute_command_string(input)
 }
 
 pub fn create_executable_with_base_hints_command(
     input: CreateExecutableInput,
     base_binary_hints: &[PathBuf],
+    luthier_core: &dyn LuthierCorePort,
+    base_binary_resolver: &dyn BaseBinaryResolverPort,
+    logger: &dyn BackendLoggerPort,
 ) -> CommandStringResult<CreateExecutableOutput> {
-    CreateExecutableUseCase::new().execute_with_base_hints_command_string(input, base_binary_hints)
+    CreateExecutableUseCase::new(luthier_core, base_binary_resolver, logger)
+        .execute_with_base_hints_command_string(input, base_binary_hints)
 }

@@ -9,8 +9,12 @@ use crate::application::{
 };
 use crate::error::{BackendError, BackendResult};
 use crate::infrastructure::{
-    fs_repo::LocalFileSystemRepository, http_client, http_client::ReqwestBlockingHttpClient,
-    image_codec::ImageRsCodec, logging::StderrJsonBackendLogger, pe_icon_reader::PelitePeIconReader,
+    fs_repo::{self, LocalFileSystemRepository},
+    http_client,
+    http_client::ReqwestBlockingHttpClient,
+    image_codec::ImageRsCodec,
+    logging::StderrJsonBackendLogger,
+    pe_icon_reader::PelitePeIconReader,
 };
 use crate::models::hero::HeroSearchResult;
 
@@ -40,6 +44,27 @@ impl LuthierCorePort for NativeLuthierCoreAdapter {
 
     fn validate_game_config(&self, config: &GameConfig) -> BackendResult<()> {
         luthier_core::validate_game_config(config).map_err(Into::into)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct NativeBaseBinaryResolverAdapter;
+
+impl use_cases::create_executable::BaseBinaryResolverPort for NativeBaseBinaryResolverAdapter {
+    fn resolve_base_orchestrator_binary(
+        &self,
+        requested: &str,
+        extra_hints: &[PathBuf],
+    ) -> BackendResult<PathBuf> {
+        fs_repo::resolve_base_orchestrator_binary(requested, extra_hints)
+    }
+
+    fn collect_base_orchestrator_binary_candidates(
+        &self,
+        requested: &str,
+        extra_hints: &[PathBuf],
+    ) -> Vec<PathBuf> {
+        fs_repo::collect_base_orchestrator_binary_candidates(requested, extra_hints)
     }
 }
 
@@ -115,16 +140,30 @@ impl JsonCodecPort for NativeJsonCodecAdapter {
 }
 
 pub fn create_executable(input: CreateExecutableInput) -> Result<CreateExecutableOutput, String> {
-    use_cases::create_executable::create_executable_command(input)
+    let luthier_core = NativeLuthierCoreAdapter;
+    let base_binary_resolver = NativeBaseBinaryResolverAdapter;
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::create_executable::create_executable_command(
+        input,
+        &luthier_core,
+        &base_binary_resolver,
+        &logger,
+    )
 }
 
 pub fn create_executable_with_base_hints(
     input: CreateExecutableInput,
     base_binary_hints: &[PathBuf],
 ) -> Result<CreateExecutableOutput, String> {
+    let luthier_core = NativeLuthierCoreAdapter;
+    let base_binary_resolver = NativeBaseBinaryResolverAdapter;
+    let logger = StderrJsonBackendLogger::new();
     use_cases::create_executable::create_executable_with_base_hints_command(
         input,
         base_binary_hints,
+        &luthier_core,
+        &base_binary_resolver,
+        &logger,
     )
 }
 
