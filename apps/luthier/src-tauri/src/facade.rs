@@ -1,10 +1,13 @@
 use std::path::{Path, PathBuf};
 
 use luthier_core::{CreateOrchestratorRequest, CreateOrchestratorResult};
-use luthier_orchestrator_core::GameConfig;
+use luthier_orchestrator_core::{doctor::DoctorReport, prefix::PrefixSetupPlan, GameConfig};
 
-use crate::application::{ports::LuthierCorePort, use_cases};
-use crate::error::BackendResult;
+use crate::application::{
+    ports::{JsonCodecPort, LuthierCorePort, OrchestratorRuntimeInspectorPort},
+    use_cases,
+};
+use crate::error::{BackendError, BackendResult};
 use crate::infrastructure::{
     fs_repo::LocalFileSystemRepository, http_client, http_client::ReqwestBlockingHttpClient,
     image_codec::ImageRsCodec, logging::StderrJsonBackendLogger, pe_icon_reader::PelitePeIconReader,
@@ -47,7 +50,7 @@ struct NativeHeroSearchAdapter {
 
 impl NativeHeroSearchAdapter {
     fn new() -> BackendResult<Self> {
-        let client = http_client::build_hero_search_client().map_err(crate::error::BackendError::from)?;
+        let client = http_client::build_hero_search_client().map_err(BackendError::from)?;
         Ok(Self { client })
     }
 }
@@ -71,6 +74,43 @@ impl use_cases::search_hero::HeroSearchPort for NativeHeroSearchAdapter {
 
     fn search_hero_image_via_usebottles(&self, game_name: &str) -> BackendResult<HeroSearchResult> {
         http_client::search_hero_image_via_usebottles(game_name, &self.client).map_err(Into::into)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct NativeOrchestratorRuntimeInspectorAdapter;
+
+impl OrchestratorRuntimeInspectorPort for NativeOrchestratorRuntimeInspectorAdapter {
+    fn run_doctor(&self, config: Option<&GameConfig>) -> BackendResult<DoctorReport> {
+        Ok(luthier_orchestrator_core::doctor::run_doctor(config))
+    }
+
+    fn build_prefix_setup_plan(&self, config: &GameConfig) -> BackendResult<PrefixSetupPlan> {
+        luthier_orchestrator_core::prefix::build_prefix_setup_plan(config).map_err(Into::into)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct NativeJsonCodecAdapter;
+
+impl JsonCodecPort for NativeJsonCodecAdapter {
+    fn parse_game_config(&self, raw: &str) -> BackendResult<GameConfig> {
+        serde_json::from_str(raw)
+            .map_err(|err| BackendError::internal(format!("invalid config JSON: {err}")))
+    }
+
+    fn to_json_value_doctor_report(
+        &self,
+        report: &DoctorReport,
+    ) -> BackendResult<serde_json::Value> {
+        serde_json::to_value(report).map_err(Into::into)
+    }
+
+    fn to_json_value_prefix_setup_plan(
+        &self,
+        plan: &PrefixSetupPlan,
+    ) -> BackendResult<serde_json::Value> {
+        serde_json::to_value(plan).map_err(Into::into)
     }
 }
 
@@ -131,7 +171,19 @@ pub fn prepare_hero_image(input: PrepareHeroImageInput) -> Result<PrepareHeroIma
 pub fn test_configuration(
     input: TestConfigurationInput,
 ) -> Result<TestConfigurationOutput, String> {
-    use_cases::test_configuration::test_configuration_command(input)
+    let luthier_core = NativeLuthierCoreAdapter;
+    let file_system = LocalFileSystemRepository::new();
+    let runtime_inspector = NativeOrchestratorRuntimeInspectorAdapter;
+    let json_codec = NativeJsonCodecAdapter;
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::test_configuration::test_configuration_command(
+        input,
+        &luthier_core,
+        &file_system,
+        &runtime_inspector,
+        &json_codec,
+        &logger,
+    )
 }
 
 pub fn winetricks_available() -> Result<WinetricksAvailableOutput, String> {

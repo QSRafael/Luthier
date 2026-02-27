@@ -1,27 +1,42 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use luthier_core::validate_game_config;
-use luthier_orchestrator_core::{
-    doctor::{run_doctor, CheckStatus},
-    prefix::build_prefix_setup_plan,
-    GameConfig,
+use luthier_orchestrator_core::{doctor::CheckStatus, GameConfig};
+
+use crate::application::ports::{
+    BackendLogEvent, BackendLogLevel, BackendLoggerPort, FileSystemPort, JsonCodecPort,
+    LuthierCorePort, OrchestratorRuntimeInspectorPort,
 };
-
-use crate::error::{BackendResult, BackendResultExt, CommandStringResult};
-use crate::infrastructure::{fs_repo, logging::log_backend_event};
+use crate::domain::paths as domain_paths;
+use crate::error::{BackendError, BackendResult, BackendResultExt, CommandStringResult};
 use crate::models::dto::{TestConfigurationInput, TestConfigurationOutput};
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct TestConfigurationUseCase;
+pub struct TestConfigurationUseCase<'a> {
+    luthier_core: &'a dyn LuthierCorePort,
+    file_system: &'a dyn FileSystemPort,
+    runtime_inspector: &'a dyn OrchestratorRuntimeInspectorPort,
+    json_codec: &'a dyn JsonCodecPort,
+    logger: &'a dyn BackendLoggerPort,
+}
 
-impl TestConfigurationUseCase {
-    pub fn new() -> Self {
-        Self
+impl<'a> TestConfigurationUseCase<'a> {
+    pub fn new(
+        luthier_core: &'a dyn LuthierCorePort,
+        file_system: &'a dyn FileSystemPort,
+        runtime_inspector: &'a dyn OrchestratorRuntimeInspectorPort,
+        json_codec: &'a dyn JsonCodecPort,
+        logger: &'a dyn BackendLoggerPort,
+    ) -> Self {
+        Self {
+            luthier_core,
+            file_system,
+            runtime_inspector,
+            json_codec,
+            logger,
+        }
     }
 
     pub fn execute(&self, input: TestConfigurationInput) -> BackendResult<TestConfigurationOutput> {
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-201",
             "test_configuration_requested",
             serde_json::json!({
@@ -30,37 +45,19 @@ impl TestConfigurationUseCase {
             }),
         );
 
-        let config: GameConfig = serde_json::from_str(&input.config_json)
-            .map_err(|err| format!("invalid config JSON: {err}"))?;
+        let config = self.json_codec.parse_game_config(&input.config_json)?;
 
-        validate_game_config(&config).map_err(|err| {
-            log_backend_event(
-                "ERROR",
-                "GO-CR-291",
-                "test_configuration_payload_validation_failed",
-                serde_json::json!({
-                    "error": err.to_string(),
-                    "validation_issues": err.validation_issues().map(|issues| {
-                        issues
-                            .iter()
-                            .map(|issue| {
-                                serde_json::json!({
-                                    "code": issue.code,
-                                    "field": issue.field,
-                                    "message": issue.message,
-                                })
-                            })
-                            .collect::<Vec<serde_json::Value>>()
-                    }),
-                }),
-            );
-            err.to_string()
-        })?;
+        self.luthier_core
+            .validate_game_config(&config)
+            .map_err(|err| {
+                self.log_validation_failed(&err);
+                err
+            })?;
 
         let game_root = PathBuf::from(&input.game_root);
-        let missing_files = fs_repo::collect_missing_files(&config, &game_root)?;
-        let doctor = run_doctor(Some(&config));
-        let prefix_plan = build_prefix_setup_plan(&config).map_err(|err| err.to_string())?;
+        let missing_files = self.collect_missing_files(&config, &game_root)?;
+        let doctor = self.runtime_inspector.run_doctor(Some(&config))?;
+        let prefix_plan = self.runtime_inspector.build_prefix_setup_plan(&config)?;
 
         let has_blocker = matches!(doctor.summary, CheckStatus::BLOCKER);
         let status = if has_blocker || !missing_files.is_empty() {
@@ -72,12 +69,11 @@ impl TestConfigurationUseCase {
         let out = TestConfigurationOutput {
             status: status.to_string(),
             missing_files,
-            doctor: serde_json::to_value(doctor).map_err(|err| err.to_string())?,
-            prefix_setup_plan: serde_json::to_value(prefix_plan).map_err(|err| err.to_string())?,
+            doctor: self.json_codec.to_json_value_doctor_report(&doctor)?,
+            prefix_setup_plan: self.json_codec.to_json_value_prefix_setup_plan(&prefix_plan)?,
         };
 
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-202",
             "test_configuration_completed",
             serde_json::json!({
@@ -95,14 +91,107 @@ impl TestConfigurationUseCase {
     ) -> CommandStringResult<TestConfigurationOutput> {
         self.execute(input).into_command_string_result()
     }
+
+    fn collect_missing_files(&self, config: &GameConfig, game_root: &Path) -> BackendResult<Vec<String>> {
+        let mut missing = Vec::new();
+
+        let exe_path = domain_paths::resolve_relative_path(game_root, &config.relative_exe_path)?;
+        if !self.file_system.exists(&exe_path) {
+            missing.push(config.relative_exe_path.clone());
+        }
+
+        for file in &config.integrity_files {
+            let path = domain_paths::resolve_relative_path(game_root, file)?;
+            if !self.file_system.exists(&path) {
+                missing.push(file.clone());
+            }
+        }
+
+        Ok(missing)
+    }
+
+    fn validation_issues_from_error(err: &BackendError) -> Option<Vec<serde_json::Value>> {
+        err.details()
+            .and_then(|details| details.get("validation_issues"))
+            .and_then(|issues| issues.as_array())
+            .map(|issues| {
+                issues
+                    .iter()
+                    .map(|issue| {
+                        serde_json::json!({
+                            "code": issue.get("code").cloned().unwrap_or(serde_json::Value::Null),
+                            "field": issue.get("field").cloned().unwrap_or(serde_json::Value::Null),
+                            "message": issue
+                                .get("message")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::Null),
+                        })
+                    })
+                    .collect::<Vec<serde_json::Value>>()
+            })
+    }
+
+    fn log_validation_failed(&self, err: &BackendError) {
+        self.log_error(
+            "GO-CR-291",
+            "test_configuration_payload_validation_failed",
+            serde_json::json!({
+                "error": err.to_string(),
+                "validation_issues": Self::validation_issues_from_error(err),
+            }),
+        );
+    }
+
+    fn log_info(&self, event_code: &str, message: &str, context: serde_json::Value) {
+        self.log(BackendLogLevel::Info, event_code, message, context);
+    }
+
+    fn log_error(&self, event_code: &str, message: &str, context: serde_json::Value) {
+        self.log(BackendLogLevel::Error, event_code, message, context);
+    }
+
+    fn log(&self, level: BackendLogLevel, event_code: &str, message: &str, context: serde_json::Value) {
+        let _ = self.logger.log(&BackendLogEvent {
+            level,
+            event_code: event_code.to_string(),
+            message: message.to_string(),
+            context,
+        });
+    }
 }
 
-pub fn test_configuration(input: TestConfigurationInput) -> BackendResult<TestConfigurationOutput> {
-    TestConfigurationUseCase::new().execute(input)
+pub fn test_configuration(
+    input: TestConfigurationInput,
+    luthier_core: &dyn LuthierCorePort,
+    file_system: &dyn FileSystemPort,
+    runtime_inspector: &dyn OrchestratorRuntimeInspectorPort,
+    json_codec: &dyn JsonCodecPort,
+    logger: &dyn BackendLoggerPort,
+) -> BackendResult<TestConfigurationOutput> {
+    TestConfigurationUseCase::new(
+        luthier_core,
+        file_system,
+        runtime_inspector,
+        json_codec,
+        logger,
+    )
+    .execute(input)
 }
 
 pub fn test_configuration_command(
     input: TestConfigurationInput,
+    luthier_core: &dyn LuthierCorePort,
+    file_system: &dyn FileSystemPort,
+    runtime_inspector: &dyn OrchestratorRuntimeInspectorPort,
+    json_codec: &dyn JsonCodecPort,
+    logger: &dyn BackendLoggerPort,
 ) -> CommandStringResult<TestConfigurationOutput> {
-    TestConfigurationUseCase::new().execute_command_string(input)
+    TestConfigurationUseCase::new(
+        luthier_core,
+        file_system,
+        runtime_inspector,
+        json_codec,
+        logger,
+    )
+    .execute_command_string(input)
 }
