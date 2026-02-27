@@ -1,0 +1,54 @@
+# Local hooks provide fast feedback but do not replace CI requirements.
+
+pre-commit:
+  parallel: false
+  commands:
+    frontend-basic:
+      run: |
+        bash -lc '
+          set -euo pipefail
+          cd apps/luthier
+
+          run_npm() {
+            if command -v mise >/dev/null 2>&1; then
+              mise exec -- npm "$@"
+            elif [ -x "$HOME/.local/bin/mise" ]; then
+              "$HOME/.local/bin/mise" exec -- npm "$@"
+            else
+              npm "$@"
+            fi
+          }
+
+          echo "[hook:pre-commit] frontend format:check"
+          run_npm run format:check
+          echo "[hook:pre-commit] frontend lint"
+          run_npm run lint
+          echo "[hook:pre-commit] frontend typecheck"
+          run_npm run typecheck
+        '
+
+    rust-basic:
+      run: |
+        bash -lc '
+          set -euo pipefail
+
+          if command -v cargo >/dev/null 2>&1; then
+            CARGO_BIN="cargo"
+          elif [ -x "$HOME/.cargo/bin/cargo" ]; then
+            CARGO_BIN="$HOME/.cargo/bin/cargo"
+          else
+            echo "[hook:pre-commit] error: cargo not found in PATH or ~/.cargo/bin/cargo" >&2
+            exit 127
+          fi
+
+          echo "[hook:pre-commit] rust fmt --check"
+          "$CARGO_BIN" fmt --all -- --check
+          echo "[hook:pre-commit] rust check --workspace --exclude luthier-backend"
+          "$CARGO_BIN" check --workspace --exclude luthier-backend
+        '
+
+pre-push:
+  parallel: false
+  commands:
+    full-quality:
+      run: ./scripts/check-quality.sh --full
