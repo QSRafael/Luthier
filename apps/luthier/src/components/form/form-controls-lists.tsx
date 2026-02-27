@@ -1,18 +1,11 @@
 import { createMemo, createSignal, For, Show } from 'solid-js'
-import { IconPlus, IconTrash } from '@tabler/icons-solidjs'
+import { IconTrash } from '@tabler/icons-solidjs'
 
 import { Button } from '../ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog'
 import { Input } from '../ui/input'
 import { TableCell, TableRow } from '../ui/table'
 import { FieldShell, useFormControlsI18n } from './form-controls-core'
+import { FormListDialog } from './form-list-dialog'
 import { FormListTable } from './form-list-table'
 
 type FieldValidation = {
@@ -38,7 +31,6 @@ type StringListFieldProps = {
 
 export function StringListField(props: StringListFieldProps) {
   const i18n = useFormControlsI18n()
-  const [open, setOpen] = createSignal(false)
   const [draft, setDraft] = createSignal('')
 
   const cleanDraft = createMemo(() => draft().trim())
@@ -46,11 +38,11 @@ export function StringListField(props: StringListFieldProps) {
 
   const addItem = () => {
     const value = cleanDraft()
-    if (!value) return
-    if (draftValidation()?.error) return
+    if (!value) return false
+    if (draftValidation()?.error) return false
     props.onChange([...props.items, value])
     setDraft('')
-    setOpen(false)
+    return true
   }
 
   const removeItem = (index: number) => {
@@ -115,44 +107,21 @@ export function StringListField(props: StringListFieldProps) {
         ) : undefined
       }
     >
-      <Dialog open={open()} onOpenChange={setOpen}>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          class="inline-flex items-center gap-1.5"
-          onClick={() => setOpen(true)}
-          disabled={props.addDisabled}
-        >
-          <IconPlus class="size-4" />
-          {props.addLabel ?? i18n.add}
-        </Button>
-
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{props.addLabel ?? i18n.addItem}</DialogTitle>
-            <DialogDescription>{i18n.addListDialogDescription}</DialogDescription>
-          </DialogHeader>
-
-          <Show
-            when={props.onPickValue}
-            fallback={
-              <Input
-                value={draft()}
-                placeholder={props.placeholder}
-                class={draftValidation()?.error ? 'border-destructive focus-visible:ring-destructive' : ''}
-                onInput={(e) => setDraft(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addItem()
-                  }
-                }}
-              />
-            }
-          >
-            <div class="grid gap-1.5">
-              <div class="picker-row">
+      <FormListDialog
+        triggerLabel={props.addLabel ?? i18n.add}
+        triggerDisabled={props.addDisabled}
+        title={props.addLabel ?? i18n.addItem}
+        description={i18n.addListDialogDescription}
+        cancelLabel={i18n.cancel}
+        confirmLabel={i18n.confirm}
+        confirmDisabled={!cleanDraft() || !!draftValidation()?.error}
+        onConfirm={addItem}
+      >
+        {({ confirm }) => (
+          <>
+            <Show
+              when={props.onPickValue}
+              fallback={
                 <Input
                   value={draft()}
                   placeholder={props.placeholder}
@@ -161,52 +130,60 @@ export function StringListField(props: StringListFieldProps) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
-                      addItem()
+                      confirm()
                     }
                   }}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={props.pickerDisabled}
-                  onClick={async () => {
-                    const picked = await props.onPickValue?.()
-                    if (!picked) return
-                    setDraft(picked)
-                  }}
-                >
-                  {props.pickerLabel ?? i18n.pickFile}
-                </Button>
+              }
+            >
+              <div class="grid gap-1.5">
+                <div class="picker-row">
+                  <Input
+                    value={draft()}
+                    placeholder={props.placeholder}
+                    class={draftValidation()?.error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    onInput={(e) => setDraft(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        confirm()
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={props.pickerDisabled}
+                    onClick={async () => {
+                      const picked = await props.onPickValue?.()
+                      if (!picked) return
+                      setDraft(picked)
+                    }}
+                  >
+                    {props.pickerLabel ?? i18n.pickFile}
+                  </Button>
+                </div>
+                <p class="text-xs text-muted-foreground">
+                  {i18n.pickFileHint}
+                </p>
               </div>
-              <p class="text-xs text-muted-foreground">
-                {i18n.pickFileHint}
-              </p>
-            </div>
-          </Show>
+            </Show>
 
-          <Show when={draftValidation()}>
-            {(validation) => (
-              <div class="space-y-1">
-                <Show when={validation().error}>
-                  <p class="text-xs text-destructive">{validation().error}</p>
-                </Show>
-                <Show when={!validation().error && validation().hint}>
-                  <p class="text-xs text-muted-foreground">{validation().hint}</p>
-                </Show>
-              </div>
-            )}
-          </Show>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {i18n.cancel}
-            </Button>
-            <Button type="button" onClick={addItem} disabled={!cleanDraft() || !!draftValidation()?.error}>
-              {i18n.confirm}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Show when={draftValidation()}>
+              {(validation) => (
+                <div class="space-y-1">
+                  <Show when={validation().error}>
+                    <p class="text-xs text-destructive">{validation().error}</p>
+                  </Show>
+                  <Show when={!validation().error && validation().hint}>
+                    <p class="text-xs text-muted-foreground">{validation().hint}</p>
+                  </Show>
+                </div>
+              )}
+            </Show>
+          </>
+        )}
+      </FormListDialog>
     </FieldShell>
   )
 }
@@ -244,7 +221,6 @@ type KeyValueListFieldProps = {
 
 export function KeyValueListField(props: KeyValueListFieldProps) {
   const i18n = useFormControlsI18n()
-  const [open, setOpen] = createSignal(false)
   const [draftKey, setDraftKey] = createSignal('')
   const [draftValue, setDraftValue] = createSignal('')
 
@@ -262,13 +238,13 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
 
   const addItem = () => {
     const key = draftKey().trim()
-    if (!key) return
-    if (draftValidation()?.keyError || draftValidation()?.valueError || draftValidation()?.formError) return
+    if (!key) return false
+    if (draftValidation()?.keyError || draftValidation()?.valueError || draftValidation()?.formError) return false
 
     props.onChange([...props.items, { key, value: draftValue() }])
     setDraftKey('')
     setDraftValue('')
-    setOpen(false)
+    return true
   }
 
   const removeItem = (index: number) => {
@@ -342,24 +318,16 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
         </Show>
       }
     >
-      <Dialog open={open()} onOpenChange={setOpen}>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          class="inline-flex items-center gap-1.5"
-          onClick={() => setOpen(true)}
-        >
-          <IconPlus class="size-4" />
-          {props.addLabel ?? i18n.add}
-        </Button>
-
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{props.addLabel ?? i18n.addItem}</DialogTitle>
-            <DialogDescription>{i18n.addKeyValueDialogDescription}</DialogDescription>
-          </DialogHeader>
-
+      <FormListDialog
+        triggerLabel={props.addLabel ?? i18n.add}
+        title={props.addLabel ?? i18n.addItem}
+        description={i18n.addKeyValueDialogDescription}
+        cancelLabel={i18n.cancel}
+        confirmLabel={i18n.confirm}
+        confirmDisabled={!canAdd() || !!draftValidation()?.keyError || !!draftValidation()?.valueError || !!draftValidation()?.formError}
+        onConfirm={addItem}
+      >
+        {() => (
           <div class="grid gap-2">
             <Input
               value={draftKey()}
@@ -388,21 +356,8 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
               <p class="text-xs text-destructive">{draftValidation()?.formError}</p>
             </Show>
           </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {i18n.cancel}
-            </Button>
-            <Button
-              type="button"
-              onClick={addItem}
-              disabled={!canAdd() || !!draftValidation()?.keyError || !!draftValidation()?.valueError || !!draftValidation()?.formError}
-            >
-              {i18n.confirm}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
+      </FormListDialog>
     </FieldShell>
   )
 }
