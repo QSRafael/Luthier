@@ -5,7 +5,7 @@ use luthier_orchestrator_core::GameConfig;
 
 use crate::application::{ports::LuthierCorePort, use_cases};
 use crate::error::BackendResult;
-use crate::infrastructure::logging::StderrJsonBackendLogger;
+use crate::infrastructure::{fs_repo::LocalFileSystemRepository, logging::StderrJsonBackendLogger};
 
 pub use crate::models::dto::{
     CreateExecutableInput, CreateExecutableOutput, ExtractExecutableIconInput,
@@ -89,11 +89,15 @@ pub fn import_registry_file(
 pub fn list_child_directories(
     input: ListChildDirectoriesInput,
 ) -> Result<ListChildDirectoriesOutput, String> {
-    use_cases::list_fs::list_child_directories_command(input)
+    let file_system = LocalFileSystemRepository::new();
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::list_fs::list_child_directories_command(input, &file_system, &logger)
 }
 
 pub fn list_directory_entries(
     input: ListDirectoryEntriesInput,
 ) -> Result<ListDirectoryEntriesOutput, String> {
-    use_cases::list_fs::list_directory_entries_command(input)
+    let file_system = LocalFileSystemRepository::new();
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::list_fs::list_directory_entries_command(input, &file_system, &logger)
 }
