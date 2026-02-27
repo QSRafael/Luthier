@@ -55,6 +55,7 @@ import {
 } from '../../models/config'
 import { createLuthierState } from './luthier-controller-state'
 import { createLuthierComputed } from './luthier-controller-computed'
+import { createLuthierStatus } from './luthier-controller-status'
 
 type WinetricksAvailableOutput = {
   source: string
@@ -218,137 +219,6 @@ export function useLuthierController() {
     }))
   }
 
-  createEffect(() => {
-    localStorage.setItem('luthier.locale', locale())
-  })
-
-  createEffect(() => {
-    const currentNormalizedName = normalizedHeroSearchGameName()
-    const cachedName = heroImageSearchCacheGameName()
-    if (!cachedName) return
-    if (currentNormalizedName === cachedName) return
-    clearHeroImageSearchCache()
-  })
-
-  // Runtime UX simplification: default to Proton-GE and enforce UMU in the authoring UI.
-  createEffect(() => {
-    const current = config()
-    let next = current
-    let changed = false
-
-    if (current.runner.runtime_preference === 'Auto') {
-      next = {
-        ...next,
-        runner: {
-          ...next.runner,
-          runtime_preference: 'Proton'
-        }
-      }
-      changed = true
-    }
-
-    if (!current.runner.proton_version.trim()) {
-      next = {
-        ...next,
-        runner: {
-          ...next.runner,
-          proton_version: 'GE-Proton-latest'
-        }
-      }
-      changed = true
-    }
-
-    if (current.requirements.umu !== 'MandatoryOn') {
-      next = {
-        ...next,
-        requirements: {
-          ...next.requirements,
-          umu: 'MandatoryOn'
-        }
-      }
-      changed = true
-    }
-
-    if (changed) {
-      setConfig(next)
-    }
-  })
-
-  createEffect(() => {
-    const currentExePath = exePath().trim()
-    if (!currentExePath) return
-
-    const detectedRoot = dirname(currentExePath)
-    if (!detectedRoot || detectedRoot === currentExePath) return
-
-    if (!gameRootManualOverride() && gameRoot() !== detectedRoot) {
-      setGameRoot(detectedRoot)
-    }
-  })
-
-  createEffect(() => {
-    const currentExePath = exePath().trim()
-    if (!currentExePath) return
-
-    const baseRoot = gameRoot().trim() || dirname(currentExePath)
-    const relative = relativeFromRoot(baseRoot, currentExePath)
-    const nextRelativePath = relative ? `./${relative}` : `./${basename(currentExePath)}`
-    if (config().relative_exe_path !== nextRelativePath) {
-      patchConfig((prev) => ({ ...prev, relative_exe_path: nextRelativePath }))
-    }
-  })
-
-  createEffect(() => {
-    const currentExePath = exePath().trim()
-    if (!currentExePath) return
-
-    const dir = dirname(currentExePath)
-    const file = basename(currentExePath)
-    const stem = stripLauncherExtension(file) || file
-    const derivedOutput = dir && dir !== file ? `${dir}/${stem}` : stem
-
-    if (derivedOutput && outputPath() !== derivedOutput) {
-      setOutputPath(derivedOutput)
-    }
-  })
-
-  createEffect(() => {
-    const hasVerbs = config().dependencies.length > 0
-    const expected: FeatureState = hasVerbs ? 'OptionalOn' : 'OptionalOff'
-
-    if (config().requirements.winetricks !== expected) {
-      patchConfig((prev) => ({
-        ...prev,
-        requirements: {
-          ...prev.requirements,
-          winetricks: expected
-        }
-      }))
-    }
-  })
-
-  onMount(() => {
-    if (winetricksLoaded() || winetricksLoading()) return
-    const timer = window.setTimeout(() => {
-      if (!winetricksLoaded() && !winetricksLoading()) {
-        void loadWinetricksCatalog()
-      }
-    }, 250)
-    onCleanup(() => window.clearTimeout(timer))
-  })
-
-  createEffect(() => {
-    const currentPath = exePath().trim()
-    if (!currentPath) return
-    if (!isLikelyAbsolutePath(currentPath)) return
-    if (!hasWindowsLauncherExtension(currentPath)) return
-    if (currentPath === hashingExePath() || currentPath === lastHashedExePath()) return
-
-    const timer = window.setTimeout(() => {
-      void hashExecutablePath(currentPath)
-    }, 200)
-    onCleanup(() => window.clearTimeout(timer))
-  })
 
   async function hashExecutablePath(absoluteExePath: string) {
     if (!absoluteExePath.trim()) {
@@ -900,6 +770,8 @@ export function useLuthierController() {
       setActiveTab(next as LuthierTab)
     }
   }
+
+  createLuthierStatus(state, computed, { hashExecutablePath, loadWinetricksCatalog })
 
   return {
     ORCHESTRATOR_BASE_PATH,
