@@ -61,6 +61,11 @@ CLIPPY_LINT_ARGS=(
 echo "[rust] fmt --check"
 "$CARGO_BIN" fmt --all -- --check
 
+echo "[rust] check local crates with warnings denied"
+# `RUSTFLAGS=-Dwarnings` enforces zero warnings for workspace crates.
+# Registry dependencies keep `cap-lints` behavior, so this gate targets local code.
+RUSTFLAGS="-Dwarnings" "$CARGO_BIN" check "${RUST_ARGS[@]}"
+
 echo "[rust] clippy -D warnings + selective pedantic/nursery"
 "$CARGO_BIN" clippy "${RUST_ARGS[@]}" -- "${CLIPPY_LINT_ARGS[@]}"
 
