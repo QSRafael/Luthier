@@ -1,44 +1,57 @@
+use crate::application::ports::{BackendLogEvent, BackendLogLevel, BackendLoggerPort};
 use crate::domain::validation as domain_validation;
 use crate::error::{BackendResult, BackendResultExt, CommandStringResult};
-use crate::infrastructure::{http_client, logging::log_backend_event};
 use crate::models::dto::{SearchHeroImageInput, SearchHeroImageOutput};
 use crate::models::hero::HeroSearchResult;
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct SearchHeroUseCase;
+pub trait HeroSearchPort: Send + Sync {
+    fn search_hero_image_via_steamgriddb_public(
+        &self,
+        game_name: &str,
+    ) -> BackendResult<Option<HeroSearchResult>>;
+    fn search_hero_image_via_steamgriddb_api(
+        &self,
+        game_name: &str,
+    ) -> BackendResult<Option<HeroSearchResult>>;
+    fn search_hero_image_via_usebottles(&self, game_name: &str) -> BackendResult<HeroSearchResult>;
+}
 
-impl SearchHeroUseCase {
-    pub fn new() -> Self {
-        Self
+pub struct SearchHeroUseCase<'a> {
+    hero_search: &'a dyn HeroSearchPort,
+    logger: &'a dyn BackendLoggerPort,
+}
+
+impl<'a> SearchHeroUseCase<'a> {
+    pub fn new(hero_search: &'a dyn HeroSearchPort, logger: &'a dyn BackendLoggerPort) -> Self {
+        Self {
+            hero_search,
+            logger,
+        }
     }
 
     pub fn execute(&self, input: SearchHeroImageInput) -> BackendResult<SearchHeroImageOutput> {
         let game_name = domain_validation::validate_search_hero_game_name(&input.game_name)?;
 
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-121",
             "search_hero_image_requested",
             serde_json::json!({ "game_name": game_name }),
         );
 
-        let client = http_client::build_hero_search_client()?;
-
-        if let Some(result) =
-            http_client::search_hero_image_via_steamgriddb_public(game_name, &client)?
+        if let Some(result) = self
+            .hero_search
+            .search_hero_image_via_steamgriddb_public(game_name)?
         {
             self.log_completed_with_candidates(game_name, &result);
             return Ok(Self::to_output(result));
         }
 
-        if let Some(result) =
-            http_client::search_hero_image_via_steamgriddb_api(game_name, &client)?
-        {
+        if let Some(result) = self.hero_search.search_hero_image_via_steamgriddb_api(game_name)? {
             self.log_completed_with_candidates(game_name, &result);
             return Ok(Self::to_output(result));
         }
 
-        let result = http_client::search_hero_image_via_usebottles(game_name, &client)?;
+        let result = self.hero_search.search_hero_image_via_usebottles(game_name)?;
         self.log_completed_simple(game_name, &result.image_url);
 
         Ok(Self::to_output(result))
@@ -51,9 +64,17 @@ impl SearchHeroUseCase {
         self.execute(input).into_command_string_result()
     }
 
+    fn log_info(&self, event_code: &str, message: &str, context: serde_json::Value) {
+        let _ = self.logger.log(&BackendLogEvent {
+            level: BackendLogLevel::Info,
+            event_code: event_code.to_string(),
+            message: message.to_string(),
+            context,
+        });
+    }
+
     fn log_completed_with_candidates(&self, game_name: &str, result: &HeroSearchResult) {
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-122",
             "search_hero_image_completed",
             serde_json::json!({
@@ -67,8 +88,7 @@ impl SearchHeroUseCase {
     }
 
     fn log_completed_simple(&self, game_name: &str, image_url: &str) {
-        log_backend_event(
-            "INFO",
+        self.log_info(
             "GO-CR-122",
             "search_hero_image_completed",
             serde_json::json!({
@@ -88,12 +108,18 @@ impl SearchHeroUseCase {
     }
 }
 
-pub fn search_hero_image(input: SearchHeroImageInput) -> BackendResult<SearchHeroImageOutput> {
-    SearchHeroUseCase::new().execute(input)
+pub fn search_hero_image(
+    input: SearchHeroImageInput,
+    hero_search: &dyn HeroSearchPort,
+    logger: &dyn BackendLoggerPort,
+) -> BackendResult<SearchHeroImageOutput> {
+    SearchHeroUseCase::new(hero_search, logger).execute(input)
 }
 
 pub fn search_hero_image_command(
     input: SearchHeroImageInput,
+    hero_search: &dyn HeroSearchPort,
+    logger: &dyn BackendLoggerPort,
 ) -> CommandStringResult<SearchHeroImageOutput> {
-    SearchHeroUseCase::new().execute_command_string(input)
+    SearchHeroUseCase::new(hero_search, logger).execute_command_string(input)
 }

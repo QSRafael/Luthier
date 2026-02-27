@@ -6,9 +6,10 @@ use luthier_orchestrator_core::GameConfig;
 use crate::application::{ports::LuthierCorePort, use_cases};
 use crate::error::BackendResult;
 use crate::infrastructure::{
-    fs_repo::LocalFileSystemRepository, http_client::ReqwestBlockingHttpClient,
+    fs_repo::LocalFileSystemRepository, http_client, http_client::ReqwestBlockingHttpClient,
     image_codec::ImageRsCodec, logging::StderrJsonBackendLogger, pe_icon_reader::PelitePeIconReader,
 };
+use crate::models::hero::HeroSearchResult;
 
 pub use crate::models::dto::{
     CreateExecutableInput, CreateExecutableOutput, ExtractExecutableIconInput,
@@ -36,6 +37,40 @@ impl LuthierCorePort for NativeLuthierCoreAdapter {
 
     fn validate_game_config(&self, config: &GameConfig) -> BackendResult<()> {
         luthier_core::validate_game_config(config).map_err(Into::into)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct NativeHeroSearchAdapter {
+    client: reqwest::blocking::Client,
+}
+
+impl NativeHeroSearchAdapter {
+    fn new() -> BackendResult<Self> {
+        let client = http_client::build_hero_search_client().map_err(crate::error::BackendError::from)?;
+        Ok(Self { client })
+    }
+}
+
+impl use_cases::search_hero::HeroSearchPort for NativeHeroSearchAdapter {
+    fn search_hero_image_via_steamgriddb_public(
+        &self,
+        game_name: &str,
+    ) -> BackendResult<Option<HeroSearchResult>> {
+        http_client::search_hero_image_via_steamgriddb_public(game_name, &self.client)
+            .map_err(Into::into)
+    }
+
+    fn search_hero_image_via_steamgriddb_api(
+        &self,
+        game_name: &str,
+    ) -> BackendResult<Option<HeroSearchResult>> {
+        http_client::search_hero_image_via_steamgriddb_api(game_name, &self.client)
+            .map_err(Into::into)
+    }
+
+    fn search_hero_image_via_usebottles(&self, game_name: &str) -> BackendResult<HeroSearchResult> {
+        http_client::search_hero_image_via_usebottles(game_name, &self.client).map_err(Into::into)
     }
 }
 
@@ -76,7 +111,9 @@ pub fn extract_executable_icon(
 }
 
 pub fn search_hero_image(input: SearchHeroImageInput) -> Result<SearchHeroImageOutput, String> {
-    use_cases::search_hero::search_hero_image_command(input)
+    let hero_search = NativeHeroSearchAdapter::new().map_err(String::from)?;
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::search_hero::search_hero_image_command(input, &hero_search, &logger)
 }
 
 pub fn prepare_hero_image(input: PrepareHeroImageInput) -> Result<PrepareHeroImageOutput, String> {
