@@ -9,7 +9,7 @@ import { Skeleton } from '../../../components/ui/skeleton'
 import { Spinner } from '../../../components/ui/spinner'
 import type { LuthierPageSectionProps } from '../page-shared'
 
-export function DependenciesWinetricksPanel(props: LuthierPageSectionProps) {
+export function WinetricksItemPanel(props: LuthierPageSectionProps) {
     const {
         winetricksAvailable,
         winetricksLoading,
