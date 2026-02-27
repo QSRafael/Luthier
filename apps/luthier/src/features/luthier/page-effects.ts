@@ -7,12 +7,12 @@
 
 import { createEffect, createMemo } from 'solid-js'
 
-import { LuthierTab } from '../../models/config'
 import type { useLuthierController } from './useLuthierController'
 import type { createLuthierPageDialogState } from './page-dialog-state'
 import { sonnerNotifier } from './infrastructure/sonner-notifier'
 import { createLuthierPageRegistryBrowserEffects } from './page-effects-registry-browser'
 import { createLuthierPageRuntimeControlsEffects } from './page-effects-runtime-controls'
+import { createLuthierPageNavigationEffects } from './page-effects-navigation'
 
 import {
     buildAncestorPathsFromExe,
@@ -20,21 +20,15 @@ import {
     isTauriLocalRuntime,
     relativeInsideBase
 } from './page-shared'
-import { useTheme } from '../../components/theme-provider'
 
 export function createLuthierPageEffects(
     controller: ReturnType<typeof useLuthierController>,
     dialogState: ReturnType<typeof createLuthierPageDialogState>
 ) {
-    const { theme, setTheme } = useTheme()
-
     const {
         config,
         exePath,
         gameRoot,
-        activeTab,
-        setActiveTab,
-        tabs,
         ct,
         statusMessage,
         statusTone,
@@ -45,7 +39,6 @@ export function createLuthierPageEffects(
     const {
         setLastStatusToastMessage,
         lastStatusToastMessage,
-        setMobileSidebarOpen,
         setGameRootChooserOpen,
         mountBrowserPath,
         integrityBrowserPath
@@ -117,6 +110,20 @@ export function createLuthierPageEffects(
         openIntegrityFileBrowser,
         openMountSourceBrowser
     } = createLuthierPageRegistryBrowserEffects(controller, dialogState)
+    const {
+        theme,
+        setTheme,
+        cycleLocale,
+        cycleTheme,
+        sidebarLocaleLabel,
+        sidebarThemeLabel,
+        tabIndex,
+        canGoPrevTab,
+        canGoNextTab,
+        goPrevTab,
+        goNextTab,
+        handleSidebarTabChange
+    } = createLuthierPageNavigationEffects(controller, dialogState)
 
     const gameRootAncestorCandidates = createMemo(() => buildAncestorPathsFromExe(exePath()))
 
@@ -177,36 +184,6 @@ export function createLuthierPageEffects(
         return await pickIntegrityFileRelative()
     }
 
-    const cycleLocale = () => {
-        controller.setLocale(controller.locale() === 'pt-BR' ? 'en-US' : 'pt-BR')
-    }
-
-    const cycleTheme = () => {
-        const current = theme()
-        if (current === 'dark') {
-            setTheme('light')
-            return
-        }
-        if (current === 'light') {
-            setTheme('system')
-            return
-        }
-        setTheme('dark')
-    }
-
-    const sidebarLocaleLabel = createMemo(() => `${ct('luthier_language')}: ${controller.locale()}`)
-
-    const sidebarThemeLabel = createMemo(() => {
-        const current = theme()
-        const label =
-            current === 'dark'
-                ? ct('luthier_dark')
-                : current === 'light'
-                    ? ct('luthier_light')
-                    : ct('luthier_system')
-        return `${ct('luthier_theme')}: ${label}`
-    })
-
     const formControlsI18n = createMemo(() => ({
         enabled: ct('luthier_label_enabled'),
         disabled: ct('luthier_label_disabled'),
@@ -227,27 +204,6 @@ export function createLuthierPageEffects(
         keyPlaceholder: ct('luthier_key'),
         valuePlaceholder: ct('luthier_value')
     }))
-
-    const tabIndex = createMemo(() => tabs.indexOf(activeTab()))
-    const canGoPrevTab = createMemo(() => tabIndex() > 0)
-    const canGoNextTab = createMemo(() => tabIndex() >= 0 && tabIndex() < tabs.length - 1)
-
-    const goPrevTab = () => {
-        const index = tabIndex()
-        if (index <= 0) return
-        setActiveTab(tabs[index - 1])
-    }
-
-    const goNextTab = () => {
-        const index = tabIndex()
-        if (index < 0 || index >= tabs.length - 1) return
-        setActiveTab(tabs[index + 1])
-    }
-
-    const handleSidebarTabChange = (tab: LuthierTab) => {
-        setActiveTab(tab)
-        setMobileSidebarOpen(false)
-    }
 
     createEffect(() => {
         const message = statusMessage().trim()
