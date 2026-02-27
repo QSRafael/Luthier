@@ -24,3 +24,16 @@ sha2 = "0.10"
 thiserror = "2.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1", features = ["v4", "serde"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unreachable_pub = "warn"
+private_interfaces = "warn"
+private_bounds = "warn"
+
+[workspace.lints.clippy]
+redundant_pub_crate = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+todo = "warn"
+dbg_macro = "warn"
