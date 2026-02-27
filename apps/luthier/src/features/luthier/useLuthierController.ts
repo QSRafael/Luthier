@@ -59,6 +59,7 @@ import { createLuthierStatus } from './luthier-controller-status'
 import { createLuthierHeroActions } from './luthier-controller-hero-actions'
 import { createLuthierWinetricksActions } from './luthier-controller-winetricks-actions'
 import { createLuthierFileActions } from './luthier-controller-file-actions'
+import { createLuthierBuildActions } from './luthier-controller-build-actions'
 
 type WinetricksAvailableOutput = {
   source: string
@@ -208,78 +209,12 @@ export function useLuthierController() {
     searchHeroImageAutomatically
   } = createLuthierHeroActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
 
-  async function hashExecutablePath(absoluteExePath: string) {
-    if (!absoluteExePath.trim()) {
-      return
-    }
-
-    if (!isLikelyAbsolutePath(absoluteExePath)) {
-      return
-    }
-
-    try {
-      setHashingExePath(absoluteExePath)
-      setLastHashedExePath(absoluteExePath)
-      const result = await invokeCommand<{ sha256_hex: string }>('cmd_hash_executable', {
-        executable_path: absoluteExePath
-      })
-      if (exePath().trim() === absoluteExePath) {
-        patchConfig((prev) => ({ ...prev, exe_hash: result.sha256_hex }))
-      }
-    } catch (error) {
-      setStatusMessage(`${t('msgHashFail')} ${String(error)}`)
-    } finally {
-      if (hashingExePath() === absoluteExePath) {
-        setHashingExePath('')
-      }
-    }
-  }
-
-  const runHash = async () => {
-    await hashExecutablePath(exePath().trim())
-  }
-
-  const runTest = async () => {
-    try {
-      setTestingConfiguration(true)
-      const result = await invokeCommand<unknown>('cmd_test_configuration', {
-        config_json: configPreview(),
-        game_root: gameRoot()
-      })
-      setResultJson(JSON.stringify(result, null, 2))
-      setStatusMessage(t('msgTestOk'))
-    } catch (error) {
-      setStatusMessage(`${t('msgTestFail')} ${String(error)}`)
-    } finally {
-      setTestingConfiguration(false)
-    }
-  }
-
-  const runCreate = async () => {
-    const blockedReason = createExecutableBlockedReason()
-    if (blockedReason) {
-      setStatusMessage(blockedReason)
-      return
-    }
-
-    try {
-      setCreatingExecutable(true)
-      const result = await invokeCommand<unknown>('cmd_create_executable', {
-        base_binary_path: ORCHESTRATOR_BASE_PATH,
-        output_path: outputPath(),
-        config_json: configPreview(),
-        backup_existing: true,
-        make_executable: true,
-        icon_png_data_url: iconPreviewPath().trim() || null
-      })
-      setResultJson(JSON.stringify(result, null, 2))
-      setStatusMessage(t('msgCreateOk'))
-    } catch (error) {
-      setStatusMessage(`${t('msgCreateFail')} ${String(error)}`)
-    } finally {
-      setCreatingExecutable(false)
-    }
-  }
+  const {
+    hashExecutablePath,
+    runHash,
+    runTest,
+    runCreate
+  } = createLuthierBuildActions(state, computed, invokeCommand, ORCHESTRATOR_BASE_PATH, t, setStatusMessage)
 
   const {
     pickExecutable,
