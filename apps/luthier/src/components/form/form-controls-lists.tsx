@@ -1,12 +1,16 @@
-import { createMemo, createSignal, For, Show } from 'solid-js'
-import { IconTrash } from '@tabler/icons-solidjs'
+import { createMemo, createSignal, Show } from 'solid-js'
 
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { TableCell, TableRow } from '../ui/table'
 import { FieldShell, useFormControlsI18n } from './form-controls-core'
+import {
+  KeyValueItemsCards,
+  KeyValueItemsTable,
+  ListEmptyState,
+  StringListItemsCards,
+  StringListItemsTable
+} from './form-controls-list-primitives'
 import { FormListDialog } from './form-list-dialog'
-import { FormListTable } from './form-list-table'
 
 type FieldValidation = {
   error?: string
@@ -57,53 +61,18 @@ export function StringListField(props: StringListFieldProps) {
       footer={
         props.items.length > 0 ? (
           props.tableValueHeader ? (
-            <FormListTable
-              columns={[
-                { label: props.tableValueHeader },
-                { label: i18n.actions, class: 'w-[72px] text-right' }
-              ]}
-              rows={props.items}
-              renderRow={(item, index) => (
-                <TableRow>
-                  <TableCell class="max-w-0 truncate">{item}</TableCell>
-                  <TableCell class="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(index())}
-                      title={i18n.remove}
-                    >
-                      <IconTrash class="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )}
+            <StringListItemsTable
+              items={props.items}
+              valueHeader={props.tableValueHeader}
+              actionHeader={i18n.actions}
+              removeLabel={i18n.remove}
+              onRemove={removeItem}
             />
           ) : (
-            <div class="grid gap-2">
-              <For each={props.items}>
-                {(item, index) => (
-                  <div class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                    <span class="truncate">{item}</span>
-                    <div class="ml-auto">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeItem(index())}
-                        title={i18n.remove}
-                      >
-                        <IconTrash class="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </For>
-            </div>
+            <StringListItemsCards items={props.items} removeLabel={i18n.remove} onRemove={removeItem} />
           )
         ) : props.emptyMessage ? (
-          <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">{props.emptyMessage}</div>
+          <ListEmptyState message={props.emptyMessage} />
         ) : undefined
       }
     >
@@ -260,60 +229,28 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
         <Show
           when={props.items.length > 0}
           fallback={
-            <div class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-              {props.emptyMessage ?? i18n.noItemAdded}
-            </div>
+            <ListEmptyState message={props.emptyMessage ?? i18n.noItemAdded} />
           }
         >
           <Show
             when={props.tableHeaders}
             fallback={
-              <div class="grid gap-2">
-                <For each={props.items}>
-                  {(item, index) => (
-                    <div class="grid items-center gap-2 rounded-md border px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                      <span class="truncate text-sm font-medium">{item.key}</span>
-                      <span class="truncate text-sm text-muted-foreground">{item.value}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeItem(index())}
-                        title={props.removeLabel ?? i18n.remove}
-                      >
-                        <IconTrash class="size-4" />
-                      </Button>
-                    </div>
-                  )}
-                </For>
-              </div>
+              <KeyValueItemsCards
+                items={props.items}
+                removeLabel={props.removeLabel ?? i18n.remove}
+                onRemove={removeItem}
+              />
             }
           >
-            <FormListTable
-              columns={[
-                { label: props.tableHeaders?.key },
-                { label: props.tableHeaders?.value },
-                { label: props.removeLabel ?? i18n.action, class: 'w-14 text-right' }
-              ]}
-              rows={props.items}
-              renderRow={(item, index) => (
-                <TableRow>
-                  <TableCell class="font-medium">{item.key}</TableCell>
-                  <TableCell class="text-muted-foreground">{item.value || '—'}</TableCell>
-                  <TableCell class="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(index())}
-                      title={props.removeLabel ?? i18n.remove}
-                    >
-                      <IconTrash class="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )}
-            />
+            {(tableHeaders) => (
+              <KeyValueItemsTable
+                items={props.items}
+                headers={tableHeaders()}
+                actionHeader={props.removeLabel ?? i18n.action}
+                removeLabel={props.removeLabel ?? i18n.remove}
+                onRemove={removeItem}
+              />
+            )}
           </Show>
         </Show>
       }
