@@ -14,7 +14,7 @@ import {
 } from '../page-shared'
 import { validatePositiveIntegerString } from '../field-validation'
 
-export function PerformanceGamescopePanel(props: LuthierPageSectionProps) {
+export function GamescopePanel(props: LuthierPageSectionProps) {
     const {
         config,
         patchConfig,

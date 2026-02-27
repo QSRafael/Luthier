@@ -34,7 +34,7 @@ import {
   SwitchChoiceCard,
   type LuthierPageSectionProps
 } from '../page-shared'
-import { PerformanceGamescopePanel } from './performance-gamescope-panel'
+import { GamescopePanel } from './gamescope-panel'
 
 export function PerformanceTabSection(props: LuthierPageSectionProps) {
   const {
@@ -60,7 +60,7 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
 
   return (
     <section class="stack">
-      <PerformanceGamescopePanel view={props.view} />
+      <GamescopePanel view={props.view} />
 
       <FeatureStateField
         label="Gamemode"
