@@ -1,112 +1,27 @@
-import { createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js'
-import { toast } from 'solid-sonner'
-
-import { invokeCommand, pickFile, pickFolder } from '../../api/tauri'
-import type { SelectOption } from '../../components/form/FormControls'
-import { detectLocale, Locale, translate } from '../../i18n'
-import { luthierFormat, luthierTranslate, type LuthierCopyKey } from './copy'
+import { invokeCommand } from '../../api/tauri'
+import { createLuthierBuildActions } from './controller-build-actions'
+import { createLuthierComputed } from './controller-computed'
+import { createLuthierConfigActions } from './controller-config-actions'
+import { createLuthierFileActions } from './controller-file-actions'
+import { createLuthierHeroActions } from './controller-hero-actions'
+import { createLuthierState } from './controller-state'
+import { createLuthierStatus } from './controller-status'
 import {
   AUDIO_DRIVERS,
-  basename,
-  DLL_MODES,
-  dirname,
-  formatRelativeDirDisplay,
-  hasWindowsLauncherExtension,
-  isFeatureEnabled,
-  isLikelyAbsolutePath,
   joinCommaList,
   ORCHESTRATOR_BASE_PATH,
-  prefixHashKey,
-  relativeFromRoot,
-  relativePathBetween,
   removeAt,
   replaceAt,
-  RUNTIME_CANDIDATES,
-  RUNTIME_PREFERENCES,
   splitCommaList,
-  stripLauncherExtension,
-  UPSCALE_METHODS,
-  WINDOW_TYPES,
   type AudioDriverOption,
   type GamescopeWindowType,
-  type UpscaleMethod
+  type UpscaleMethod,
 } from './controller-utils'
-import {
-  validateCommandToken,
-  validateDllName,
-  validateEnvVarName,
-  validateLinuxPath,
-  validatePositiveIntegerString,
-  validateRegistryPath,
-  validateRegistryValueType,
-  validateRelativeGamePath,
-  validateWindowsDriveSerial,
-  validateWindowsFriendlyName,
-  validateWindowsPath,
-  validateWrapperExecutable,
-} from './field-validation'
-import {
-  LuthierTab,
-  defaultGameConfig,
-  FeatureState,
-  GameConfig,
-  RuntimePreference,
-  RuntimePrimary
-} from '../../models/config'
-import { createLuthierState } from './controller-state'
-import { createLuthierComputed } from './controller-computed'
-import { createLuthierStatus } from './controller-status'
-import { createLuthierHeroActions } from './controller-hero-actions'
 import { createLuthierWinetricksActions } from './controller-winetricks-actions'
-import { createLuthierFileActions } from './controller-file-actions'
-import { createLuthierBuildActions } from './controller-build-actions'
-import { createLuthierConfigActions } from './controller-config-actions'
-
-type WinetricksAvailableOutput = {
-  source: string
-  components: string[]
-}
-
-type ExtractExecutableIconOutput = {
-  data_url: string
-  width: number
-  height: number
-}
-
-type SearchHeroImageOutput = {
-  source: string
-  image_url: string
-  game_id?: number | null
-  candidate_image_urls?: string[]
-}
-
-type PrepareHeroImageOutput = {
-  source_url: string
-  data_url: string
-  width: number
-  height: number
-  original_width: number
-  original_height: number
-}
-
-type StatusTone = 'info' | 'success' | 'error'
-
-const dedupeUrls = (values: string[]) => {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const value of values) {
-    const trimmed = value.trim()
-    if (!trimmed || seen.has(trimmed)) continue
-    seen.add(trimmed)
-    out.push(trimmed)
-  }
-  return out
-}
 
 export function useLuthierController() {
   const state = createLuthierState()
   const {
-    initialLocale,
     locale,
     setLocale,
     activeTab,
@@ -124,9 +39,7 @@ export function useLuthierController() {
     iconPreviewPath,
     setIconPreviewPath,
     heroImageProcessing,
-    setHeroImageProcessing,
     heroImageAutoSearching,
-    setHeroImageAutoSearching,
     statusMessage,
     setStatusMessage,
     resultJson,
@@ -134,38 +47,15 @@ export function useLuthierController() {
     winetricksAvailable,
     setWinetricksAvailable,
     winetricksLoading,
-    setWinetricksLoading,
     winetricksSource,
-    setWinetricksSource,
     winetricksSearch,
     setWinetricksSearch,
-    winetricksLoaded,
-    setWinetricksLoaded,
     winetricksCatalogError,
-    setWinetricksCatalogError,
-    hashingExePath,
-    setHashingExePath,
-    lastHashedExePath,
-    setLastHashedExePath,
     extractingExecutableIcon,
-    setExtractingExecutableIcon,
     testingConfiguration,
-    setTestingConfiguration,
     creatingExecutable,
-    setCreatingExecutable,
-    lastPreparedHeroImageUrl,
-    setLastPreparedHeroImageUrl,
-    heroImageSearchCacheGameName,
-    setHeroImageSearchCacheGameName,
-    heroImageSearchCacheGameId,
-    setHeroImageSearchCacheGameId,
-    heroImageSearchCandidates,
-    setHeroImageSearchCandidates,
-    heroImageSearchIndex,
-    setHeroImageSearchIndex,
     config,
-    setConfig,
-    patchConfig
+    patchConfig,
   } = state
 
   const computed = createLuthierComputed(state)
@@ -183,7 +73,6 @@ export function useLuthierController() {
     upscaleMethodOptions,
     windowTypeOptions,
     prefixPathPreview,
-    exeDirectory,
     exeInsideGameRoot,
     gameRootRelativeDisplay,
     runtimeFallbackOrder,
@@ -192,30 +81,32 @@ export function useLuthierController() {
     gamescopeEnabled,
     availableFallbackCandidates,
     normalizedWinetricksSearch,
-    normalizedHeroSearchGameName,
     winetricksCandidates,
-    winetricksExactMatch,
     payloadSummary,
     hashingExecutable,
     createExecutableValidationErrors,
     createExecutableBlockedReason,
     statusTone,
-    canSearchAnotherHeroImage
+    canSearchAnotherHeroImage,
   } = computed
 
-  const {
-    clearHeroImageSearchCache,
-    setHeroImageUrl,
-    prepareHeroImageFromUrl,
-    searchHeroImageAutomatically
-  } = createLuthierHeroActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
+  const { setHeroImageUrl, prepareHeroImageFromUrl, searchHeroImageAutomatically } = createLuthierHeroActions(
+    state,
+    computed,
+    invokeCommand,
+    ct,
+    ctf,
+    setStatusMessage
+  )
 
-  const {
-    hashExecutablePath,
-    runHash,
-    runTest,
-    runCreate
-  } = createLuthierBuildActions(state, computed, invokeCommand, ORCHESTRATOR_BASE_PATH, t, setStatusMessage)
+  const { hashExecutablePath, runHash, runTest, runCreate } = createLuthierBuildActions(
+    state,
+    computed,
+    invokeCommand,
+    ORCHESTRATOR_BASE_PATH,
+    t,
+    setStatusMessage
+  )
 
   const {
     pickExecutable,
@@ -224,15 +115,11 @@ export function useLuthierController() {
     pickIntegrityFileRelative,
     pickMountFolder,
     pickMountSourceRelative,
-    extractExecutableIcon
+    extractExecutableIcon,
   } = createLuthierFileActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
 
-  const {
-    loadWinetricksCatalog,
-    addWinetricksVerb,
-    removeWinetricksVerb,
-    addWinetricksFromSearch
-  } = createLuthierWinetricksActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
+  const { loadWinetricksCatalog, addWinetricksVerb, removeWinetricksVerb, addWinetricksFromSearch } =
+    createLuthierWinetricksActions(state, computed, invokeCommand, ct, ctf, setStatusMessage)
 
   const {
     setGamescopeState,
@@ -243,7 +130,7 @@ export function useLuthierController() {
     removeFallbackCandidate,
     moveFallbackCandidate,
     updateCustomVars,
-    setTab
+    setTab,
   } = createLuthierConfigActions(state, tabs)
 
   createLuthierStatus(state, computed, { hashExecutablePath, loadWinetricksCatalog })
@@ -342,7 +229,7 @@ export function useLuthierController() {
     updateCustomVars,
     addWinetricksVerb,
     removeWinetricksVerb,
-    addWinetricksFromSearch
+    addWinetricksFromSearch,
   }
 }
 

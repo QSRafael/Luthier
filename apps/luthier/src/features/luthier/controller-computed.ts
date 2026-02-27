@@ -6,7 +6,6 @@
  */
 
 import { createMemo } from 'solid-js'
-import type { SelectOption } from '../../components/form/FormControls'
 import { translate } from '../../i18n'
 import { luthierFormat, luthierTranslate, type LuthierCopyKey } from './copy'
 import {
@@ -35,6 +34,11 @@ import {
 } from '../../models/config'
 import type { createLuthierState } from './controller-state'
 import { getCreateExecutableValidationErrors } from './domain/create-executable-guards'
+
+type SelectOption<T extends string> = {
+    value: T
+    label: string
+}
 
 export type StatusTone = 'info' | 'success' | 'error'
 
