@@ -6,7 +6,14 @@ import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/a
 import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
 import { Select } from '../../../../components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../components/ui/table'
 import { AccordionSection } from '../../page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 import { validateLinuxPath, validateWindowsFriendlyName } from '../../field-validation'
@@ -26,7 +33,12 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
   } = props.view
   const shortcutNameValidation = createMemo(() =>
     wineDesktopFolderDraft().shortcut_name.trim()
-      ? validateWindowsFriendlyName(wineDesktopFolderDraft().shortcut_name, locale(), 'o nome do atalho', 'the shortcut name')
+      ? validateWindowsFriendlyName(
+          wineDesktopFolderDraft().shortcut_name,
+          locale(),
+          'o nome do atalho',
+          'the shortcut name'
+        )
       : {}
   )
   const desktopFolderLinuxPathValidation = createMemo(() =>
@@ -67,7 +79,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
           onChange={(value) =>
             patchConfig((prev) => ({
               ...prev,
-              winecfg: { ...prev.winecfg, desktop_integration: value }
+              winecfg: { ...prev.winecfg, desktop_integration: value },
             }))
           }
         />
@@ -79,7 +91,7 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
           onChange={(value) =>
             patchConfig((prev) => ({
               ...prev,
-              winecfg: { ...prev.winecfg, mime_associations: value }
+              winecfg: { ...prev.winecfg, mime_associations: value },
             }))
           }
         />
@@ -120,16 +132,22 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                       <TableHead>{ct('luthier_type')}</TableHead>
                       <TableHead>{ct('luthier_shortcut')}</TableHead>
                       <TableHead>{ct('luthier_linux_path')}</TableHead>
-                      <TableHead class="w-[72px] text-right">{ct('luthier_label_actions')}</TableHead>
+                      <TableHead class="w-[72px] text-right">
+                        {ct('luthier_label_actions')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <For each={config().winecfg.desktop_folders}>
                       {(item, index) => (
                         <TableRow>
-                          <TableCell class="max-w-[120px] truncate font-medium">{item.folder_key}</TableCell>
+                          <TableCell class="max-w-[120px] truncate font-medium">
+                            {item.folder_key}
+                          </TableCell>
                           <TableCell class="max-w-[180px] truncate">{item.shortcut_name}</TableCell>
-                          <TableCell class="max-w-[320px] truncate text-muted-foreground">{item.linux_path}</TableCell>
+                          <TableCell class="max-w-[320px] truncate text-muted-foreground">
+                            {item.linux_path}
+                          </TableCell>
                           <TableCell class="text-right">
                             <Button
                               type="button"
@@ -140,8 +158,11 @@ export function WinecfgDesktopAccordionSection(props: WinecfgAccordionSectionPro
                                   ...prev,
                                   winecfg: {
                                     ...prev.winecfg,
-                                    desktop_folders: removeAt(prev.winecfg.desktop_folders, index())
-                                  }
+                                    desktop_folders: removeAt(
+                                      prev.winecfg.desktop_folders,
+                                      index()
+                                    ),
+                                  },
                                 }))
                               }
                             >

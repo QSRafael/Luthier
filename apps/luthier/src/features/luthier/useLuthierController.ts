@@ -91,15 +91,16 @@ export function useLuthierController() {
     canSearchAnotherHeroImage,
   } = computed
 
-  const { setHeroImageUrl, prepareHeroImageFromUrl, searchHeroImageAutomatically } = createLuthierHeroActions(
-    state,
-    computed,
-    luthierBackendApi,
-    sonnerNotifier,
-    ct,
-    ctf,
-    setStatusMessage
-  )
+  const { setHeroImageUrl, prepareHeroImageFromUrl, searchHeroImageAutomatically } =
+    createLuthierHeroActions(
+      state,
+      computed,
+      luthierBackendApi,
+      sonnerNotifier,
+      ct,
+      ctf,
+      setStatusMessage
+    )
 
   const { hashExecutablePath, runHash, runTest, runCreate } = createLuthierBuildActions(
     state,
@@ -120,8 +121,20 @@ export function useLuthierController() {
     extractExecutableIcon,
   } = createLuthierFileActions(state, computed, luthierBackendApi, ct, ctf, setStatusMessage)
 
-  const { loadWinetricksCatalog, addWinetricksVerb, removeWinetricksVerb, addWinetricksFromSearch } =
-    createLuthierWinetricksActions(state, computed, luthierBackendApi, sonnerNotifier, ct, ctf, setStatusMessage)
+  const {
+    loadWinetricksCatalog,
+    addWinetricksVerb,
+    removeWinetricksVerb,
+    addWinetricksFromSearch,
+  } = createLuthierWinetricksActions(
+    state,
+    computed,
+    luthierBackendApi,
+    sonnerNotifier,
+    ct,
+    ctf,
+    setStatusMessage
+  )
 
   const {
     setGamescopeState,

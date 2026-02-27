@@ -73,7 +73,11 @@ export function SwitchChoiceCard(props: SwitchChoiceCardProps) {
           <p class="text-xs text-muted-foreground">{props.description}</p>
         </Show>
       </div>
-      <Switch checked={props.checked} onChange={props.onChange} onClick={(e) => e.stopPropagation()}>
+      <Switch
+        checked={props.checked}
+        onChange={props.onChange}
+        onClick={(e) => e.stopPropagation()}
+      >
         <SwitchInput />
         <SwitchControl>
           <SwitchThumb />

@@ -39,7 +39,9 @@ pub(crate) fn validate_game_config(config: &GameConfig) -> Result<(), LuthierErr
     }
 }
 
-pub(crate) fn collect_game_config_validation_issues(config: &GameConfig) -> Vec<ConfigValidationIssue> {
+pub(crate) fn collect_game_config_validation_issues(
+    config: &GameConfig,
+) -> Vec<ConfigValidationIssue> {
     let mut issues = Vec::new();
 
     if let Err(err) = validate_game_config_relative_paths(config) {
@@ -566,7 +568,10 @@ fn validate_drive_serial(raw: &str) -> Option<String> {
     if trimmed.len() > 32 {
         return Some("drive serial is too long".to_string());
     }
-    if !trimmed.chars().all(|ch| ch.is_ascii_hexdigit() || ch == '-') {
+    if !trimmed
+        .chars()
+        .all(|ch| ch.is_ascii_hexdigit() || ch == '-')
+    {
         return Some("drive serial must contain only hexadecimal characters and '-'".to_string());
     }
     None

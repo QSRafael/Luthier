@@ -9,7 +9,9 @@ pub(crate) fn to_relative_inside_game_root(
     let relative = if candidate.is_absolute() {
         candidate
             .strip_prefix(game_root)
-            .map_err(|_| LuthierError::PathOutsideGameRoot(candidate.to_string_lossy().into_owned()))?
+            .map_err(|_| {
+                LuthierError::PathOutsideGameRoot(candidate.to_string_lossy().into_owned())
+            })?
             .to_path_buf()
     } else {
         candidate.to_path_buf()

@@ -8,7 +8,7 @@ import {
   KeyValueItemsTable,
   ListEmptyState,
   StringListItemsCards,
-  StringListItemsTable
+  StringListItemsTable,
 } from './form-controls-list-primitives'
 import { FormListDialog } from './form-list-dialog'
 
@@ -69,7 +69,11 @@ export function StringListField(props: StringListFieldProps) {
               onRemove={removeItem}
             />
           ) : (
-            <StringListItemsCards items={props.items} removeLabel={i18n.remove} onRemove={removeItem} />
+            <StringListItemsCards
+              items={props.items}
+              removeLabel={i18n.remove}
+              onRemove={removeItem}
+            />
           )
         ) : props.emptyMessage ? (
           <ListEmptyState message={props.emptyMessage} />
@@ -94,7 +98,11 @@ export function StringListField(props: StringListFieldProps) {
                 <Input
                   value={draft()}
                   placeholder={props.placeholder}
-                  class={draftValidation()?.error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  class={
+                    draftValidation()?.error
+                      ? 'border-destructive focus-visible:ring-destructive'
+                      : ''
+                  }
                   onInput={(e) => setDraft(e.currentTarget.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -110,7 +118,11 @@ export function StringListField(props: StringListFieldProps) {
                   <Input
                     value={draft()}
                     placeholder={props.placeholder}
-                    class={draftValidation()?.error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    class={
+                      draftValidation()?.error
+                        ? 'border-destructive focus-visible:ring-destructive'
+                        : ''
+                    }
                     onInput={(e) => setDraft(e.currentTarget.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -132,9 +144,7 @@ export function StringListField(props: StringListFieldProps) {
                     {props.pickerLabel ?? i18n.pickFile}
                   </Button>
                 </div>
-                <p class="text-xs text-muted-foreground">
-                  {i18n.pickFileHint}
-                </p>
+                <p class="text-xs text-muted-foreground">{i18n.pickFileHint}</p>
               </div>
             </Show>
 
@@ -179,13 +189,16 @@ type KeyValueListFieldProps = {
   validateDraft?: (
     draft: { key: string; value: string },
     items: KeyValueItem[]
-  ) => {
-    keyError?: string
-    keyHint?: string
-    valueError?: string
-    valueHint?: string
-    formError?: string
-  } | null | undefined
+  ) =>
+    | {
+        keyError?: string
+        keyHint?: string
+        valueError?: string
+        valueHint?: string
+        formError?: string
+      }
+    | null
+    | undefined
 }
 
 export function KeyValueListField(props: KeyValueListFieldProps) {
@@ -199,7 +212,7 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
       props.validateDraft?.(
         {
           key: draftKey().trim(),
-          value: draftValue()
+          value: draftValue(),
         },
         props.items
       ) ?? null
@@ -208,7 +221,12 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
   const addItem = () => {
     const key = draftKey().trim()
     if (!key) return false
-    if (draftValidation()?.keyError || draftValidation()?.valueError || draftValidation()?.formError) return false
+    if (
+      draftValidation()?.keyError ||
+      draftValidation()?.valueError ||
+      draftValidation()?.formError
+    )
+      return false
 
     props.onChange([...props.items, { key, value: draftValue() }])
     setDraftKey('')
@@ -228,9 +246,7 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
       footer={
         <Show
           when={props.items.length > 0}
-          fallback={
-            <ListEmptyState message={props.emptyMessage ?? i18n.noItemAdded} />
-          }
+          fallback={<ListEmptyState message={props.emptyMessage ?? i18n.noItemAdded} />}
         >
           <Show
             when={props.tableHeaders}
@@ -261,7 +277,12 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
         description={i18n.addKeyValueDialogDescription}
         cancelLabel={i18n.cancel}
         confirmLabel={i18n.confirm}
-        confirmDisabled={!canAdd() || !!draftValidation()?.keyError || !!draftValidation()?.valueError || !!draftValidation()?.formError}
+        confirmDisabled={
+          !canAdd() ||
+          !!draftValidation()?.keyError ||
+          !!draftValidation()?.valueError ||
+          !!draftValidation()?.formError
+        }
         onConfirm={addItem}
       >
         {() => (
@@ -269,23 +290,43 @@ export function KeyValueListField(props: KeyValueListFieldProps) {
             <Input
               value={draftKey()}
               placeholder={props.keyPlaceholder ?? i18n.keyPlaceholder}
-              class={draftValidation()?.keyError ? 'border-destructive focus-visible:ring-destructive' : ''}
+              class={
+                draftValidation()?.keyError
+                  ? 'border-destructive focus-visible:ring-destructive'
+                  : ''
+              }
               onInput={(e) => setDraftKey(e.currentTarget.value)}
             />
             <Input
               value={draftValue()}
               placeholder={props.valuePlaceholder ?? i18n.valuePlaceholder}
-              class={draftValidation()?.valueError ? 'border-destructive focus-visible:ring-destructive' : ''}
+              class={
+                draftValidation()?.valueError
+                  ? 'border-destructive focus-visible:ring-destructive'
+                  : ''
+              }
               onInput={(e) => setDraftValue(e.currentTarget.value)}
             />
 
             <Show when={draftValidation()?.keyError || draftValidation()?.keyHint}>
-              <p class={draftValidation()?.keyError ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+              <p
+                class={
+                  draftValidation()?.keyError
+                    ? 'text-xs text-destructive'
+                    : 'text-xs text-muted-foreground'
+                }
+              >
                 {draftValidation()?.keyError ?? draftValidation()?.keyHint}
               </p>
             </Show>
             <Show when={draftValidation()?.valueError || draftValidation()?.valueHint}>
-              <p class={draftValidation()?.valueError ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+              <p
+                class={
+                  draftValidation()?.valueError
+                    ? 'text-xs text-destructive'
+                    : 'text-xs text-muted-foreground'
+                }
+              >
                 {draftValidation()?.valueError ?? draftValidation()?.valueHint}
               </p>
             </Show>

@@ -6,7 +6,7 @@ import {
   createSignal,
   onCleanup,
   onMount,
-  useContext
+  useContext,
 } from 'solid-js'
 
 export type Theme = 'dark' | 'light' | 'system'
@@ -76,7 +76,7 @@ export function ThemeProvider(
       value={{
         theme,
         resolvedTheme,
-        setTheme
+        setTheme,
       }}
     >
       {props.children}

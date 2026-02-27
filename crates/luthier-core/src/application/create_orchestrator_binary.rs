@@ -12,15 +12,16 @@ pub(crate) fn create_orchestrator_binary(
     let base_bytes = file_io::read_bytes(&request.base_binary_path)?;
     let config_bytes = serde_json::to_vec_pretty(&request.config)?;
 
-    let inject_result = injector_adapter::inject_orchestrator_payload(OrchestratorInjectionRequest {
-        base_bytes: &base_bytes,
-        config_bytes: &config_bytes,
-        output_path: &request.output_path,
-        options: OrchestratorInjectionOptions {
-            backup_existing: request.backup_existing,
-            make_executable: request.make_executable,
-        },
-    })?;
+    let inject_result =
+        injector_adapter::inject_orchestrator_payload(OrchestratorInjectionRequest {
+            base_bytes: &base_bytes,
+            config_bytes: &config_bytes,
+            output_path: &request.output_path,
+            options: OrchestratorInjectionOptions {
+                backup_existing: request.backup_existing,
+                make_executable: request.make_executable,
+            },
+        })?;
 
     Ok(CreateOrchestratorResult {
         output_path: inject_result.output_path.to_string_lossy().into_owned(),

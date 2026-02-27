@@ -3,8 +3,8 @@ use fontdue::Font;
 use minifb::Window;
 
 use crate::splash::state::{
-    ChildRunOutcome, HeroBackground, MouseSnapshot, PrelaunchState, ProgressViewState, Rect, SplashLaunchMode,
-    TextMetrics, ToggleRow,
+    ChildRunOutcome, HeroBackground, MouseSnapshot, PrelaunchState, ProgressViewState, Rect,
+    SplashLaunchMode, TextMetrics, ToggleRow,
 };
 use crate::splash::theme::{
     system_font, BAD, BG, BORDER, BTN, BTN_HOVER, MUTED, SEPARATOR, TEXT, WIN_H, WIN_W,
@@ -103,13 +103,7 @@ pub fn draw_prelaunch(
 
     if gear_visible {
         draw_button_secondary_clean(buffer, gear_button, gear_button.contains(mouse.x, mouse.y));
-        draw_button_label_centered(
-            buffer,
-            gear_button,
-            t(SplashTextKey::ScreenConfig),
-            TEXT,
-            1,
-        );
+        draw_button_label_centered(buffer, gear_button, t(SplashTextKey::ScreenConfig), TEXT, 1);
     }
 
     draw_button_secondary_clean(buffer, exit_button, exit_button.contains(mouse.x, mouse.y));
@@ -665,7 +659,13 @@ pub fn config_toggle_button_rects(count: usize) -> Vec<Rect> {
         .collect()
 }
 
-pub fn draw_button_label_centered(buffer: &mut [u32], rect: Rect, text: &str, color: u32, scale: i32) {
+pub fn draw_button_label_centered(
+    buffer: &mut [u32],
+    rect: Rect,
+    text: &str,
+    color: u32,
+    scale: i32,
+) {
     let metrics = measure_text_metrics(text, scale);
     let x = rect.x + ((rect.w - metrics.width) / 2).max(4);
     // `draw_text` uses a y origin above the actual glyph top (fontdue layout offset),
@@ -741,7 +741,13 @@ pub fn draw_text_soft_scrim(buffer: &mut [u32], x: i32, y: i32, metrics: &TextMe
     );
 }
 
-pub fn draw_soft_scrim_rect(buffer: &mut [u32], rect: Rect, color: u32, core_alpha: u8, fade_px: i32) {
+pub fn draw_soft_scrim_rect(
+    buffer: &mut [u32],
+    rect: Rect,
+    color: u32,
+    core_alpha: u8,
+    fade_px: i32,
+) {
     if rect.w <= 0 || rect.h <= 0 || core_alpha == 0 {
         return;
     }
@@ -1025,7 +1031,14 @@ pub fn draw_text_bitmap_fallback(
     cy + line_h
 }
 
-pub fn draw_glyph_bitmap(buffer: &mut [u32], x: i32, y: i32, glyph: [u8; 8], color: u32, scale: i32) {
+pub fn draw_glyph_bitmap(
+    buffer: &mut [u32],
+    x: i32,
+    y: i32,
+    glyph: [u8; 8],
+    color: u32,
+    scale: i32,
+) {
     for (row_idx, row) in glyph.iter().enumerate() {
         for col in 0..8 {
             let on = (row >> col) & 1 == 1;

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use luthier_core::{CreateOrchestratorRequest, create_orchestrator_binary};
+use luthier_core::{create_orchestrator_binary, CreateOrchestratorRequest};
 use luthier_orchestrator_core::GameConfig;
 
 use crate::error::{BackendResult, BackendResultExt, CommandStringResult};
@@ -130,15 +130,12 @@ impl CreateExecutableUseCase {
             .into_command_string_result()
     }
 
-    fn log_base_orchestrator_resolution_attempts(
-        &self,
-        requested: &str,
-        extra_hints: &[PathBuf],
-    ) {
-        let attempted = fs_repo::collect_base_orchestrator_binary_candidates(requested, extra_hints)
-            .into_iter()
-            .map(|path| path.to_string_lossy().into_owned())
-            .collect::<Vec<_>>();
+    fn log_base_orchestrator_resolution_attempts(&self, requested: &str, extra_hints: &[PathBuf]) {
+        let attempted =
+            fs_repo::collect_base_orchestrator_binary_candidates(requested, extra_hints)
+                .into_iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect::<Vec<_>>();
 
         log_backend_event(
             "INFO",

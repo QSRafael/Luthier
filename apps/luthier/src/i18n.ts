@@ -51,7 +51,7 @@ const messages: Record<Locale, Record<string, string>> = {
     msgCreateStart: 'Gerando Luthier Orchestrator...',
     msgCreateOk: 'Executável gerado com sucesso.',
     msgCreateFail: 'Falha ao gerar executável:',
-    msgListsApplied: 'Listas aplicadas à configuração'
+    msgListsApplied: 'Listas aplicadas à configuração',
   },
   'en-US': {
     appName: 'Luthier',
@@ -103,8 +103,8 @@ const messages: Record<Locale, Record<string, string>> = {
     msgCreateStart: 'Generating Luthier Orchestrator...',
     msgCreateOk: 'Executable created successfully.',
     msgCreateFail: 'Failed to create executable:',
-    msgListsApplied: 'Lists applied to configuration'
-  }
+    msgListsApplied: 'Lists applied to configuration',
+  },
 }
 
 export function detectLocale(): Locale {

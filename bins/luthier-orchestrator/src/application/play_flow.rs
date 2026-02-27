@@ -8,7 +8,6 @@ use serde_json::Value;
 
 use crate::{
     application::runtime_overrides::{apply_runtime_overrides, load_runtime_overrides},
-    instance_lock::acquire_instance_lock,
     infrastructure::{
         mounts_adapter::{apply_folder_mounts, MountStatus},
         paths::{resolve_game_root, resolve_relative_path},
@@ -18,13 +17,12 @@ use crate::{
             ExternalCommand, StepStatus,
         },
     },
+    instance_lock::acquire_instance_lock,
     logging::log_event,
     services::{
-        integrity_service::validate_integrity,
-        launch_plan_builder::build_launch_command,
+        integrity_service::validate_integrity, launch_plan_builder::build_launch_command,
         prefix_setup_service::build_prefix_setup_execution_context,
-        registry_apply_service::apply_registry_keys_if_present,
-        runtime_flags::dry_run_enabled,
+        registry_apply_service::apply_registry_keys_if_present, runtime_flags::dry_run_enabled,
         script_runner::execute_script_if_present,
         winecfg_apply_service::apply_winecfg_overrides_if_present,
     },
@@ -517,7 +515,10 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
         }
     });
 
-    if matches!(game_result.status, StepStatus::Failed | StepStatus::TimedOut) {
+    if matches!(
+        game_result.status,
+        StepStatus::Failed | StepStatus::TimedOut
+    ) {
         return Ok(PlayFlowExecution::failed(
             output,
             anyhow!("game launch command failed"),

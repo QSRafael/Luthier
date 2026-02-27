@@ -2,9 +2,7 @@ use std::io::Cursor;
 
 use image::{imageops::FilterType, DynamicImage, GenericImageView, ImageFormat, RgbaImage};
 
-use crate::application::ports::{
-    ImageCodecPort, RasterImage, RasterImageFormat, ResizeFilter,
-};
+use crate::application::ports::{ImageCodecPort, RasterImage, RasterImageFormat, ResizeFilter};
 use crate::error::{BackendError, BackendResult};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -45,7 +43,9 @@ impl ImageCodecPort for ImageRsCodec {
         height: u32,
     ) -> BackendResult<RasterImage> {
         let dynamic = raster_to_dynamic_image(image)?;
-        Ok(dynamic_image_to_raster(dynamic.crop_imm(x, y, width, height)))
+        Ok(dynamic_image_to_raster(
+            dynamic.crop_imm(x, y, width, height),
+        ))
     }
 
     fn resize_exact(
@@ -70,7 +70,9 @@ impl ImageCodecPort for ImageRsCodec {
         max_height: u32,
     ) -> BackendResult<RasterImage> {
         let dynamic = raster_to_dynamic_image(image)?;
-        Ok(dynamic_image_to_raster(dynamic.thumbnail(max_width, max_height)))
+        Ok(dynamic_image_to_raster(
+            dynamic.thumbnail(max_width, max_height),
+        ))
     }
 }
 
@@ -166,21 +168,20 @@ fn dynamic_image_to_raster(image: DynamicImage) -> RasterImage {
 fn raster_to_dynamic_image(image: &RasterImage) -> BackendResult<DynamicImage> {
     let expected_len = expected_rgba_len(image.width, image.height)?;
     if image.rgba8.len() != expected_len {
-        return Err(
-            BackendError::invalid_input(format!(
-                "invalid RGBA buffer length: expected {expected_len} bytes for {}x{}, got {}",
-                image.width,
-                image.height,
-                image.rgba8.len()
-            ))
-            .with_code("invalid_raster_rgba_length"),
-        );
+        return Err(BackendError::invalid_input(format!(
+            "invalid RGBA buffer length: expected {expected_len} bytes for {}x{}, got {}",
+            image.width,
+            image.height,
+            image.rgba8.len()
+        ))
+        .with_code("invalid_raster_rgba_length"));
     }
 
-    let rgba = RgbaImage::from_vec(image.width, image.height, image.rgba8.clone()).ok_or_else(|| {
-        BackendError::invalid_input("failed to build RGBA image from buffer")
-            .with_code("invalid_raster_rgba_buffer")
-    })?;
+    let rgba =
+        RgbaImage::from_vec(image.width, image.height, image.rgba8.clone()).ok_or_else(|| {
+            BackendError::invalid_input("failed to build RGBA image from buffer")
+                .with_code("invalid_raster_rgba_buffer")
+        })?;
 
     Ok(DynamicImage::ImageRgba8(rgba))
 }
@@ -190,10 +191,8 @@ fn expected_rgba_len(width: u32, height: u32) -> BackendResult<usize> {
         .ok()
         .and_then(|w| usize::try_from(height).ok().and_then(|h| w.checked_mul(h)))
         .ok_or_else(|| {
-            BackendError::invalid_input(format!(
-                "image dimensions are too large: {width}x{height}"
-            ))
-            .with_code("image_dimensions_too_large")
+            BackendError::invalid_input(format!("image dimensions are too large: {width}x{height}"))
+                .with_code("image_dimensions_too_large")
         })?;
     pixels.checked_mul(4).ok_or_else(|| {
         BackendError::invalid_input(format!(
@@ -220,4 +219,3 @@ fn to_filter_type(filter: ResizeFilter) -> FilterType {
         ResizeFilter::Nearest => FilterType::Nearest,
     }
 }
-

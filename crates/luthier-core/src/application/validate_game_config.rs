@@ -1,13 +1,15 @@
 use luthier_orchestrator_core::GameConfig;
 
-use crate::{ConfigValidationIssue, LuthierError};
 use crate::domain::validation_rules as domain_validation_rules;
+use crate::{ConfigValidationIssue, LuthierError};
 
 pub(crate) fn validate_game_config_relative_paths(config: &GameConfig) -> Result<(), LuthierError> {
     domain_validation_rules::validate_game_config_relative_paths(config)
 }
 
-pub(crate) fn collect_game_config_validation_issues(config: &GameConfig) -> Vec<ConfigValidationIssue> {
+pub(crate) fn collect_game_config_validation_issues(
+    config: &GameConfig,
+) -> Vec<ConfigValidationIssue> {
     domain_validation_rules::collect_game_config_validation_issues(config)
 }
 

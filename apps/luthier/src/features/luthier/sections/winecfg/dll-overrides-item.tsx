@@ -5,7 +5,14 @@ import { FieldShell } from '../../../../components/form/FormControls'
 import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
 import { Select } from '../../../../components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../components/ui/table'
 import type { WinecfgSectionViewProps } from './shared'
 import { validateDllName } from '../../field-validation'
 
@@ -29,7 +36,9 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
   const dllDuplicateValidation = createMemo(() => {
     const dll = dllDraft().dll.trim().toLowerCase()
     if (!dll) return ''
-    const duplicate = config().winecfg.dll_overrides.some((item) => item.dll.trim().toLowerCase() === dll)
+    const duplicate = config().winecfg.dll_overrides.some(
+      (item) => item.dll.trim().toLowerCase() === dll
+    )
     if (!duplicate) return ''
     return ct('luthier_validation_duplicate_dll_override')
   })
@@ -72,9 +81,9 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                                 ...prev.winecfg,
                                 dll_overrides: replaceAt(prev.winecfg.dll_overrides, index(), {
                                   ...prev.winecfg.dll_overrides[index()],
-                                  mode: e.currentTarget.value
-                                })
-                              }
+                                  mode: e.currentTarget.value,
+                                }),
+                              },
                             }))
                           }
                         >
@@ -93,8 +102,8 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
                               ...prev,
                               winecfg: {
                                 ...prev.winecfg,
-                                dll_overrides: removeAt(prev.winecfg.dll_overrides, index())
-                              }
+                                dll_overrides: removeAt(prev.winecfg.dll_overrides, index()),
+                              },
                             }))
                           }
                           title={ct('luthier_label_remove')}
@@ -111,7 +120,13 @@ export function WinecfgDllOverridesItem(props: WinecfgSectionViewProps) {
         </Show>
       }
     >
-      <Button type="button" variant="outline" size="sm" class="inline-flex items-center gap-1.5" onClick={() => setDllDialogOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        class="inline-flex items-center gap-1.5"
+        onClick={() => setDllDialogOpen(true)}
+      >
         <IconPlus class="size-4" />
         {ct('luthier_add_dll_override')}
       </Button>

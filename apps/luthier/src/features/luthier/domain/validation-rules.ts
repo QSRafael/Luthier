@@ -33,7 +33,9 @@ function hasControlChars(raw: string) {
   return /[\u0000-\u001f]/.test(raw)
 }
 
-export function detectPathStyle(raw: string): 'empty' | 'linux' | 'windows' | 'relative' | 'unknown' {
+export function detectPathStyle(
+  raw: string
+): 'empty' | 'linux' | 'windows' | 'relative' | 'unknown' {
   const value = raw.trim()
   if (!value) return 'empty'
   if (value.startsWith('/')) return 'linux'
@@ -84,8 +86,8 @@ export function validatePositiveIntegerString(
   if (!/^\d+$/.test(value)) {
     return {
       error: ctf(locale, 'luthier_validation_positive_integer_digits', {
-        label: isPt(locale) ? options.labelPt : options.labelEn
-      })
+        label: isPt(locale) ? options.labelPt : options.labelEn,
+      }),
     }
   }
   const parsed = Number.parseInt(value, 10)
@@ -94,8 +96,8 @@ export function validatePositiveIntegerString(
       error: ctf(locale, 'luthier_validation_positive_integer_range', {
         label: isPt(locale) ? options.labelPt : options.labelEn,
         min: options.min,
-        max: options.max
-      })
+        max: options.max,
+      }),
     }
   }
   return {}
@@ -118,13 +120,13 @@ export function validateRelativeGamePath(
         options.kind === 'file'
           ? 'luthier_validation_relative_path_required_file'
           : 'luthier_validation_relative_path_required_folder'
-      )
+      ),
     }
   }
 
   if (looksLikeLinuxPath(value) || looksLikeWindowsPath(value)) {
     return {
-      error: ct(locale, 'luthier_validation_relative_path_no_absolute')
+      error: ct(locale, 'luthier_validation_relative_path_no_absolute'),
     }
   }
 
@@ -132,24 +134,24 @@ export function validateRelativeGamePath(
   if (value.includes('\\')) {
     return {
       error: ct(locale, 'luthier_validation_relative_path_use_forward_slashes'),
-      hint: normalized
+      hint: normalized,
     }
   }
   if (options.requireDotPrefix && !normalized.startsWith('./')) {
     return {
-      error: ct(locale, 'luthier_validation_relative_path_dot_prefix')
+      error: ct(locale, 'luthier_validation_relative_path_dot_prefix'),
     }
   }
 
   if (normalized.includes('//')) {
     return {
-      error: ct(locale, 'luthier_validation_relative_path_double_slash')
+      error: ct(locale, 'luthier_validation_relative_path_double_slash'),
     }
   }
 
   if (hasControlChars(normalized)) {
     return {
-      error: ct(locale, 'luthier_validation_path_invalid_chars')
+      error: ct(locale, 'luthier_validation_path_invalid_chars'),
     }
   }
 
@@ -157,33 +159,33 @@ export function validateRelativeGamePath(
   if (stripped === '.') {
     if (options.allowDot) return {}
     return {
-      error: ct(locale, 'luthier_validation_relative_path_specific_target')
+      error: ct(locale, 'luthier_validation_relative_path_specific_target'),
     }
   }
 
   const segments = stripped.split('/').filter(Boolean)
   if (segments.length === 0 && !options.allowDot) {
     return {
-      error: ct(locale, 'luthier_validation_relative_path_empty')
+      error: ct(locale, 'luthier_validation_relative_path_empty'),
     }
   }
 
   for (const segment of segments) {
     if (segment === '.' || segment === '..') {
       return {
-        error: ct(locale, 'luthier_validation_relative_path_no_dotdot')
+        error: ct(locale, 'luthier_validation_relative_path_no_dotdot'),
       }
     }
     if (/[<>:"|?*\u0000]/.test(segment)) {
       return {
-        error: ct(locale, 'luthier_validation_path_invalid_chars')
+        error: ct(locale, 'luthier_validation_path_invalid_chars'),
       }
     }
   }
 
   if (options.kind === 'file' && stripped.endsWith('/')) {
     return {
-      error: ct(locale, 'luthier_validation_relative_path_file_expected')
+      error: ct(locale, 'luthier_validation_relative_path_file_expected'),
     }
   }
 
@@ -204,27 +206,27 @@ export function validateWindowsPath(raw: string, locale: Locale): ValidationResu
       error: ct(locale, 'luthier_validation_windows_path_expected'),
       hint: suggestion
         ? ctf(locale, 'luthier_validation_suggestion', { value: suggestion })
-        : undefined
+        : undefined,
     }
   }
 
   const normalized = value.replace(/\//g, '\\')
   if (!/^[A-Za-z]:\\/.test(normalized) && !/^\\\\[^\\]+\\[^\\]+/.test(normalized)) {
     return {
-      error: ct(locale, 'luthier_validation_windows_path_invalid_format')
+      error: ct(locale, 'luthier_validation_windows_path_invalid_format'),
     }
   }
 
   const withoutRoot = normalized.replace(/^[A-Za-z]:\\/, '').replace(/^\\\\[^\\]+\\[^\\]+\\?/, '')
   if (/[<>:"|?*]/.test(withoutRoot)) {
     return {
-      error: ct(locale, 'luthier_validation_windows_path_invalid_chars')
+      error: ct(locale, 'luthier_validation_windows_path_invalid_chars'),
     }
   }
 
   if (normalized !== value) {
     return {
-      hint: ctf(locale, 'luthier_validation_windows_path_backslash_hint', { path: normalized })
+      hint: ctf(locale, 'luthier_validation_windows_path_backslash_hint', { path: normalized }),
     }
   }
 
@@ -242,12 +244,12 @@ export function validateLinuxPath(raw: string, locale: Locale, required = true):
   if (looksLikeWindowsPath(value)) {
     return {
       error: ct(locale, 'luthier_validation_linux_path_expected'),
-      hint: ct(locale, 'luthier_validation_linux_path_host_hint')
+      hint: ct(locale, 'luthier_validation_linux_path_host_hint'),
     }
   }
   if (!value.startsWith('/')) {
     return {
-      error: ct(locale, 'luthier_validation_linux_path_absolute')
+      error: ct(locale, 'luthier_validation_linux_path_absolute'),
     }
   }
   return {}
@@ -260,7 +262,7 @@ export function validateRegistryPath(raw: string, locale: Locale): ValidationRes
   }
   if (looksLikeLinuxPath(value) || looksLikeWindowsPath(value)) {
     return {
-      error: ct(locale, 'luthier_validation_registry_path_expected')
+      error: ct(locale, 'luthier_validation_registry_path_expected'),
     }
   }
   if (hasControlChars(value)) {
@@ -271,7 +273,7 @@ export function validateRegistryPath(raw: string, locale: Locale): ValidationRes
     /^(HKCU|HKLM|HKCR|HKU|HKCC|HKEY_CURRENT_USER|HKEY_LOCAL_MACHINE|HKEY_CLASSES_ROOT|HKEY_USERS|HKEY_CURRENT_CONFIG)(\\|$)/i
   if (!hiveRegex.test(normalized)) {
     return {
-      error: ct(locale, 'luthier_validation_registry_hive_invalid')
+      error: ct(locale, 'luthier_validation_registry_hive_invalid'),
     }
   }
   return normalized !== value
@@ -290,16 +292,16 @@ export function validateRegistryValueType(raw: string, locale: Locale): Validati
     'REG_DWORD',
     'REG_QWORD',
     'REG_BINARY',
-    'REG_NONE'
+    'REG_NONE',
   ])
   if (!supported.has(normalized)) {
     return {
-      error: ct(locale, 'luthier_validation_registry_type_invalid')
+      error: ct(locale, 'luthier_validation_registry_type_invalid'),
     }
   }
   return normalized !== value
     ? {
-        hint: ctf(locale, 'luthier_validation_suggestion', { value: normalized })
+        hint: ctf(locale, 'luthier_validation_suggestion', { value: normalized }),
       }
     : {}
 }
@@ -311,7 +313,7 @@ export function validateEnvVarName(raw: string, locale: Locale): ValidationResul
   }
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
     return {
-      error: ct(locale, 'luthier_validation_env_var_name_invalid')
+      error: ct(locale, 'luthier_validation_env_var_name_invalid'),
     }
   }
   return {}
@@ -327,7 +329,7 @@ export function validateDllName(raw: string, locale: Locale): ValidationResult {
   }
   if (!/^[A-Za-z0-9_.-]+$/.test(value)) {
     return {
-      error: ct(locale, 'luthier_validation_dll_name_invalid')
+      error: ct(locale, 'luthier_validation_dll_name_invalid'),
     }
   }
   return {}
@@ -340,12 +342,12 @@ export function validateWrapperExecutable(raw: string, locale: Locale): Validati
   }
   if (looksLikeWindowsPath(value)) {
     return {
-      error: ct(locale, 'luthier_validation_wrapper_executable_windows_path')
+      error: ct(locale, 'luthier_validation_wrapper_executable_windows_path'),
     }
   }
   if (/\s/.test(value) && !value.startsWith('/')) {
     return {
-      error: ct(locale, 'luthier_validation_wrapper_executable_args_separate')
+      error: ct(locale, 'luthier_validation_wrapper_executable_args_separate'),
     }
   }
   return {}
@@ -356,22 +358,39 @@ export function validateCommandToken(raw: string, locale: Locale): ValidationRes
   if (!value) return {}
   if (looksLikeWindowsPath(value)) {
     return {
-      error: ct(locale, 'luthier_validation_command_linux_expected')
+      error: ct(locale, 'luthier_validation_command_linux_expected'),
     }
   }
   return {}
 }
 
-export function validateWindowsFriendlyName(raw: string, locale: Locale, labelPt: string, labelEn: string): ValidationResult {
+export function validateWindowsFriendlyName(
+  raw: string,
+  locale: Locale,
+  labelPt: string,
+  labelEn: string
+): ValidationResult {
   const value = raw.trim()
   if (!value) {
-    return { error: ctf(locale, 'luthier_validation_windows_name_required', { label: isPt(locale) ? labelPt : labelEn }) }
+    return {
+      error: ctf(locale, 'luthier_validation_windows_name_required', {
+        label: isPt(locale) ? labelPt : labelEn,
+      }),
+    }
   }
   if (/[<>:"/\\|?*\u0000-\u001f]/.test(value)) {
-    return { error: ctf(locale, 'luthier_validation_windows_name_invalid_chars', { label: isPt(locale) ? labelPt : labelEn }) }
+    return {
+      error: ctf(locale, 'luthier_validation_windows_name_invalid_chars', {
+        label: isPt(locale) ? labelPt : labelEn,
+      }),
+    }
   }
   if (/[. ]$/.test(value)) {
-    return { error: ctf(locale, 'luthier_validation_windows_name_trailing', { label: isPt(locale) ? labelPt : labelEn }) }
+    return {
+      error: ctf(locale, 'luthier_validation_windows_name_trailing', {
+        label: isPt(locale) ? labelPt : labelEn,
+      }),
+    }
   }
   return {}
 }
@@ -381,13 +400,17 @@ export function validateWindowsDriveSerial(raw: string, locale: Locale): Validat
   if (!value) return {}
   if (!/^(0x)?[A-Fa-f0-9]{1,16}$/.test(value)) {
     return {
-      error: ct(locale, 'luthier_validation_drive_serial_invalid')
+      error: ct(locale, 'luthier_validation_drive_serial_invalid'),
     }
   }
   return {}
 }
 
-export function validateFileOrFolderName(raw: string, locale: Locale, kind: 'file' | 'folder'): ValidationResult {
+export function validateFileOrFolderName(
+  raw: string,
+  locale: Locale,
+  kind: 'file' | 'folder'
+): ValidationResult {
   const value = raw.trim()
   if (!value) {
     return {
@@ -396,7 +419,7 @@ export function validateFileOrFolderName(raw: string, locale: Locale, kind: 'fil
         kind === 'file'
           ? 'luthier_validation_file_name_required'
           : 'luthier_validation_folder_name_required'
-      )
+      ),
     }
   }
   if (value === '.' || value === '..') {

@@ -48,8 +48,10 @@ impl HttpClientPort for ReqwestBlockingHttpClient {
                     .with_code("invalid_http_header_name")
             })?;
             let header_value = HeaderValue::from_str(value).map_err(|err| {
-                BackendError::invalid_input(format!("invalid HTTP header value for '{name}': {err}"))
-                    .with_code("invalid_http_header_value")
+                BackendError::invalid_input(format!(
+                    "invalid HTTP header value for '{name}': {err}"
+                ))
+                .with_code("invalid_http_header_value")
             })?;
             req = req.header(header_name, header_value);
         }
@@ -509,4 +511,3 @@ fn extract_steamgriddb_hero_url(item: &serde_json::Value) -> Option<String> {
     }
     None
 }
-

@@ -3,6 +3,7 @@
 Backend Rust para o App Luthier.
 
 Status atual:
+
 - implementa funções puras para a UI chamar:
   - `create_executable(...)`
   - `hash_executable(...)`
@@ -13,7 +14,9 @@ Status atual:
   - habilitados com feature `tauri-commands`.
 
 Próxima etapa:
+
 - integrar frontend em `devUrl`/`frontendDist` do `tauri.conf.json`.
 
 Execução (backend Tauri real):
+
 - `cargo run -p luthier-backend --features tauri-commands`

@@ -1,11 +1,9 @@
 use std::path::PathBuf;
 
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 
 use crate::error::{BackendError, BackendResult, BackendResultExt, CommandStringResult};
-use crate::infrastructure::{
-    fs_repo, image_codec, logging::log_backend_event, pe_icon_reader,
-};
+use crate::infrastructure::{fs_repo, image_codec, logging::log_backend_event, pe_icon_reader};
 use crate::models::dto::{ExtractExecutableIconInput, ExtractExecutableIconOutput};
 
 #[derive(Debug, Clone, Copy, Default)]

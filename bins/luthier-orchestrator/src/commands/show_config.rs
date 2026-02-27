@@ -1,10 +1,7 @@
 use anyhow::Context;
 use luthier_orchestrator_core::observability::LogLevel;
 
-use crate::{
-    infrastructure::payload_loader::load_embedded_config_required,
-    logging::log_event,
-};
+use crate::{infrastructure::payload_loader::load_embedded_config_required, logging::log_event};
 
 pub fn run_show_embedded_config(trace_id: &str) -> anyhow::Result<()> {
     let parsed = load_embedded_config_required()?;

@@ -24,11 +24,7 @@
  * `"picker"`       — a file/folder picker operation failed or was cancelled.
  * `"unknown"`      — any other caught value that does not match above.
  */
-export type LuthierErrorKind =
-    | 'tauri_invoke'
-    | 'validation'
-    | 'picker'
-    | 'unknown'
+export type LuthierErrorKind = 'tauri_invoke' | 'validation' | 'picker' | 'unknown'
 
 // ---------------------------------------------------------------------------
 // Structured error envelope
@@ -40,26 +36,26 @@ export type LuthierErrorKind =
  * to any notification layer without coupling to a specific UI library.
  */
 export type LuthierError = {
-    /** Discriminant — identifies the origin/classification of the error. */
-    readonly kind: LuthierErrorKind
+  /** Discriminant — identifies the origin/classification of the error. */
+  readonly kind: LuthierErrorKind
 
-    /**
-     * Short human-readable message suitable for a status bar or toast title.
-     * Always non-empty after normalization.
-     */
-    readonly message: string
+  /**
+   * Short human-readable message suitable for a status bar or toast title.
+   * Always non-empty after normalization.
+   */
+  readonly message: string
 
-    /**
-     * Optional extended detail, e.g. the raw Tauri error string or stack trace
-     * fragment. May be empty when not available.
-     */
-    readonly detail: string
+  /**
+   * Optional extended detail, e.g. the raw Tauri error string or stack trace
+   * fragment. May be empty when not available.
+   */
+  readonly detail: string
 
-    /**
-     * The raw caught value preserved as-is for logging or debugging.
-     * Typed as `unknown` to reflect that `catch (e)` carries unknown values.
-     */
-    readonly raw: unknown
+  /**
+   * The raw caught value preserved as-is for logging or debugging.
+   * Typed as `unknown` to reflect that `catch (e)` carries unknown values.
+   */
+  readonly raw: unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -81,8 +77,8 @@ export type LuthierError = {
  * ```
  */
 export type LuthierResult<T> =
-    | { readonly ok: true; readonly value: T }
-    | { readonly ok: false; readonly error: LuthierError }
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: LuthierError }
 
 // ---------------------------------------------------------------------------
 // Normalization helpers
@@ -99,12 +95,12 @@ export type LuthierResult<T> =
  * @returns A normalized `LuthierError`.
  */
 export function normalizeTauriError(error: unknown): LuthierError {
-    return {
-        kind: 'tauri_invoke',
-        message: extractMessage(error),
-        detail: String(error),
-        raw: error
-    }
+  return {
+    kind: 'tauri_invoke',
+    message: extractMessage(error),
+    detail: String(error),
+    raw: error,
+  }
 }
 
 /**
@@ -115,12 +111,12 @@ export function normalizeTauriError(error: unknown): LuthierError {
  * @returns A normalized `LuthierError` with kind `"validation"`.
  */
 export function makeValidationError(message: string): LuthierError {
-    return {
-        kind: 'validation',
-        message,
-        detail: '',
-        raw: null
-    }
+  return {
+    kind: 'validation',
+    message,
+    detail: '',
+    raw: null,
+  }
 }
 
 /**
@@ -132,12 +128,12 @@ export function makeValidationError(message: string): LuthierError {
  * @returns A normalized `LuthierError` with kind `"unknown"`.
  */
 export function normalizeLuthierError(error: unknown): LuthierError {
-    return {
-        kind: 'unknown',
-        message: extractMessage(error),
-        detail: String(error),
-        raw: error
-    }
+  return {
+    kind: 'unknown',
+    message: extractMessage(error),
+    detail: String(error),
+    raw: error,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -150,7 +146,7 @@ export function normalizeLuthierError(error: unknown): LuthierError {
  * @param value - The successful operation output.
  */
 export function ok<T>(value: T): LuthierResult<T> {
-    return { ok: true, value }
+  return { ok: true, value }
 }
 
 /**
@@ -159,7 +155,7 @@ export function ok<T>(value: T): LuthierResult<T> {
  * @param error - The normalized error.
  */
 export function err<T>(error: LuthierError): LuthierResult<T> {
-    return { ok: false, error }
+  return { ok: false, error }
 }
 
 /**
@@ -174,7 +170,7 @@ export function err<T>(error: LuthierError): LuthierResult<T> {
  * ```
  */
 export function errFromTauri<T>(error: unknown): LuthierResult<T> {
-    return { ok: false, error: normalizeTauriError(error) }
+  return { ok: false, error: normalizeTauriError(error) }
 }
 
 // ---------------------------------------------------------------------------
@@ -193,8 +189,8 @@ export function errFromTauri<T>(error: unknown): LuthierResult<T> {
  * @returns A plain string ready for use as `statusMessage`.
  */
 export function errorToStatusMessage(error: LuthierError, prefix?: string): string {
-    const base = error.message
-    return prefix ? `${prefix} ${base}` : base
+  const base = error.message
+  return prefix ? `${prefix} ${base}` : base
 }
 
 // ---------------------------------------------------------------------------
@@ -213,13 +209,13 @@ export function errorToStatusMessage(error: LuthierError, prefix?: string): stri
  * because `String(error)` would produce `"Error: ..."` with the prefix.
  */
 function extractMessage(error: unknown): string {
-    if (
-        error !== null &&
-        typeof error === 'object' &&
-        'message' in error &&
-        typeof (error as { message: unknown }).message === 'string'
-    ) {
-        return (error as { message: string }).message
-    }
-    return String(error)
+  if (
+    error !== null &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as { message: unknown }).message === 'string'
+  ) {
+    return (error as { message: string }).message
+  }
+  return String(error)
 }

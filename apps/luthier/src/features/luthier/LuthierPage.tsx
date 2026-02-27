@@ -24,16 +24,9 @@ export default function LuthierPage() {
   const dialogState = createLuthierPageDialogState()
   const effects = createLuthierPageEffects(controller, dialogState)
 
-  const {
-    activeTab,
-    tabs,
-    ct,
-  } = controller
+  const { activeTab, tabs, ct } = controller
 
-  const {
-    setMobileSidebarOpen,
-    mobileSidebarOpen,
-  } = dialogState
+  const { setMobileSidebarOpen, mobileSidebarOpen } = dialogState
 
   const {
     theme,
@@ -146,7 +139,6 @@ export default function LuthierPage() {
                 <Show when={activeTab() === 'review'}>
                   <ReviewTabSection view={sectionView} />
                 </Show>
-
               </div>
 
               <div class="mt-auto grid grid-cols-2 gap-2 border-t border-border/60 pt-4">

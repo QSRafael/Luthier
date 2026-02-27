@@ -3,8 +3,8 @@ use minifb::{Icon, MouseButton, MouseMode, Scale, Window, WindowOptions};
 
 use crate::application::runtime_overrides::RuntimeOverrides;
 use crate::splash::state::{MouseSnapshot, Rect};
-use crate::splash::SplashWindowScale;
 use crate::splash::theme::{FPS, WIN_H, WIN_W};
+use crate::splash::SplashWindowScale;
 
 /// Reads current mouse position and button state from the window.
 /// `last_left_down` is the `left_down` value from the previous frame, used to

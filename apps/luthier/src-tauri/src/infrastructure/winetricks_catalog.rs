@@ -130,4 +130,3 @@ pub(crate) fn fallback_winetricks_components() -> Vec<String> {
     .map(|item| item.to_string())
     .collect()
 }
-

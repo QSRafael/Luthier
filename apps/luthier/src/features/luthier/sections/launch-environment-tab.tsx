@@ -10,15 +10,29 @@ import {
   StringListField,
   TextInputField,
   ToggleField,
-  WinecfgFeatureStateField
+  WinecfgFeatureStateField,
 } from '../../../components/form/FormControls'
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert'
 import { Button } from '../../../components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
 import { Select } from '../../../components/ui/select'
 import { Spinner } from '../../../components/ui/spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../components/ui/table'
 import { Textarea } from '../../../components/ui/textarea'
 import type { RuntimePreference } from '../../../models/config'
 import type { AudioDriverOption, GamescopeWindowType, UpscaleMethod } from '../useLuthierController'
@@ -31,7 +45,7 @@ import {
   posixDirname,
   relativeInsideBase,
   SwitchChoiceCard,
-  type LuthierPageSectionProps
+  type LuthierPageSectionProps,
 } from '../page-shared'
 import { LaunchWrapperCommandsPanel } from './launch-wrapper-commands-panel'
 
@@ -51,7 +65,6 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
     launchScriptsAccordionOpen,
     setLaunchScriptsAccordionOpen,
   } = props.view
-
 
   return (
     <section class="stack">
@@ -76,7 +89,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                 onInput={(e) =>
                   patchConfig((prev) => ({
                     ...prev,
-                    scripts: { ...prev.scripts, pre_launch: e.currentTarget.value }
+                    scripts: { ...prev.scripts, pre_launch: e.currentTarget.value },
                   }))
                 }
               />
@@ -97,7 +110,7 @@ export function LaunchEnvironmentTabSection(props: LuthierPageSectionProps) {
                 onInput={(e) =>
                   patchConfig((prev) => ({
                     ...prev,
-                    scripts: { ...prev.scripts, post_launch: e.currentTarget.value }
+                    scripts: { ...prev.scripts, post_launch: e.currentTarget.value },
                   }))
                 }
               />

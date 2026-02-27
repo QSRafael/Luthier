@@ -36,7 +36,8 @@ pub(crate) fn spawn_play_child(tx: mpsc::Sender<ChildProcessEvent>) -> anyhow::R
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
-                        let _ = tx_out.send(ChildProcessEvent::Line(ChildProcessStream::Stdout, line));
+                        let _ =
+                            tx_out.send(ChildProcessEvent::Line(ChildProcessStream::Stdout, line));
                     }
                     Err(err) => {
                         let _ = tx_out.send(ChildProcessEvent::Line(
@@ -57,7 +58,8 @@ pub(crate) fn spawn_play_child(tx: mpsc::Sender<ChildProcessEvent>) -> anyhow::R
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
-                        let _ = tx_err.send(ChildProcessEvent::Line(ChildProcessStream::Stderr, line));
+                        let _ =
+                            tx_err.send(ChildProcessEvent::Line(ChildProcessStream::Stderr, line));
                     }
                     Err(err) => {
                         let _ = tx_err.send(ChildProcessEvent::Line(

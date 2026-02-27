@@ -12,10 +12,7 @@ pub struct HashExecutableUseCase<'a> {
 }
 
 impl<'a> HashExecutableUseCase<'a> {
-    pub fn new(
-        luthier_core: &'a dyn LuthierCorePort,
-        logger: &'a dyn BackendLoggerPort,
-    ) -> Self {
+    pub fn new(luthier_core: &'a dyn LuthierCorePort, logger: &'a dyn BackendLoggerPort) -> Self {
         Self {
             luthier_core,
             logger,
@@ -42,7 +39,10 @@ impl<'a> HashExecutableUseCase<'a> {
         Ok(HashExeOutput { sha256_hex: hash })
     }
 
-    pub fn execute_command_string(&self, input: HashExeInput) -> CommandStringResult<HashExeOutput> {
+    pub fn execute_command_string(
+        &self,
+        input: HashExeInput,
+    ) -> CommandStringResult<HashExeOutput> {
         self.execute(input).into_command_string_result()
     }
 
@@ -71,4 +71,3 @@ pub fn hash_executable_command(
 ) -> CommandStringResult<HashExeOutput> {
     HashExecutableUseCase::new(luthier_core, logger).execute_command_string(input)
 }
-

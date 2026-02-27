@@ -3,6 +3,7 @@
 App Luthier em Tauri + SolidJS.
 
 Status atual:
+
 - frontend mínimo (Vite + Solid) com abas:
   - Jogo
   - Runtime
@@ -17,7 +18,9 @@ Status atual:
   - `cmd_create_executable`
 
 Rodar frontend (dev):
+
 - `pnpm dev` (ou `npm run dev`)
 
 Rodar backend Tauri:
+
 - `cargo run -p luthier-backend --features tauri-commands`

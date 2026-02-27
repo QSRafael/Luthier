@@ -78,12 +78,16 @@ impl LuthierError {
                 issues,
                 issues_len,
                 first_issue,
-            } => LayeredErrorRef::Application(application::ApplicationErrorRef::InvalidGameConfig {
-                issues: issues.as_slice(),
-                issues_len: *issues_len,
-                first_issue,
-            }),
-            Self::Io(_) => LayeredErrorRef::Infrastructure(infrastructure::InfrastructureErrorKind::Io),
+            } => {
+                LayeredErrorRef::Application(application::ApplicationErrorRef::InvalidGameConfig {
+                    issues: issues.as_slice(),
+                    issues_len: *issues_len,
+                    first_issue,
+                })
+            }
+            Self::Io(_) => {
+                LayeredErrorRef::Infrastructure(infrastructure::InfrastructureErrorKind::Io)
+            }
             Self::Json(_) => {
                 LayeredErrorRef::Infrastructure(infrastructure::InfrastructureErrorKind::Json)
             }

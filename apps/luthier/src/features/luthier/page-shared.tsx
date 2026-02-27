@@ -4,8 +4,7 @@ import type { createLuthierPageDialogState } from './page-dialog-state'
 import type { createLuthierPageEffects } from './page-effects'
 import type { LuthierCopyKey } from './copy'
 
-export type LuthierPageSectionView =
-  LuthierController &
+export type LuthierPageSectionView = LuthierController &
   ReturnType<typeof createLuthierPageDialogState> &
   ReturnType<typeof createLuthierPageEffects>
 
@@ -38,5 +37,5 @@ export {
   buildWxH,
   featureStateEnabled,
   featureStateMandatory,
-  buildFeatureState
+  buildFeatureState,
 } from './domain/page-shared-helpers'

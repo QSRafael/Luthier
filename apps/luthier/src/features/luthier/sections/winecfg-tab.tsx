@@ -29,22 +29,34 @@ export function WinecfgTabSection(props: LuthierPageSectionProps) {
         <WinecfgGraphicsAccordionSection
           view={props.view}
           open={winecfgAccordionOpen() === 'graphics'}
-          onToggle={() => setWinecfgAccordionOpen((prev: string | null) => (prev === 'graphics' ? null : 'graphics'))}
+          onToggle={() =>
+            setWinecfgAccordionOpen((prev: string | null) =>
+              prev === 'graphics' ? null : 'graphics'
+            )
+          }
         />
         <WinecfgDesktopAccordionSection
           view={props.view}
           open={winecfgAccordionOpen() === 'desktop'}
-          onToggle={() => setWinecfgAccordionOpen((prev: string | null) => (prev === 'desktop' ? null : 'desktop'))}
+          onToggle={() =>
+            setWinecfgAccordionOpen((prev: string | null) =>
+              prev === 'desktop' ? null : 'desktop'
+            )
+          }
         />
         <WinecfgDrivesAccordionSection
           view={props.view}
           open={winecfgAccordionOpen() === 'drives'}
-          onToggle={() => setWinecfgAccordionOpen((prev: string | null) => (prev === 'drives' ? null : 'drives'))}
+          onToggle={() =>
+            setWinecfgAccordionOpen((prev: string | null) => (prev === 'drives' ? null : 'drives'))
+          }
         />
         <WinecfgAudioAccordionSection
           view={props.view}
           open={winecfgAccordionOpen() === 'audio'}
-          onToggle={() => setWinecfgAccordionOpen((prev: string | null) => (prev === 'audio' ? null : 'audio'))}
+          onToggle={() =>
+            setWinecfgAccordionOpen((prev: string | null) => (prev === 'audio' ? null : 'audio'))
+          }
         />
       </div>
     </section>

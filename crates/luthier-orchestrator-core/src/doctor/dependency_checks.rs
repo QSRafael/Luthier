@@ -91,7 +91,11 @@ fn evaluate_gamemode_umu_runtime_component(
     let resolved_path = gamemoderun_bin
         .as_ref()
         .map(|p| host_probe::path_to_string(p.clone()))
-        .or_else(|| umu_run.as_ref().map(|p| host_probe::path_to_string(p.clone())));
+        .or_else(|| {
+            umu_run
+                .as_ref()
+                .map(|p| host_probe::path_to_string(p.clone()))
+        });
 
     let (status, found, note) = match state {
         Some(FeatureState::MandatoryOn) => {
@@ -277,9 +281,15 @@ pub(super) fn evaluate_component(
         }
         Some(FeatureState::OptionalOff) => {
             if found {
-                (CheckStatus::INFO, "not required by current payload (available)")
+                (
+                    CheckStatus::INFO,
+                    "not required by current payload (available)",
+                )
             } else {
-                (CheckStatus::INFO, "not required by current payload (missing)")
+                (
+                    CheckStatus::INFO,
+                    "not required by current payload (missing)",
+                )
             }
         }
         None => {

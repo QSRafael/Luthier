@@ -12,8 +12,8 @@ import {
   IconSunMoon,
   IconSettings,
   IconTool,
-  IconGauge
-  ,IconFolder
+  IconGauge,
+  IconFolder,
 } from '@tabler/icons-solidjs'
 
 import {
@@ -23,7 +23,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem
+  SidebarMenuItem,
 } from '../../components/ui/sidebar'
 import { LuthierTab } from '../../models/config'
 
@@ -52,7 +52,7 @@ const navMain: NavEntry[] = [
   { tab: 'prefix', icon: IconTool },
   { tab: 'winecfg', icon: IconSettings },
   { tab: 'wrappers', icon: IconFlask },
-  { tab: 'review', icon: IconChecklist }
+  { tab: 'review', icon: IconChecklist },
 ]
 
 export function AppSidebar(props: AppSidebarProps) {
@@ -61,7 +61,10 @@ export function AppSidebar(props: AppSidebarProps) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton active class="cursor-default bg-sidebar-accent text-sidebar-accent-foreground">
+            <SidebarMenuButton
+              active
+              class="cursor-default bg-sidebar-accent text-sidebar-accent-foreground"
+            >
               <IconInnerShadowTop class="size-5" />
               <span class="text-left text-sm font-semibold tracking-tight">{props.appName}</span>
             </SidebarMenuButton>

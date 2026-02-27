@@ -133,7 +133,7 @@ export function defaultGameConfig(): GameConfig {
       auto_update: false,
       esync: true,
       fsync: true,
-      runtime_preference: 'Proton'
+      runtime_preference: 'Proton',
     },
     environment: {
       gamemode: 'OptionalOff',
@@ -151,11 +151,11 @@ export function defaultGameConfig(): GameConfig {
         fps_limiter: '',
         fps_limiter_no_focus: '',
         force_grab_cursor: false,
-        additional_options: ''
+        additional_options: '',
       },
       mangohud: 'OptionalOff',
       prime_offload: 'OptionalOff',
-      custom_vars: {}
+      custom_vars: {},
     },
     compatibility: {
       wine_wayland: 'OptionalOff',
@@ -164,7 +164,7 @@ export function defaultGameConfig(): GameConfig {
       easy_anti_cheat_runtime: 'OptionalOff',
       battleye_runtime: 'OptionalOff',
       staging: 'OptionalOff',
-      wrapper_commands: []
+      wrapper_commands: [],
     },
     winecfg: {
       windows_version: null,
@@ -172,7 +172,10 @@ export function defaultGameConfig(): GameConfig {
       auto_capture_mouse: { state: 'OptionalOn', use_wine_default: true },
       window_decorations: { state: 'OptionalOn', use_wine_default: true },
       window_manager_control: { state: 'OptionalOn', use_wine_default: true },
-      virtual_desktop: { state: { state: 'OptionalOff', use_wine_default: true }, resolution: null },
+      virtual_desktop: {
+        state: { state: 'OptionalOff', use_wine_default: true },
+        resolution: null,
+      },
       screen_dpi: null,
       desktop_integration: { state: 'OptionalOn', use_wine_default: true },
       mime_associations: { state: 'OptionalOff', use_wine_default: true },
@@ -185,10 +188,10 @@ export function defaultGameConfig(): GameConfig {
           host_path: null,
           drive_type: 'auto',
           label: null,
-          serial: null
-        }
+          serial: null,
+        },
       ],
-      audio_driver: null
+      audio_driver: null,
     },
     dependencies: [],
     extra_system_dependencies: [],
@@ -196,25 +199,25 @@ export function defaultGameConfig(): GameConfig {
       runtime: {
         strict: false,
         primary: 'ProtonUmu',
-        fallback_order: ['ProtonNative', 'Wine']
+        fallback_order: ['ProtonNative', 'Wine'],
       },
       umu: 'MandatoryOn',
       winetricks: 'OptionalOff',
       gamescope: 'OptionalOff',
       gamemode: 'OptionalOff',
       mangohud: 'OptionalOff',
-      steam_runtime: 'OptionalOff'
+      steam_runtime: 'OptionalOff',
     },
     registry_keys: [],
     integrity_files: [],
     folder_mounts: [],
     splash: {
       hero_image_url: '',
-      hero_image_data_url: ''
+      hero_image_data_url: '',
     },
     scripts: {
       pre_launch: '',
-      post_launch: ''
-    }
+      post_launch: '',
+    },
   }
 }

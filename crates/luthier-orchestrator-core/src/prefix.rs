@@ -162,10 +162,9 @@ mod tests {
 
     #[test]
     fn truncates_hex_hash_for_prefix_key() {
-        let key =
-            compact_exe_hash_key(
-                "d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9",
-            );
+        let key = compact_exe_hash_key(
+            "d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9",
+        );
         assert_eq!(key, "d21d0173c302");
     }
 

@@ -12,7 +12,7 @@ import {
   ItemDescription,
   ItemFooter,
   ItemMain,
-  ItemTitle
+  ItemTitle,
 } from '../ui/item'
 export type FormControlsI18n = {
   enabled: string
@@ -53,13 +53,20 @@ const defaultFormControlsI18n: FormControlsI18n = {
   remove: 'Remover',
   noItemAdded: 'Nenhum item adicionado.',
   keyPlaceholder: 'Chave',
-  valuePlaceholder: 'Valor'
+  valuePlaceholder: 'Valor',
 }
 
 const FormControlsI18nContext = createContext<FormControlsI18n>(defaultFormControlsI18n)
 
-export function FormControlsI18nProvider(props: { value: FormControlsI18n; children: JSX.Element }) {
-  return <FormControlsI18nContext.Provider value={props.value}>{props.children}</FormControlsI18nContext.Provider>
+export function FormControlsI18nProvider(props: {
+  value: FormControlsI18n
+  children: JSX.Element
+}) {
+  return (
+    <FormControlsI18nContext.Provider value={props.value}>
+      {props.children}
+    </FormControlsI18nContext.Provider>
+  )
 }
 
 export function useFormControlsI18n() {
@@ -101,7 +108,11 @@ export function FieldShell(props: FieldShellProps) {
           </Show>
         </ItemContent>
 
-        <ItemActions class={props.controlClass ?? (props.compact ? 'max-w-[260px] justify-self-end' : 'w-full')}>
+        <ItemActions
+          class={
+            props.controlClass ?? (props.compact ? 'max-w-[260px] justify-self-end' : 'w-full')
+          }
+        >
           {props.children}
         </ItemActions>
       </ItemMain>
@@ -182,7 +193,9 @@ export function SelectField<T extends string>(props: SelectFieldProps<T>) {
   return (
     <FieldShell label={props.label} help={props.help} compact>
       <Select value={props.value} onInput={(e) => props.onChange(e.currentTarget.value as T)}>
-        <For each={props.options}>{(option) => <option value={option.value}>{option.label}</option>}</For>
+        <For each={props.options}>
+          {(option) => <option value={option.value}>{option.label}</option>}
+        </For>
       </Select>
     </FieldShell>
   )
@@ -229,7 +242,7 @@ export function ToggleField(props: ToggleFieldProps) {
     <FieldShell label={props.label} help={props.help} compact>
       <div class="flex items-center justify-end gap-3">
         <span class="text-xs font-medium text-muted-foreground">
-          {props.checked ? props.yesLabel ?? i18n.enabled : props.noLabel ?? i18n.disabled}
+          {props.checked ? (props.yesLabel ?? i18n.enabled) : (props.noLabel ?? i18n.disabled)}
         </span>
         <Switch checked={props.checked} onChange={props.onChange}>
           <SwitchInput />

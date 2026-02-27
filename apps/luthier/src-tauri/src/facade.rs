@@ -44,7 +44,10 @@ pub fn create_executable_with_base_hints(
     input: CreateExecutableInput,
     base_binary_hints: &[PathBuf],
 ) -> Result<CreateExecutableOutput, String> {
-    use_cases::create_executable::create_executable_with_base_hints_command(input, base_binary_hints)
+    use_cases::create_executable::create_executable_with_base_hints_command(
+        input,
+        base_binary_hints,
+    )
 }
 
 pub fn hash_executable(input: HashExeInput) -> Result<HashExeOutput, String> {

@@ -1,9 +1,9 @@
+use luthier_orchestrator_core::doctor::DoctorReport;
+use luthier_orchestrator_core::GameConfig;
+use minifb::Window;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Instant;
-use minifb::Window;
-use luthier_orchestrator_core::doctor::DoctorReport;
-use luthier_orchestrator_core::GameConfig;
 
 use crate::application::runtime_overrides::RuntimeOverrides;
 use crate::splash::{t, SplashTextKey};

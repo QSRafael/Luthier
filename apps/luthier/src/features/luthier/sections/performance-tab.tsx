@@ -10,15 +10,29 @@ import {
   StringListField,
   TextInputField,
   ToggleField,
-  WinecfgFeatureStateField
+  WinecfgFeatureStateField,
 } from '../../../components/form/FormControls'
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert'
 import { Button } from '../../../components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
 import { Select } from '../../../components/ui/select'
 import { Spinner } from '../../../components/ui/spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
 import { Textarea } from '../../../components/ui/textarea'
 import type { RuntimePreference } from '../../../models/config'
@@ -32,7 +46,7 @@ import {
   posixDirname,
   relativeInsideBase,
   SwitchChoiceCard,
-  type LuthierPageSectionProps
+  type LuthierPageSectionProps,
 } from '../page-shared'
 import { GamescopePanel } from './gamescope-panel'
 
@@ -55,8 +69,6 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
     setGamescopeOutputWidth,
     setGamescopeOutputHeight,
   } = props.view
-
-
 
   return (
     <section class="stack">
@@ -85,8 +97,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
             ...prev,
             compatibility: {
               ...prev.compatibility,
-              wine_wayland: value
-            }
+              wine_wayland: value,
+            },
           }))
         }
         footer={
@@ -100,8 +112,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
                   ...prev,
                   compatibility: {
                     ...prev.compatibility,
-                    hdr: value
-                  }
+                    hdr: value,
+                  },
                 }))
               }
             />
@@ -118,8 +130,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
             ...prev,
             compatibility: {
               ...prev.compatibility,
-              auto_dxvk_nvapi: value
-            }
+              auto_dxvk_nvapi: value,
+            },
           }))
         }
       />
@@ -133,8 +145,8 @@ export function PerformanceTabSection(props: LuthierPageSectionProps) {
             ...prev,
             environment: {
               ...prev.environment,
-              prime_offload: value
-            }
+              prime_offload: value,
+            },
           }))
         }
       />

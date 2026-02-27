@@ -1,4 +1,3 @@
-
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
@@ -7,9 +6,9 @@ use std::time::{Duration, Instant};
 use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose, Engine as _};
 use image::imageops::FilterType;
-use minifb::{Key, Scale, Window};
 use luthier_orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use luthier_orchestrator_core::GameConfig;
+use minifb::{Key, Scale, Window};
 
 use crate::application::runtime_overrides::{
     apply_runtime_overrides, build_feature_view, load_runtime_overrides, save_runtime_overrides,
@@ -34,8 +33,8 @@ use progress_events::{
 use renderer::*;
 pub use state::*;
 use text::{initialize_splash_locale, t_process_exit};
-use theme::*;
 pub(crate) use text::{t, SplashTextKey};
+use theme::*;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct SplashWindowScale {
@@ -297,8 +296,7 @@ fn show_prelaunch_window(
         }
 
         let auto_start_ready = elapsed >= Duration::from_secs(PRELAUNCH_AUTOSTART_SECS);
-        if auto_start_ready
-            || (mouse.left_pressed && rects.start_button.contains(mouse.x, mouse.y))
+        if auto_start_ready || (mouse.left_pressed && rects.start_button.contains(mouse.x, mouse.y))
         {
             return Ok(PrelaunchDecision::Start {
                 overrides: state.overrides.clone(),

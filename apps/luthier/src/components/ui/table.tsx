@@ -29,7 +29,12 @@ export const TableBody = (props: TableBodyProps) => {
 export type TableFooterProps = ComponentProps<'tfoot'>
 export const TableFooter = (props: TableFooterProps) => {
   const [, rest] = splitProps(props, ['class'])
-  return <tfoot class={cn('bg-muted/40 border-t font-medium [&>tr]:last:border-b-0', props.class)} {...rest} />
+  return (
+    <tfoot
+      class={cn('bg-muted/40 border-t font-medium [&>tr]:last:border-b-0', props.class)}
+      {...rest}
+    />
+  )
 }
 
 export type TableRowProps = ComponentProps<'tr'>
@@ -63,4 +68,3 @@ export const TableCaption = (props: TableCaptionProps) => {
   const [, rest] = splitProps(props, ['class'])
   return <caption class={cn('text-muted-foreground mt-3 text-xs', props.class)} {...rest} />
 }
-

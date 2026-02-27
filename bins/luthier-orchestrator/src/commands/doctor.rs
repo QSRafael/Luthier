@@ -1,7 +1,5 @@
 use anyhow::Context;
-use luthier_orchestrator_core::{
-    doctor::{CheckStatus, DoctorReport},
-};
+use luthier_orchestrator_core::doctor::{CheckStatus, DoctorReport};
 
 use crate::application::doctor_flow::execute_doctor_flow;
 

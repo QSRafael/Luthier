@@ -24,12 +24,16 @@ impl SearchHeroUseCase {
 
         let client = http_client::build_hero_search_client()?;
 
-        if let Some(result) = http_client::search_hero_image_via_steamgriddb_public(game_name, &client)? {
+        if let Some(result) =
+            http_client::search_hero_image_via_steamgriddb_public(game_name, &client)?
+        {
             self.log_completed_with_candidates(game_name, &result);
             return Ok(Self::to_output(result));
         }
 
-        if let Some(result) = http_client::search_hero_image_via_steamgriddb_api(game_name, &client)? {
+        if let Some(result) =
+            http_client::search_hero_image_via_steamgriddb_api(game_name, &client)?
+        {
             self.log_completed_with_candidates(game_name, &result);
             return Ok(Self::to_output(result));
         }

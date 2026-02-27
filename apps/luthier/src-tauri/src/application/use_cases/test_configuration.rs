@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use luthier_core::validate_game_config;
 use luthier_orchestrator_core::{
-    doctor::{CheckStatus, run_doctor},
+    doctor::{run_doctor, CheckStatus},
     prefix::build_prefix_setup_plan,
     GameConfig,
 };

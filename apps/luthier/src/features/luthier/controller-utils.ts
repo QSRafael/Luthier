@@ -4,7 +4,13 @@ export const ORCHESTRATOR_BASE_PATH = './target/debug/luthier-orchestrator'
 
 export const RUNTIME_CANDIDATES: RuntimePrimary[] = ['ProtonUmu', 'ProtonNative', 'Wine']
 export const RUNTIME_PREFERENCES: RuntimePreference[] = ['Auto', 'Proton', 'Wine']
-export const DLL_MODES = ['builtin', 'native', 'builtin,native', 'native,builtin', 'disabled'] as const
+export const DLL_MODES = [
+  'builtin',
+  'native',
+  'builtin,native',
+  'native,builtin',
+  'disabled',
+] as const
 export const AUDIO_DRIVERS = ['__none__', 'pipewire', 'pulseaudio', 'alsa'] as const
 export const UPSCALE_METHODS = ['fsr', 'nis', 'integer', 'stretch'] as const
 export const WINDOW_TYPES = ['fullscreen', 'borderless', 'windowed'] as const
@@ -73,9 +79,7 @@ export function isFeatureEnabled(state: FeatureState): boolean {
 }
 
 function splitPathSegments(raw: string): string[] {
-  return normalizePath(raw)
-    .split('/')
-    .filter(Boolean)
+  return normalizePath(raw).split('/').filter(Boolean)
 }
 
 function pathPrefix(raw: string): string {
@@ -96,7 +100,11 @@ export function relativePathBetween(fromPath: string, toPath: string): string | 
   const toParts = splitPathSegments(toNormalized)
 
   let shared = 0
-  while (shared < fromParts.length && shared < toParts.length && fromParts[shared] === toParts[shared]) {
+  while (
+    shared < fromParts.length &&
+    shared < toParts.length &&
+    fromParts[shared] === toParts[shared]
+  ) {
     shared += 1
   }
 

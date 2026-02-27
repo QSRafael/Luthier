@@ -1,4 +1,4 @@
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use image::{GenericImageView, ImageFormat};
 
 use crate::domain::validation as domain_validation;

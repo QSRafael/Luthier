@@ -11,31 +11,43 @@ export const Tabs = <T extends ValidComponent = 'div'>(props: TabsProps<T>) => {
   return <TabsPrimitive class={cn('flex flex-col gap-3', props.class)} {...rest} />
 }
 
-export type TabsListProps<T extends ValidComponent = 'div'> = ComponentProps<typeof TabsPrimitive.List<T>>
+export type TabsListProps<T extends ValidComponent = 'div'> = ComponentProps<
+  typeof TabsPrimitive.List<T>
+>
 
 export const TabsList = <T extends ValidComponent = 'div'>(props: TabsListProps<T>) => {
   const [, rest] = splitProps(props as TabsListProps, ['class'])
   return (
     <TabsPrimitive.List
-      class={cn('bg-muted text-muted-foreground inline-flex h-10 w-fit items-center rounded-lg p-1', props.class)}
+      class={cn(
+        'bg-muted text-muted-foreground inline-flex h-10 w-fit items-center rounded-lg p-1',
+        props.class
+      )}
       {...rest}
     />
   )
 }
 
-export type TabsTriggerProps<T extends ValidComponent = 'button'> = ComponentProps<typeof TabsPrimitive.Trigger<T>>
+export type TabsTriggerProps<T extends ValidComponent = 'button'> = ComponentProps<
+  typeof TabsPrimitive.Trigger<T>
+>
 
 export const TabsTrigger = <T extends ValidComponent = 'button'>(props: TabsTriggerProps<T>) => {
   const [, rest] = splitProps(props as TabsTriggerProps, ['class'])
   return (
     <TabsPrimitive.Trigger
-      class={cn('inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium data-[selected]:bg-background data-[selected]:text-foreground', props.class)}
+      class={cn(
+        'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium data-[selected]:bg-background data-[selected]:text-foreground',
+        props.class
+      )}
       {...rest}
     />
   )
 }
 
-export type TabsContentProps<T extends ValidComponent = 'div'> = ComponentProps<typeof TabsPrimitive.Content<T>>
+export type TabsContentProps<T extends ValidComponent = 'div'> = ComponentProps<
+  typeof TabsPrimitive.Content<T>
+>
 
 export const TabsContent = <T extends ValidComponent = 'div'>(props: TabsContentProps<T>) => {
   const [, rest] = splitProps(props as TabsContentProps, ['class'])

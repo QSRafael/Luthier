@@ -3,15 +3,14 @@ use std::path::PathBuf;
 
 #[cfg(feature = "tauri-commands")]
 use luthier_backend::{
-    CreateExecutableInput, CreateExecutableOutput, ExtractExecutableIconInput,
-    ExtractExecutableIconOutput, HashExeInput, HashExeOutput, ImportRegistryFileInput,
-    ImportRegistryFileOutput, ListChildDirectoriesInput, ListChildDirectoriesOutput,
-    ListDirectoryEntriesInput, ListDirectoryEntriesOutput, PrepareHeroImageInput,
-    PrepareHeroImageOutput, SearchHeroImageInput, SearchHeroImageOutput,
-    TestConfigurationInput, TestConfigurationOutput, create_executable_with_base_hints,
-    extract_executable_icon, hash_executable, import_registry_file, list_child_directories,
-    list_directory_entries, prepare_hero_image, search_hero_image, test_configuration,
-    winetricks_available, WinetricksAvailableOutput,
+    create_executable_with_base_hints, extract_executable_icon, hash_executable,
+    import_registry_file, list_child_directories, list_directory_entries, prepare_hero_image,
+    search_hero_image, test_configuration, winetricks_available, CreateExecutableInput,
+    CreateExecutableOutput, ExtractExecutableIconInput, ExtractExecutableIconOutput, HashExeInput,
+    HashExeOutput, ImportRegistryFileInput, ImportRegistryFileOutput, ListChildDirectoriesInput,
+    ListChildDirectoriesOutput, ListDirectoryEntriesInput, ListDirectoryEntriesOutput,
+    PrepareHeroImageInput, PrepareHeroImageOutput, SearchHeroImageInput, SearchHeroImageOutput,
+    TestConfigurationInput, TestConfigurationOutput, WinetricksAvailableOutput,
 };
 #[cfg(feature = "tauri-commands")]
 use tauri::async_runtime::spawn_blocking;
@@ -24,7 +23,8 @@ fn collect_orchestrator_base_hints(app: &tauri::AppHandle) -> Vec<PathBuf> {
     let resolver = app.path_resolver();
     let mut hints = Vec::<PathBuf>::new();
 
-    if let Some(path) = resolver.resolve_resource("luthier-orchestrator-base/luthier-orchestrator") {
+    if let Some(path) = resolver.resolve_resource("luthier-orchestrator-base/luthier-orchestrator")
+    {
         hints.push(path);
     }
     if let Some(path) = resolver.resource_dir() {
@@ -102,7 +102,10 @@ async fn cmd_import_registry_file(
 async fn cmd_list_child_directories(
     input: ListChildDirectoriesInput,
 ) -> CommandResult<ListChildDirectoriesOutput> {
-    run_blocking_command("list child directories", move || list_child_directories(input)).await
+    run_blocking_command("list child directories", move || {
+        list_child_directories(input)
+    })
+    .await
 }
 
 #[cfg(feature = "tauri-commands")]
@@ -110,12 +113,17 @@ async fn cmd_list_child_directories(
 async fn cmd_list_directory_entries(
     input: ListDirectoryEntriesInput,
 ) -> CommandResult<ListDirectoryEntriesOutput> {
-    run_blocking_command("list directory entries", move || list_directory_entries(input)).await
+    run_blocking_command("list directory entries", move || {
+        list_directory_entries(input)
+    })
+    .await
 }
 
 #[cfg(feature = "tauri-commands")]
 #[tauri::command]
-async fn cmd_search_hero_image(input: SearchHeroImageInput) -> CommandResult<SearchHeroImageOutput> {
+async fn cmd_search_hero_image(
+    input: SearchHeroImageInput,
+) -> CommandResult<SearchHeroImageOutput> {
     run_blocking_command("hero search", move || search_hero_image(input)).await
 }
 

@@ -70,14 +70,16 @@ impl ListFsUseCase {
         &self,
         input: ListChildDirectoriesInput,
     ) -> CommandStringResult<ListChildDirectoriesOutput> {
-        self.list_child_directories(input).into_command_string_result()
+        self.list_child_directories(input)
+            .into_command_string_result()
     }
 
     pub fn list_directory_entries_command_string(
         &self,
         input: ListDirectoryEntriesInput,
     ) -> CommandStringResult<ListDirectoryEntriesOutput> {
-        self.list_directory_entries(input).into_command_string_result()
+        self.list_directory_entries(input)
+            .into_command_string_result()
     }
 }
 
@@ -104,4 +106,3 @@ pub fn list_directory_entries_command(
 ) -> CommandStringResult<ListDirectoryEntriesOutput> {
     ListFsUseCase::new().list_directory_entries_command_string(input)
 }
-

@@ -29,7 +29,11 @@ pub(super) fn worse_status(a: CheckStatus, b: CheckStatus) -> CheckStatus {
         INFO => 0,
     };
 
-    if rank(a) >= rank(b) { a } else { b }
+    if rank(a) >= rank(b) {
+        a
+    } else {
+        b
+    }
 }
 
 fn should_preserve_dependency_status(name: &str) -> bool {
@@ -58,9 +62,15 @@ fn map_feature_state_and_presence_to_status(
         }
         Some(FeatureState::OptionalOff) => {
             if found {
-                (CheckStatus::INFO, "not required by current payload (available)")
+                (
+                    CheckStatus::INFO,
+                    "not required by current payload (available)",
+                )
             } else {
-                (CheckStatus::INFO, "not required by current payload (missing)")
+                (
+                    CheckStatus::INFO,
+                    "not required by current payload (missing)",
+                )
             }
         }
         None => {

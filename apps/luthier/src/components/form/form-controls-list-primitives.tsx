@@ -49,7 +49,7 @@ export function StringListItemsTable(props: StringListItemsTableProps) {
     <FormListTable
       columns={[
         { label: props.valueHeader },
-        { label: props.actionHeader, class: 'w-[72px] text-right' }
+        { label: props.actionHeader, class: 'w-[72px] text-right' },
       ]}
       rows={props.items}
       renderRow={(item, index) => (
@@ -131,7 +131,7 @@ export function KeyValueItemsTable(props: KeyValueItemsTableProps) {
       columns={[
         { label: props.headers.key },
         { label: props.headers.value },
-        { label: props.actionHeader, class: 'w-14 text-right' }
+        { label: props.actionHeader, class: 'w-14 text-right' },
       ]}
       rows={props.items}
       renderRow={(item, index) => (

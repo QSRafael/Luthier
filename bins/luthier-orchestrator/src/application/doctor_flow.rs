@@ -5,10 +5,7 @@ use luthier_orchestrator_core::{
     prefix::{build_prefix_setup_plan, PrefixSetupPlan},
 };
 
-use crate::{
-    infrastructure::payload_loader::try_load_embedded_config,
-    logging::log_event,
-};
+use crate::{infrastructure::payload_loader::try_load_embedded_config, logging::log_event};
 
 #[derive(Debug)]
 pub struct DoctorFlowExecution {
@@ -26,8 +23,8 @@ impl DoctorFlowExecution {
 }
 
 pub fn execute_doctor_flow(trace_id: &str) -> anyhow::Result<DoctorFlowExecution> {
-    let embedded_config = try_load_embedded_config()
-        .context("failed to inspect embedded config")?;
+    let embedded_config =
+        try_load_embedded_config().context("failed to inspect embedded config")?;
     let prefix_setup_plan = embedded_config
         .as_ref()
         .map(build_prefix_setup_plan)

@@ -10,7 +10,7 @@ import {
   StringListField,
   TextInputField,
   ToggleField,
-  WinecfgFeatureStateField
+  WinecfgFeatureStateField,
 } from '../../../components/form/FormControls'
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert'
 import { Button } from '../../../components/ui/button'
@@ -18,7 +18,14 @@ import { Input } from '../../../components/ui/input'
 import { Select } from '../../../components/ui/select'
 import { Skeleton } from '../../../components/ui/skeleton'
 import { Spinner } from '../../../components/ui/spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../components/ui/table'
 import { Textarea } from '../../../components/ui/textarea'
 import type { RuntimePreference } from '../../../models/config'
 import type { AudioDriverOption, GamescopeWindowType, UpscaleMethod } from '../useLuthierController'
@@ -31,7 +38,7 @@ import {
   posixDirname,
   relativeInsideBase,
   SwitchChoiceCard,
-  type LuthierPageSectionProps
+  type LuthierPageSectionProps,
 } from '../page-shared'
 import {
   validateCommandToken,
@@ -83,7 +90,9 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
     registryDraft().path.trim() ? validateRegistryPath(registryDraft().path, locale()) : {}
   )
   const registryTypeValidation = createMemo(() =>
-    registryDraft().value_type.trim() ? validateRegistryValueType(registryDraft().value_type, locale()) : {}
+    registryDraft().value_type.trim()
+      ? validateRegistryValueType(registryDraft().value_type, locale())
+      : {}
   )
   const registryDuplicateValidation = createMemo(() => {
     const path = registryDraft().path.trim().toLowerCase()
@@ -158,10 +167,14 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                           {item.name || ct('luthier_unnamed')}
                         </TableCell>
                         <TableCell class="max-w-[220px] truncate text-muted-foreground">
-                          {item.check_commands.length > 0 ? joinCommaList(item.check_commands) : '—'}
+                          {item.check_commands.length > 0
+                            ? joinCommaList(item.check_commands)
+                            : '—'}
                         </TableCell>
                         <TableCell class="max-w-[220px] truncate text-muted-foreground">
-                          {item.check_env_vars.length > 0 ? joinCommaList(item.check_env_vars) : '—'}
+                          {item.check_env_vars.length > 0
+                            ? joinCommaList(item.check_env_vars)
+                            : '—'}
                         </TableCell>
                         <TableCell class="max-w-[240px] truncate text-muted-foreground">
                           {item.check_paths.length > 0 ? joinCommaList(item.check_paths) : '—'}
@@ -174,7 +187,10 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
                             onClick={() =>
                               patchConfig((prev) => ({
                                 ...prev,
-                                extra_system_dependencies: removeAt(prev.extra_system_dependencies, index())
+                                extra_system_dependencies: removeAt(
+                                  prev.extra_system_dependencies,
+                                  index()
+                                ),
                               }))
                             }
                             title={ct('luthier_remove_dependency')}
@@ -206,7 +222,6 @@ export function DependenciesTabSection(props: LuthierPageSectionProps) {
           {ct('luthier_add_dependency')}
         </Button>
       </FieldShell>
-
     </section>
   )
 }

@@ -5,9 +5,7 @@ use std::path::{Path, PathBuf};
 
 use luthier_orchestrator_core::GameConfig;
 
-use crate::application::ports::{
-    FileSystemEntry, FileSystemEntryKind, FileSystemPort,
-};
+use crate::application::ports::{FileSystemEntry, FileSystemEntryKind, FileSystemPort};
 use crate::domain::paths as domain_paths;
 use crate::error::{BackendError, BackendResult};
 use crate::models::dto::{
@@ -74,7 +72,10 @@ pub(crate) fn list_child_directories(
 ) -> BackendResult<ListChildDirectoriesOutput> {
     let root = PathBuf::from(&input.path);
     let entries = fs::read_dir(&root).map_err(|err| {
-        BackendError::new("fs_read_dir_failed", format!("failed to list directory: {err}"))
+        BackendError::new(
+            "fs_read_dir_failed",
+            format!("failed to list directory: {err}"),
+        )
     })?;
 
     let mut directories = Vec::new();
@@ -104,7 +105,10 @@ pub(crate) fn list_directory_entries(
 ) -> BackendResult<ListDirectoryEntriesOutput> {
     let root = PathBuf::from(&input.path);
     let entries = fs::read_dir(&root).map_err(|err| {
-        BackendError::new("fs_read_dir_failed", format!("failed to list directory: {err}"))
+        BackendError::new(
+            "fs_read_dir_failed",
+            format!("failed to list directory: {err}"),
+        )
     })?;
 
     let mut directories = Vec::new();
@@ -134,7 +138,10 @@ pub(crate) fn list_directory_entries(
     })
 }
 
-pub(crate) fn collect_missing_files(config: &GameConfig, game_root: &Path) -> BackendResult<Vec<String>> {
+pub(crate) fn collect_missing_files(
+    config: &GameConfig,
+    game_root: &Path,
+) -> BackendResult<Vec<String>> {
     let mut missing = Vec::new();
 
     let exe_path = domain_paths::resolve_relative_path(game_root, &config.relative_exe_path)?;
@@ -256,4 +263,3 @@ fn map_std_file_type(file_type: fs::FileType) -> FileSystemEntryKind {
         FileSystemEntryKind::Other
     }
 }
-

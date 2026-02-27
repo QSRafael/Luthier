@@ -9,7 +9,10 @@ export const Card = (props: CardProps) => {
   const [, rest] = splitProps(props, ['class'])
   return (
     <div
-      class={cn('bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-5 shadow-sm', props.class)}
+      class={cn(
+        'bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-5 shadow-sm',
+        props.class
+      )}
       {...rest}
     />
   )

@@ -3,13 +3,17 @@ import { Switch as SwitchPrimitive } from '@kobalte/core/switch'
 
 import { cn } from '../../lib/cva'
 
-export type SwitchProps<T extends ValidComponent = 'div'> = ComponentProps<typeof SwitchPrimitive<T>>
+export type SwitchProps<T extends ValidComponent = 'div'> = ComponentProps<
+  typeof SwitchPrimitive<T>
+>
 
 export const Switch = <T extends ValidComponent = 'div'>(props: SwitchProps<T>) => {
   return <SwitchPrimitive {...props} />
 }
 
-export type SwitchControlProps<T extends ValidComponent = 'div'> = ComponentProps<typeof SwitchPrimitive.Control<T>>
+export type SwitchControlProps<T extends ValidComponent = 'div'> = ComponentProps<
+  typeof SwitchPrimitive.Control<T>
+>
 
 export const SwitchControl = <T extends ValidComponent = 'div'>(props: SwitchControlProps<T>) => {
   const [, rest] = splitProps(props as SwitchControlProps, ['class'])
@@ -28,19 +32,26 @@ export const SwitchControl = <T extends ValidComponent = 'div'>(props: SwitchCon
   )
 }
 
-export type SwitchThumbProps<T extends ValidComponent = 'div'> = ComponentProps<typeof SwitchPrimitive.Thumb<T>>
+export type SwitchThumbProps<T extends ValidComponent = 'div'> = ComponentProps<
+  typeof SwitchPrimitive.Thumb<T>
+>
 
 export const SwitchThumb = <T extends ValidComponent = 'div'>(props: SwitchThumbProps<T>) => {
   const [, rest] = splitProps(props as SwitchThumbProps, ['class'])
   return (
     <SwitchPrimitive.Thumb
-      class={cn('bg-background pointer-events-none size-4 rounded-full transition-transform data-[checked]:translate-x-5', props.class)}
+      class={cn(
+        'bg-background pointer-events-none size-4 rounded-full transition-transform data-[checked]:translate-x-5',
+        props.class
+      )}
       {...rest}
     />
   )
 }
 
-export type SwitchInputProps<T extends ValidComponent = 'input'> = ComponentProps<typeof SwitchPrimitive.Input<T>>
+export type SwitchInputProps<T extends ValidComponent = 'input'> = ComponentProps<
+  typeof SwitchPrimitive.Input<T>
+>
 
 export const SwitchInput = <T extends ValidComponent = 'input'>(props: SwitchInputProps<T>) => {
   const [, rest] = splitProps(props as SwitchInputProps, ['class'])

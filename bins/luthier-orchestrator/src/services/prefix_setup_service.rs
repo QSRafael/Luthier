@@ -11,8 +11,7 @@ use luthier_orchestrator_core::{
 };
 
 use crate::{
-    application::runtime_overrides::feature_enabled,
-    domain::models::PrefixSetupExecutionContext,
+    application::runtime_overrides::feature_enabled, domain::models::PrefixSetupExecutionContext,
 };
 
 pub fn build_prefix_setup_execution_context(
@@ -183,7 +182,9 @@ fn filter_installed_winetricks_verbs(plan: &mut PrefixSetupPlan, effective_prefi
     plan.commands = filtered_commands;
 }
 
-fn read_installed_winetricks_verbs(effective_prefix_path: &Path) -> std::collections::BTreeSet<String> {
+fn read_installed_winetricks_verbs(
+    effective_prefix_path: &Path,
+) -> std::collections::BTreeSet<String> {
     let path = effective_prefix_path.join("winetricks.log");
     let Ok(raw) = fs::read_to_string(path) else {
         return std::collections::BTreeSet::new();
@@ -433,13 +434,16 @@ fn adapt_prefix_setup_plan_for_runtime(
         .proton
         .clone()
         .ok_or_else(|| anyhow!("selected Proton runtime but proton path is missing"))?;
-    let umu_run = if matches!(runtime, RuntimeCandidate::ProtonUmu) {
-        Some(report.runtime.umu_run.clone().ok_or_else(|| {
-            anyhow!("selected ProtonUmu runtime but umu-run path is missing")
-        })?)
-    } else {
-        None
-    };
+    let umu_run =
+        if matches!(runtime, RuntimeCandidate::ProtonUmu) {
+            Some(
+                report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected ProtonUmu runtime but umu-run path is missing")
+                })?,
+            )
+        } else {
+            None
+        };
 
     for cmd in &mut out.commands {
         if cmd.program == "wineboot" {

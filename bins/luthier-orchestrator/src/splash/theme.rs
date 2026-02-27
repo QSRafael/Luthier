@@ -1,6 +1,6 @@
-use std::sync::OnceLock;
 use fontdb::{Database, Family, Query, Source, Style, Weight};
 use fontdue::{Font, FontSettings};
+use std::sync::OnceLock;
 
 use super::assets::embedded_splash_font_bytes;
 

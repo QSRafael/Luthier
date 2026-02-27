@@ -6,7 +6,11 @@ use luthier_orchestrator_core::GameConfig;
 use crate::infrastructure::paths::resolve_relative_path;
 
 pub fn validate_integrity(config: &GameConfig, game_root: &Path) -> anyhow::Result<Vec<String>> {
-    validate_required_paths(game_root, &config.relative_exe_path, &config.integrity_files)
+    validate_required_paths(
+        game_root,
+        &config.relative_exe_path,
+        &config.integrity_files,
+    )
 }
 
 pub fn validate_required_paths(
@@ -23,8 +27,8 @@ pub fn validate_required_paths(
     }
 
     for file in integrity_files {
-        let path =
-            resolve_relative_path(game_root, file).with_context(|| format!("invalid path '{file}'"))?;
+        let path = resolve_relative_path(game_root, file)
+            .with_context(|| format!("invalid path '{file}'"))?;
         if !path.exists() {
             missing.push(file.clone());
         }

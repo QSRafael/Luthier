@@ -9,25 +9,30 @@ const itemVariants = cva('rounded-xl border bg-card/95 p-4', {
     variant: {
       default: 'border-border',
       outline: 'border-dashed border-border',
-      muted: 'border-border bg-muted/20'
+      muted: 'border-border bg-muted/20',
     },
     size: {
       default: 'p-4',
       sm: 'p-3',
-      xs: 'p-2.5'
-    }
+      xs: 'p-2.5',
+    },
   },
   defaultVariants: {
     variant: 'default',
-    size: 'default'
-  }
+    size: 'default',
+  },
 })
 
 export type ItemProps = ComponentProps<'section'> & VariantProps<typeof itemVariants>
 
 export const Item = (props: ItemProps) => {
   const [, rest] = splitProps(props, ['class', 'variant', 'size'])
-  return <section class={cn(itemVariants({ variant: props.variant, size: props.size }), props.class)} {...rest} />
+  return (
+    <section
+      class={cn(itemVariants({ variant: props.variant, size: props.size }), props.class)}
+      {...rest}
+    />
+  )
 }
 
 export type ItemGroupProps = ComponentProps<'div'>
@@ -47,7 +52,10 @@ export const ItemMain = (props: ItemMainProps) => {
   const [, rest] = splitProps(props, ['class'])
   return (
     <div
-      class={cn('grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start', props.class)}
+      class={cn(
+        'grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start',
+        props.class
+      )}
       {...rest}
     />
   )
@@ -64,7 +72,8 @@ export const ItemMedia = (props: ItemMediaProps) => {
     <div
       class={cn(
         'shrink-0',
-        variant === 'icon' && 'inline-flex size-8 items-center justify-center rounded-md border bg-muted/40',
+        variant === 'icon' &&
+          'inline-flex size-8 items-center justify-center rounded-md border bg-muted/40',
         variant === 'image' && 'overflow-hidden rounded-md border',
         props.class
       )}
@@ -82,7 +91,9 @@ export const ItemContent = (props: ItemContentProps) => {
 export type ItemTitleProps = ComponentProps<'p'>
 export const ItemTitle = (props: ItemTitleProps) => {
   const [, rest] = splitProps(props, ['class'])
-  return <p class={cn('text-sm font-semibold leading-tight text-foreground', props.class)} {...rest} />
+  return (
+    <p class={cn('text-sm font-semibold leading-tight text-foreground', props.class)} {...rest} />
+  )
 }
 
 export type ItemDescriptionProps = ComponentProps<'p'>
@@ -105,7 +116,10 @@ export const ItemFooter = (props: ItemFooterProps) => {
   const [, rest] = splitProps(props, ['class', 'showDivider'])
   return (
     <Show when={props.children}>
-      <div class={cn('mt-3 pt-3', props.showDivider !== false && 'border-t', props.class)} {...rest} />
+      <div
+        class={cn('mt-3 pt-3', props.showDivider !== false && 'border-t', props.class)}
+        {...rest}
+      />
     </Show>
   )
 }

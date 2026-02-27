@@ -84,7 +84,12 @@ export function FeatureStateField(props: FeatureStateFieldProps) {
   const state = createMemo(() => decodeFeatureState(props.value))
 
   return (
-    <FieldShell label={props.label} help={props.help} controlClass="grid gap-2 md:grid-cols-2" footer={props.footer}>
+    <FieldShell
+      label={props.label}
+      help={props.help}
+      controlClass="grid gap-2 md:grid-cols-2"
+      footer={props.footer}
+    >
       <>
         <FeatureToggleCard
           title={i18n.enabled}
@@ -126,14 +131,14 @@ export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
     if (next === 'default') {
       props.onChange({
         use_wine_default: true,
-        state: decoded().enabled ? 'OptionalOn' : 'OptionalOff'
+        state: decoded().enabled ? 'OptionalOn' : 'OptionalOff',
       })
       return
     }
 
     props.onChange({
       use_wine_default: false,
-      state: next === 'enabled' ? 'OptionalOn' : 'OptionalOff'
+      state: next === 'enabled' ? 'OptionalOn' : 'OptionalOff',
     })
   }
 
@@ -144,7 +149,11 @@ export function WinecfgFeatureStateField(props: WinecfgFeatureStateFieldProps) {
       controlClass="flex justify-end"
       footer={props.footer}
     >
-      <Tabs value={mode()} onChange={(value) => applyMode(value as 'default' | 'enabled' | 'disabled')} class="items-end">
+      <Tabs
+        value={mode()}
+        onChange={(value) => applyMode(value as 'default' | 'enabled' | 'disabled')}
+        class="items-end"
+      >
         <TabsList class="w-full justify-start md:w-auto">
           <TabsTrigger value="default" class="min-w-[84px]">
             {i18n.wineDefault}

@@ -5,10 +5,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use luthier_orchestrator_core::{
-    doctor::DoctorReport,
-    GameConfig, RegistryKey, RuntimeCandidate,
-};
+use luthier_orchestrator_core::{doctor::DoctorReport, GameConfig, RegistryKey, RuntimeCandidate};
 use sha2::{Digest, Sha256};
 
 use crate::{
@@ -40,7 +37,8 @@ pub fn apply_registry_keys_if_present(
         return Ok(Some(cached_registry_import_result()));
     }
 
-    let reg_windows_path = write_registry_import_file(&config.registry_keys, &effective_prefix_path)?;
+    let reg_windows_path =
+        write_registry_import_file(&config.registry_keys, &effective_prefix_path)?;
     let command_plan =
         build_regedit_import_command(config, report, prefix_root_path, &reg_windows_path)
             .context("failed to build registry import command")?;
@@ -84,11 +82,10 @@ fn build_regedit_import_command(
 
     let mut command_tokens = match selected_runtime {
         RuntimeCandidate::ProtonUmu => {
-            let umu = report
-                .runtime
-                .umu_run
-                .clone()
-                .ok_or_else(|| anyhow!("selected runtime ProtonUmu but umu-run path is missing"))?;
+            let umu =
+                report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected runtime ProtonUmu but umu-run path is missing")
+                })?;
             vec![
                 umu,
                 "regedit.exe".to_string(),
@@ -148,7 +145,8 @@ fn write_registry_import_file(
     effective_prefix_path: &Path,
 ) -> anyhow::Result<String> {
     let temp_dir = effective_prefix_path.join("drive_c/windows/temp");
-    fs::create_dir_all(&temp_dir).context("failed to create Windows temp directory inside prefix")?;
+    fs::create_dir_all(&temp_dir)
+        .context("failed to create Windows temp directory inside prefix")?;
 
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)

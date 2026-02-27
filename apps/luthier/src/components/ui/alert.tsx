@@ -12,12 +12,12 @@ const alertVariants = cva(
         default: 'bg-card text-card-foreground border-border',
         warning:
           'border-amber-500/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100',
-        destructive: 'border-destructive/40 bg-destructive/10 text-destructive'
-      }
+        destructive: 'border-destructive/40 bg-destructive/10 text-destructive',
+      },
     },
     defaultVariants: {
-      variant: 'default'
-    }
+      variant: 'default',
+    },
   }
 )
 
@@ -25,7 +25,13 @@ export type AlertProps = ComponentProps<'div'> & VariantProps<typeof alertVarian
 
 export const Alert = (props: AlertProps) => {
   const [, rest] = splitProps(props, ['class', 'variant'])
-  return <div role="alert" class={cn(alertVariants({ variant: props.variant }), props.class)} {...rest} />
+  return (
+    <div
+      role="alert"
+      class={cn(alertVariants({ variant: props.variant }), props.class)}
+      {...rest}
+    />
+  )
 }
 
 export type AlertTitleProps = ComponentProps<'h5'>

@@ -26,33 +26,28 @@ import type { NotifierPort, NotifyOptions } from '../application/ports'
  * ```
  */
 export const sonnerNotifier: NotifierPort = {
-    notify(message: string, options?: NotifyOptions): void {
-        const tone = options?.tone ?? 'info'
-        const emit =
-            tone === 'error'
-                ? toast.error
-                : tone === 'success'
-                  ? toast.success
-                  : toast.info
+  notify(message: string, options?: NotifyOptions): void {
+    const tone = options?.tone ?? 'info'
+    const emit = tone === 'error' ? toast.error : tone === 'success' ? toast.success : toast.info
 
-        if (!options) {
-            emit(message)
-            return
-        }
-
-        const toastOptions: Parameters<typeof toast>[1] = {}
-
-        if (options.description) {
-            toastOptions.description = options.description
-        }
-
-        if (options.action) {
-            toastOptions.action = {
-                label: options.action.label,
-                onClick: options.action.onClick
-            }
-        }
-
-        emit(message, toastOptions)
+    if (!options) {
+      emit(message)
+      return
     }
+
+    const toastOptions: Parameters<typeof toast>[1] = {}
+
+    if (options.description) {
+      toastOptions.description = options.description
+    }
+
+    if (options.action) {
+      toastOptions.action = {
+        label: options.action.label,
+        onClick: options.action.onClick,
+      }
+    }
+
+    emit(message, toastOptions)
+  },
 }

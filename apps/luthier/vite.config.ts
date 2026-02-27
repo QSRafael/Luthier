@@ -5,9 +5,9 @@ export default defineConfig({
   plugins: [solidPlugin()],
   server: {
     port: 1420,
-    strictPort: true
+    strictPort: true,
   },
   build: {
-    target: 'esnext'
-  }
+    target: 'esnext',
+  },
 })

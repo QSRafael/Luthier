@@ -103,4 +103,3 @@ fn pe_is_64(bin: &[u8]) -> Result<bool, String> {
         _ => Err(format!("unknown PE optional header magic: {magic:#x}")),
     }
 }
-

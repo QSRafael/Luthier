@@ -16,19 +16,19 @@ export const buttonVariants = cva(
           'border border-border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-muted/30 dark:hover:bg-muted/50',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline'
+        link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2',
         sm: 'h-8 rounded-md px-3',
         lg: 'h-10 rounded-md px-6',
-        icon: 'h-9 w-9 p-0'
-      }
+        icon: 'h-9 w-9 p-0',
+      },
     },
     defaultVariants: {
       variant: 'default',
-      size: 'default'
-    }
+      size: 'default',
+    },
   }
 )
 
@@ -45,7 +45,7 @@ export const Button = <T extends ValidComponent = 'button'>(props: ButtonProps<T
       class={cn(
         buttonVariants({
           variant: props.variant,
-          size: props.size
+          size: props.size,
         }),
         props.class
       )}

@@ -29,7 +29,9 @@ export const SidebarHeader = (props: SidebarHeaderProps) => {
 export type SidebarContentProps = ComponentProps<'div'>
 export const SidebarContent = (props: SidebarContentProps) => {
   const [, rest] = splitProps(props, ['class'])
-  return <div class={cn('flex flex-1 flex-col gap-3 overflow-auto px-2 py-3', props.class)} {...rest} />
+  return (
+    <div class={cn('flex flex-1 flex-col gap-3 overflow-auto px-2 py-3', props.class)} {...rest} />
+  )
 }
 
 export type SidebarFooterProps = ComponentProps<'div'>

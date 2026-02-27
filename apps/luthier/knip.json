@@ -1,29 +1,12 @@
 {
   "$schema": "./node_modules/knip/schema.json",
-  "project": [
-    "src/**/*.{ts,tsx}"
-  ],
-  "include": [
-    "files",
-    "exports",
-    "dependencies"
-  ],
-  "ignoreFiles": [
-    "src/components/ui/badge.tsx",
-    "src/features/luthier/errors.ts"
-  ],
-  "ignoreDependencies": [
-    "@tauri-apps/cli"
-  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "include": ["files", "exports", "dependencies"],
+  "ignoreFiles": ["src/components/ui/badge.tsx", "src/features/luthier/errors.ts"],
+  "ignoreDependencies": ["@tauri-apps/cli"],
   "ignoreIssues": {
-    "src/components/ui/**": [
-      "exports"
-    ],
-    "src/components/form/**": [
-      "exports"
-    ],
-    "src/lib/cva.ts": [
-      "exports"
-    ]
+    "src/components/ui/**": ["exports"],
+    "src/components/form/**": ["exports"],
+    "src/lib/cva.ts": ["exports"]
   }
 }

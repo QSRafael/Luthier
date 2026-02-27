@@ -38,8 +38,8 @@ pub(crate) fn decode_reg_file_text(bytes: &[u8]) -> Result<String, String> {
         return Err("UTF-16BE .reg files are not supported".to_string());
     }
 
-    let text =
-        String::from_utf8(bytes.to_vec()).map_err(|err| format!("invalid UTF-8 .reg file: {err}"))?;
+    let text = String::from_utf8(bytes.to_vec())
+        .map_err(|err| format!("invalid UTF-8 .reg file: {err}"))?;
     Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_string())
 }
 
@@ -66,7 +66,9 @@ pub(crate) fn parse_reg_file_entries(raw: &str) -> (Vec<RegistryKey>, Vec<String
         }
 
         let Some(path) = current_path.clone() else {
-            warnings.push(format!("ignored line outside registry key section: {trimmed}"));
+            warnings.push(format!(
+                "ignored line outside registry key section: {trimmed}"
+            ));
             continue;
         };
 
@@ -293,4 +295,3 @@ fn unescape_reg_string(raw: &str) -> String {
     }
     out
 }
-

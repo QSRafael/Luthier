@@ -16,27 +16,27 @@ const config: Config = {
         foreground: labAlpha('--foreground'),
         primary: {
           DEFAULT: labAlpha('--primary'),
-          foreground: labAlpha('--primary-foreground')
+          foreground: labAlpha('--primary-foreground'),
         },
         secondary: {
           DEFAULT: labAlpha('--secondary'),
-          foreground: labAlpha('--secondary-foreground')
+          foreground: labAlpha('--secondary-foreground'),
         },
         destructive: {
           DEFAULT: labAlpha('--destructive'),
-          foreground: labAlpha('--destructive-foreground')
+          foreground: labAlpha('--destructive-foreground'),
         },
         muted: {
           DEFAULT: labAlpha('--muted'),
-          foreground: labAlpha('--muted-foreground')
+          foreground: labAlpha('--muted-foreground'),
         },
         accent: {
           DEFAULT: labAlpha('--accent'),
-          foreground: labAlpha('--accent-foreground')
+          foreground: labAlpha('--accent-foreground'),
         },
         card: {
           DEFAULT: labAlpha('--card'),
-          foreground: labAlpha('--card-foreground')
+          foreground: labAlpha('--card-foreground'),
         },
         sidebar: {
           DEFAULT: lab('--sidebar'),
@@ -46,20 +46,20 @@ const config: Config = {
           accent: lab('--sidebar-accent'),
           'accent-foreground': lab('--sidebar-accent-foreground'),
           border: lab('--sidebar-border'),
-          ring: lab('--sidebar-ring')
-        }
+          ring: lab('--sidebar-ring'),
+        },
       },
       borderRadius: {
         lg: '0.75rem',
         md: '0.6rem',
-        sm: '0.45rem'
+        sm: '0.45rem',
       },
       boxShadow: {
-        soft: '0 20px 40px -30px rgba(15, 23, 42, 0.45)'
-      }
-    }
+        soft: '0 20px 40px -30px rgba(15, 23, 42, 0.45)',
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 }
 
 export default config

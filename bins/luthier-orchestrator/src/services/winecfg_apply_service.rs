@@ -7,9 +7,8 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use luthier_orchestrator_core::{
-    doctor::DoctorReport,
-    DllOverrideRule, GameConfig, RuntimeCandidate, VirtualDesktopConfig, WinecfgConfig,
-    WinecfgFeaturePolicy,
+    doctor::DoctorReport, DllOverrideRule, GameConfig, RuntimeCandidate, VirtualDesktopConfig,
+    WinecfgConfig, WinecfgFeaturePolicy,
 };
 use sha2::{Digest, Sha256};
 

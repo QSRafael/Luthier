@@ -205,8 +205,7 @@ mod tests {
         let dir = create_test_dir("short-key");
         let full_hash = "d21d0173c3028c190055ae1f14f9a4c282e8e58318975fc5d4cefdeb61a15df9";
 
-        let guard =
-            acquire_instance_lock_in_dir(full_hash, &dir).expect("lock should be created");
+        let guard = acquire_instance_lock_in_dir(full_hash, &dir).expect("lock should be created");
         let expected = dir.join("d21d0173c302.lock");
         assert_eq!(guard.lock_path(), expected.as_path());
 

@@ -31,8 +31,8 @@
  * `components` — flat list of available Winetricks verbs.
  */
 export type WinetricksAvailableOutput = {
-    source: string
-    components: string[]
+  source: string
+  components: string[]
 }
 
 /**
@@ -43,9 +43,9 @@ export type WinetricksAvailableOutput = {
  * `height`   — icon height in pixels.
  */
 export type ExtractExecutableIconOutput = {
-    data_url: string
-    width: number
-    height: number
+  data_url: string
+  width: number
+  height: number
 }
 
 /**
@@ -59,10 +59,10 @@ export type ExtractExecutableIconOutput = {
  *                          may be absent when only one candidate was found.
  */
 export type SearchHeroImageOutput = {
-    source: string
-    image_url: string
-    game_id?: number | null
-    candidate_image_urls?: string[]
+  source: string
+  image_url: string
+  game_id?: number | null
+  candidate_image_urls?: string[]
 }
 
 /**
@@ -77,12 +77,12 @@ export type SearchHeroImageOutput = {
  * `original_height` — height of the source image before processing.
  */
 export type PrepareHeroImageOutput = {
-    source_url: string
-    data_url: string
-    width: number
-    height: number
-    original_width: number
-    original_height: number
+  source_url: string
+  data_url: string
+  width: number
+  height: number
+  original_width: number
+  original_height: number
 }
 
 /**
@@ -91,42 +91,42 @@ export type PrepareHeroImageOutput = {
  * `sha256_hex` — lowercase hex-encoded SHA-256 digest of the executable file.
  */
 export type HashExecutableOutput = {
-    sha256_hex: string
+  sha256_hex: string
 }
 
 /**
  * A single registry entry decoded from a `.reg` file.
  */
 export type RegistryImportEntry = {
-    path: string
-    name: string
-    value_type: string
-    value: string
+  path: string
+  name: string
+  value_type: string
+  value: string
 }
 
 /**
  * Output of the `cmd_import_registry_file` Tauri command.
  */
 export type ImportRegistryFileOutput = {
-    entries: RegistryImportEntry[]
-    warnings: string[]
+  entries: RegistryImportEntry[]
+  warnings: string[]
 }
 
 /**
  * Output of the `cmd_list_child_directories` Tauri command.
  */
 export type ListChildDirectoriesOutput = {
-    path: string
-    directories: string[]
+  path: string
+  directories: string[]
 }
 
 /**
  * Output of the `cmd_list_directory_entries` Tauri command.
  */
 export type ListDirectoryEntriesOutput = {
-    path: string
-    directories: string[]
-    files: string[]
+  path: string
+  directories: string[]
+  files: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -147,8 +147,8 @@ export type StatusTone = 'info' | 'success' | 'error'
  * restore the previous image selection after an undo action.
  */
 export type HeroImageSnapshot = {
-    hero_image_url: string
-    hero_image_data_url: string
-    lastPreparedHeroImageUrl: string
-    searchIndex: number
+  hero_image_url: string
+  hero_image_data_url: string
+  lastPreparedHeroImageUrl: string
+  searchIndex: number
 }

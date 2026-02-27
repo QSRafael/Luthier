@@ -6,14 +6,11 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use luthier_orchestrator_core::{
-    doctor::DoctorReport,
-    prefix::base_env_for_prefix,
-    FeatureState, GameConfig, RuntimeCandidate,
+    doctor::DoctorReport, prefix::base_env_for_prefix, FeatureState, GameConfig, RuntimeCandidate,
 };
 
 use crate::{
-    application::runtime_overrides::feature_enabled,
-    domain::models::LaunchCommandPlan,
+    application::runtime_overrides::feature_enabled, domain::models::LaunchCommandPlan,
     infrastructure::paths::resolve_relative_path,
 };
 
@@ -28,19 +25,22 @@ pub fn build_launch_command(
         .selected_runtime
         .ok_or_else(|| anyhow!("doctor did not select a runtime"))?;
 
-    let runtime_program = match selected_runtime {
-        RuntimeCandidate::ProtonUmu => report.runtime.umu_run.clone().ok_or_else(|| {
-            anyhow!("selected runtime ProtonUmu but umu-run path is missing")
-        })?,
-        RuntimeCandidate::ProtonNative => report.runtime.proton.clone().ok_or_else(|| {
-            anyhow!("selected runtime ProtonNative but proton path is missing")
-        })?,
-        RuntimeCandidate::Wine => report
-            .runtime
-            .wine
-            .clone()
-            .ok_or_else(|| anyhow!("selected runtime Wine but wine path is missing"))?,
-    };
+    let runtime_program =
+        match selected_runtime {
+            RuntimeCandidate::ProtonUmu => {
+                report.runtime.umu_run.clone().ok_or_else(|| {
+                    anyhow!("selected runtime ProtonUmu but umu-run path is missing")
+                })?
+            }
+            RuntimeCandidate::ProtonNative => report.runtime.proton.clone().ok_or_else(|| {
+                anyhow!("selected runtime ProtonNative but proton path is missing")
+            })?,
+            RuntimeCandidate::Wine => report
+                .runtime
+                .wine
+                .clone()
+                .ok_or_else(|| anyhow!("selected runtime Wine but wine path is missing"))?,
+        };
 
     let game_exe = resolve_relative_path(game_root, &config.relative_exe_path)
         .context("invalid relative_exe_path in payload")?;

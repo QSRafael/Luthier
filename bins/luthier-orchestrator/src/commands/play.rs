@@ -1,5 +1,5 @@
-use anyhow::Context;
 use crate::application::play_flow;
+use anyhow::Context;
 
 pub fn run_play(trace_id: &str) -> anyhow::Result<()> {
     let execution = play_flow::execute_play_flow(trace_id)?;

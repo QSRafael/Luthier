@@ -5,7 +5,14 @@ import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/a
 import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
 import { Select } from '../../../../components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../components/ui/table'
 import { AccordionSection } from '../../page-shared'
 import type { WinecfgAccordionSectionProps } from './shared'
 import {
@@ -30,7 +37,9 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
     availableWineDriveLetters,
   } = props.view
   const wineDriveHostPathValidation = createMemo(() =>
-    wineDriveDraft().host_path.trim() ? validateLinuxPath(wineDriveDraft().host_path, locale(), true) : {}
+    wineDriveDraft().host_path.trim()
+      ? validateLinuxPath(wineDriveDraft().host_path, locale(), true)
+      : {}
   )
   const wineDriveLabelValidation = createMemo(() =>
     wineDriveDraft().label.trim()
@@ -38,7 +47,9 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
       : {}
   )
   const wineDriveSerialValidation = createMemo(() =>
-    wineDriveDraft().serial.trim() ? validateWindowsDriveSerial(wineDriveDraft().serial, locale()) : {}
+    wineDriveDraft().serial.trim()
+      ? validateWindowsDriveSerial(wineDriveDraft().serial, locale())
+      : {}
   )
 
   return (
@@ -86,10 +97,10 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                         host_path: null,
                         drive_type: 'auto',
                         label: null,
-                        serial: null
-                      }
-                    ]
-                  }
+                        serial: null,
+                      },
+                    ],
+                  },
                 }))
               }
             >
@@ -111,7 +122,7 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                 host_path: '',
                 drive_type: 'auto',
                 label: '',
-                serial: ''
+                serial: '',
               })
               setWineDriveDialogOpen(true)
             }}
@@ -168,8 +179,8 @@ export function WinecfgDrivesAccordionSection(props: WinecfgAccordionSectionProp
                               ...prev,
                               winecfg: {
                                 ...prev.winecfg,
-                                drives: removeAt(prev.winecfg.drives, index())
-                              }
+                                drives: removeAt(prev.winecfg.drives, index()),
+                              },
                             }))
                           }
                         >

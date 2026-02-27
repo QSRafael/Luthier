@@ -19,8 +19,7 @@ use crate::{
     services::{
         launch_plan_builder::build_winecfg_command,
         prefix_setup_service::build_prefix_setup_execution_context,
-        registry_apply_service::apply_registry_keys_if_present,
-        runtime_flags::dry_run_enabled,
+        registry_apply_service::apply_registry_keys_if_present, runtime_flags::dry_run_enabled,
         winecfg_apply_service::apply_winecfg_overrides_if_present,
     },
 };

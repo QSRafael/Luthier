@@ -29,7 +29,9 @@ impl ImportRegistryUseCase {
         let (entries, warnings) = registry_parser::parse_reg_file_entries(&raw);
 
         if entries.is_empty() {
-            return Err("no importable registry entries found in .reg file".to_string().into());
+            return Err("no importable registry entries found in .reg file"
+                .to_string()
+                .into());
         }
 
         let out = ImportRegistryFileOutput { entries, warnings };
@@ -56,7 +58,9 @@ impl ImportRegistryUseCase {
     }
 }
 
-pub fn import_registry_file(input: ImportRegistryFileInput) -> BackendResult<ImportRegistryFileOutput> {
+pub fn import_registry_file(
+    input: ImportRegistryFileInput,
+) -> BackendResult<ImportRegistryFileOutput> {
     ImportRegistryUseCase::new().execute(input)
 }
 

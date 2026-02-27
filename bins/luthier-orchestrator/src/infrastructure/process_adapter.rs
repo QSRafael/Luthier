@@ -1,8 +1,6 @@
 use luthier_orchestrator_core::prefix::PrefixSetupPlan;
 
-pub use luthier_orchestrator_core::process::{
-    CommandExecutionResult, ExternalCommand, StepStatus,
-};
+pub use luthier_orchestrator_core::process::{CommandExecutionResult, ExternalCommand, StepStatus};
 
 pub fn execute_prefix_setup_plan(
     plan: &PrefixSetupPlan,
