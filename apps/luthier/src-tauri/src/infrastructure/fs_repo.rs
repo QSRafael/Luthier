@@ -52,10 +52,6 @@ impl FileSystemPort for LocalFileSystemRepository {
     }
 }
 
-pub(crate) fn read_bytes(path: &Path) -> BackendResult<Vec<u8>> {
-    LocalFileSystemRepository::new().read_bytes(path)
-}
-
 pub(crate) fn resolve_base_orchestrator_binary(
     requested: &str,
     extra_hints: &[PathBuf],

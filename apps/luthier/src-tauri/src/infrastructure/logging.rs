@@ -46,17 +46,6 @@ impl StderrJsonBackendLogger {
         self.write_payload(&payload)
     }
 
-    pub fn emit_raw(
-        &self,
-        level: &str,
-        event_code: &str,
-        message: &str,
-        context: serde_json::Value,
-    ) -> BackendResult<()> {
-        let payload = self.build_payload(level, event_code, message, context);
-        self.write_payload(&payload)
-    }
-
     pub fn build_payload(
         &self,
         level: &str,
@@ -95,35 +84,6 @@ pub fn format_backend_log_level(level: BackendLogLevel) -> &'static str {
         BackendLogLevel::Info => "INFO",
         BackendLogLevel::Warn => "WARN",
         BackendLogLevel::Error => "ERROR",
-    }
-}
-
-pub fn try_log_backend_event(
-    level: &str,
-    event_code: &str,
-    message: &str,
-    context: serde_json::Value,
-) -> BackendResult<()> {
-    StderrJsonBackendLogger::new().emit_raw(level, event_code, message, context)
-}
-
-pub fn log_backend_event(level: &str, event_code: &str, message: &str, context: serde_json::Value) {
-    if let Err(err) = try_log_backend_event(level, event_code, message, context) {
-        let fallback = serde_json::json!({
-            "ts_ms": unix_time_ms_now(),
-            "level": "ERROR",
-            "component": DEFAULT_BACKEND_COMPONENT,
-            "event_code": "GO-LOG-001",
-            "message": "failed to emit backend log",
-            "pid": std::process::id(),
-            "context": {
-                "error": err.to_string(),
-                "original_level": level,
-                "original_event_code": event_code,
-                "original_message": message,
-            }
-        });
-        eprintln!("{fallback}");
     }
 }
 
