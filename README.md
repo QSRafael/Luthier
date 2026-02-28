@@ -160,7 +160,7 @@ When you run `game --play`, the Orchestrator executes this pipeline before and d
 4. Resolve game root and main `.exe` path.
 5. Validate required files (`integrity_files`) and block if something is missing.
 6. Run `doctor` with policy enforcement (`MandatoryOn` can block, optional items can degrade).
-7. Build and execute prefix setup plan (runtime-aware).
+7. Build and execute prefix setup plan (runtime-aware), including Winetricks verbs when configured and allowed by policy.
 8. Apply registry entries (when configured).
 9. Apply winecfg overrides (when configured).
 10. Apply folder mounts into the prefix (`folder_mounts`).
