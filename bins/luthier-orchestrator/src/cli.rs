@@ -4,13 +4,17 @@ use clap::{Parser, ValueEnum};
 #[command(name = "luthier-orchestrator")]
 #[command(about = "Luthier Orchestrator CLI")]
 #[command(
-    after_help = "Examples:\n  game --doctor\n  game --doctor --verbose\n  game --doctor --play\n  game --play\n  game --play-splash\n  game --set-mangohud on --set-gamescope off\n  game --set-mangohud off --play\n  game --show-payload\n  game --show-base64-hero-image\n  game --save-payload"
+    after_help = "Examples:\n  game --doctor\n  game --doctor --play\n  game --play\n  game --play-splash\n  game --set-mangohud on --set-gamescope off\n  game --set-mangohud off --play\n  game --show-payload\n  game --show-base64-hero-image\n  game --save-payload"
 )]
 pub struct Cli {
     #[arg(long, help = "Run game launch pipeline without splash")]
     pub play: bool,
 
-    #[arg(long = "play-splash", help = "Run game launch pipeline with splash")]
+    #[arg(
+        long = "play-splash",
+        visible_alias = "play-launcher",
+        help = "Run game launch pipeline with splash"
+    )]
     pub play_splash: bool,
 
     #[arg(long, help = "Run doctor checks and print categorized result")]
@@ -18,9 +22,6 @@ pub struct Cli {
 
     #[arg(long, help = "Run Wine configuration flow")]
     pub winecfg: bool,
-
-    #[arg(long, help = "Alias for full doctor output (already default)")]
-    pub verbose: bool,
 
     #[arg(
         long = "show-payload",
@@ -36,7 +37,7 @@ pub struct Cli {
 
     #[arg(
         long = "save-payload",
-        help = "Save embedded payload JSON to luthier-payload.json in game root"
+        help = "Save embedded payload JSON to <executable-name>-payload.json in game root"
     )]
     pub save_payload: bool,
 

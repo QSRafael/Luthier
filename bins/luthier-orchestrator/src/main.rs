@@ -10,7 +10,7 @@ mod logging;
 mod services;
 mod splash;
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use clap::Parser;
 use luthier_orchestrator_core::observability::{new_trace_id, LogLevel};
 
@@ -28,17 +28,6 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let trace_id = new_trace_id();
 
-    validate_cli_flags(&cli)?;
-    let has_explicit_mode = has_explicit_command_mode(&cli);
-
-    if has_config_override_flags(&cli) {
-        run_config_command(&trace_id, &cli, !has_explicit_mode)
-            .context("failed to apply runtime override flags")?;
-        if !has_explicit_mode {
-            return Ok(());
-        }
-    }
-
     if should_log_startup_event(&cli) {
         log_startup_event(&trace_id, &cli);
     }
@@ -52,36 +41,6 @@ async fn main() -> anyhow::Result<()> {
     }
 
     print_noop_hint();
-    Ok(())
-}
-
-fn validate_cli_flags(cli: &Cli) -> anyhow::Result<()> {
-    if cli.play && cli.play_splash {
-        return Err(anyhow!(
-            "choose only one play mode: --play or --play-splash"
-        ));
-    }
-
-    if cli.verbose && !cli.doctor {
-        return Err(anyhow!(
-            "--verbose is only supported together with --doctor"
-        ));
-    }
-
-    let utility_modes = [
-        cli.doctor,
-        cli.winecfg,
-        cli.show_payload,
-        cli.show_hero_image_base64,
-        cli.save_payload,
-    ];
-    let active_utility_modes = utility_modes.into_iter().filter(|mode| *mode).count();
-    if active_utility_modes > 1 {
-        return Err(anyhow!(
-            "utility command modes are mutually exclusive: choose only one of --doctor, --winecfg, --show-payload, --show-base64-hero-image, --save-payload"
-        ));
-    }
-
     Ok(())
 }
 
@@ -116,7 +75,6 @@ fn log_startup_event(trace_id: &str, cli: &Cli) {
             "show_base64_hero_image": cli.show_hero_image_base64,
             "save_payload": cli.save_payload,
             "lang": cli.lang,
-            "verbose": cli.verbose,
             "set_mangohud": cli.set_mangohud.as_ref().map(|v| format!("{v:?}")),
             "set_gamescope": cli.set_gamescope.as_ref().map(|v| format!("{v:?}")),
             "set_gamemode": cli.set_gamemode.as_ref().map(|v| format!("{v:?}")),
@@ -138,46 +96,49 @@ fn should_log_startup_event(cli: &Cli) -> bool {
         return false;
     }
 
-    cli.play || cli.play_splash || cli.winecfg
+    has_execution_stage_requested(cli)
 }
 
 fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
+    if !has_cli_actions(cli) {
+        return Ok(false);
+    }
+
+    if cli.doctor {
+        run_doctor_command(trace_id).context("doctor command failed")?;
+    }
+
     if cli.show_payload {
         run_show_payload_command(trace_id, false)
             .context("failed to print embedded payload from current executable")?;
-        return Ok(true);
     }
 
     if cli.show_hero_image_base64 {
         run_show_payload_command(trace_id, true)
             .context("failed to print embedded payload with hero image base64")?;
-        return Ok(true);
     }
 
     if cli.save_payload {
         run_save_payload_command(trace_id).context("failed to save embedded payload")?;
-        return Ok(true);
     }
 
-    if cli.doctor {
-        run_doctor_command(trace_id, cli.verbose).context("doctor command failed")?;
-        if cli.play || cli.play_splash {
-            route_play_command(trace_id, cli).context("play flow failed after doctor")?;
-        }
-        return Ok(true);
+    if has_config_override_flags(cli) {
+        let should_print_config_output = !has_execution_stage_requested(cli)
+            && !cli.doctor
+            && !cli.show_payload
+            && !cli.show_hero_image_base64
+            && !cli.save_payload;
+        run_config_command(trace_id, cli, should_print_config_output)
+            .context("failed to apply runtime override flags")?;
     }
 
-    if cli.winecfg {
-        run_winecfg_command(trace_id).context("winecfg command failed")?;
-        return Ok(true);
-    }
-
-    if cli.play || cli.play_splash {
+    if cli.play_splash || cli.play {
         route_play_command(trace_id, cli)?;
-        return Ok(true);
+    } else if cli.winecfg {
+        run_winecfg_command(trace_id).context("winecfg command failed")?;
     }
 
-    Ok(false)
+    Ok(true)
 }
 
 fn route_play_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
@@ -209,10 +170,10 @@ fn route_implicit_splash(cli: &Cli) -> anyhow::Result<bool> {
 }
 
 fn should_try_implicit_splash(cli: &Cli) -> bool {
-    !has_explicit_command_mode(cli) && !has_config_override_flags(cli)
+    !has_cli_actions(cli)
 }
 
-fn has_explicit_command_mode(cli: &Cli) -> bool {
+fn has_cli_actions(cli: &Cli) -> bool {
     cli.play
         || cli.play_splash
         || cli.doctor
@@ -220,6 +181,11 @@ fn has_explicit_command_mode(cli: &Cli) -> bool {
         || cli.show_payload
         || cli.show_hero_image_base64
         || cli.save_payload
+        || has_config_override_flags(cli)
+}
+
+fn has_execution_stage_requested(cli: &Cli) -> bool {
+    cli.play || cli.play_splash || cli.winecfg
 }
 
 fn print_noop_hint() {

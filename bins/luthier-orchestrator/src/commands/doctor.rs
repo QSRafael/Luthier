@@ -12,8 +12,7 @@ use crate::infrastructure::payload_loader::try_load_embedded_config;
 
 const CORE_ESSENTIAL_DEPENDENCIES: &[&str] = &["winetricks", "umu-run", "proton", "wine"];
 
-pub fn run_doctor_command(_trace_id: &str, verbose: bool) -> anyhow::Result<()> {
-    let _ = verbose;
+pub fn run_doctor_command(_trace_id: &str) -> anyhow::Result<()> {
     let config = try_load_embedded_config().context("failed to inspect embedded payload")?;
     let execution = execute_doctor_flow(config.as_ref())?;
     let mut categories = build_categorized_doctor_output(&execution.report, config.as_ref());
