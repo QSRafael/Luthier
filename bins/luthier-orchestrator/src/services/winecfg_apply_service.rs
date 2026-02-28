@@ -872,3 +872,298 @@ fn split_program_and_args(tokens: Vec<String>) -> Option<(String, Vec<String>)> 
     let args = iter.collect::<Vec<String>>();
     Some((program, args))
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use luthier_orchestrator_core::FeatureState;
+
+    use super::*;
+
+    #[test]
+    fn normalizes_audio_driver_registry_values_for_valid_and_invalid_inputs() {
+        assert_eq!(
+            normalize_audio_driver_registry_value(Some("pipewire")),
+            Some("winepulse.drv")
+        );
+        assert_eq!(
+            normalize_audio_driver_registry_value(Some(" PulseAudio ")),
+            Some("winepulse.drv")
+        );
+        assert_eq!(
+            normalize_audio_driver_registry_value(Some("alsa")),
+            Some("winealsa.drv")
+        );
+
+        assert_eq!(normalize_audio_driver_registry_value(None), None);
+        assert_eq!(normalize_audio_driver_registry_value(Some("  ")), None);
+        assert_eq!(normalize_audio_driver_registry_value(Some("jack")), None);
+    }
+
+    #[test]
+    fn normalizes_drive_letter_and_type_for_valid_and_invalid_inputs() {
+        assert_eq!(normalize_drive_letter("d"), Some('D'));
+        assert_eq!(normalize_drive_letter(" Z "), Some('Z'));
+        assert_eq!(normalize_drive_letter("c"), Some('C'));
+
+        assert_eq!(normalize_drive_letter(""), None);
+        assert_eq!(normalize_drive_letter("1"), None);
+        assert_eq!(normalize_drive_letter("AA"), None);
+
+        assert_eq!(
+            normalize_drive_type_for_registry(Some(" local_disk ")),
+            Some("hd")
+        );
+        assert_eq!(
+            normalize_drive_type_for_registry(Some("network_share")),
+            Some("network")
+        );
+        assert_eq!(
+            normalize_drive_type_for_registry(Some("floppy")),
+            Some("floppy")
+        );
+        assert_eq!(
+            normalize_drive_type_for_registry(Some("cdrom")),
+            Some("cdrom")
+        );
+        assert_eq!(normalize_drive_type_for_registry(Some("ramdisk")), None);
+        assert_eq!(normalize_drive_type_for_registry(None), None);
+    }
+
+    #[test]
+    fn maps_desktop_folder_keys_to_registry_names() {
+        assert_eq!(map_desktop_folder_registry_name("desktop"), Some("Desktop"));
+        assert_eq!(
+            map_desktop_folder_registry_name(" DOCUMENTS "),
+            Some("Personal")
+        );
+        assert_eq!(
+            map_desktop_folder_registry_name("downloads"),
+            Some("{374DE290-123F-4565-9164-39C4925E467B}")
+        );
+        assert_eq!(map_desktop_folder_registry_name("music"), Some("My Music"));
+        assert_eq!(
+            map_desktop_folder_registry_name("pictures"),
+            Some("My Pictures")
+        );
+        assert_eq!(map_desktop_folder_registry_name("videos"), Some("My Video"));
+
+        assert_eq!(map_desktop_folder_registry_name("unknown"), None);
+        assert_eq!(map_desktop_folder_registry_name(""), None);
+    }
+
+    #[test]
+    fn winecfg_apply_hash_is_stable_and_changes_when_inputs_change() {
+        let drives = vec![
+            ResolvedDriveMapping {
+                letter: 'D',
+                target_path: PathBuf::from("/games/sample"),
+                drive_type: Some("hd".to_string()),
+                label: Some("GameDrive".to_string()),
+                serial: Some("ABCD-1234".to_string()),
+            },
+            ResolvedDriveMapping {
+                letter: 'Z',
+                target_path: PathBuf::from("/"),
+                drive_type: Some("network".to_string()),
+                label: None,
+                serial: None,
+            },
+        ];
+
+        let hash_a = build_winecfg_apply_hash(Some("registry=v1"), &drives);
+        let hash_b = build_winecfg_apply_hash(Some("registry=v1"), &drives);
+        assert_eq!(hash_a, hash_b);
+        assert_eq!(hash_a.len(), 64);
+        assert!(hash_a.chars().all(|ch| ch.is_ascii_hexdigit()));
+
+        let hash_registry_changed = build_winecfg_apply_hash(Some("registry=v2"), &drives);
+        assert_ne!(hash_a, hash_registry_changed);
+
+        let mut drives_serial_changed = drives.clone();
+        drives_serial_changed[0].serial = Some("ABCD-9999".to_string());
+        let hash_drive_changed =
+            build_winecfg_apply_hash(Some("registry=v1"), &drives_serial_changed);
+        assert_ne!(hash_a, hash_drive_changed);
+    }
+
+    #[test]
+    fn resolves_active_drive_mappings_for_valid_scenarios() {
+        let test_dir = create_test_dir("winecfg-drive-valid");
+        let game_root = test_dir.path.join("game-root");
+        fs::create_dir_all(&game_root).expect("create game_root");
+
+        let host_dir = test_dir.path.join("host-drive");
+        fs::create_dir_all(&host_dir).expect("create host drive path");
+
+        let drives = vec![
+            drive_mapping(
+                "C",
+                FeatureState::MandatoryOn,
+                ".",
+                Some(host_dir.to_string_lossy().as_ref()),
+                Some("local_disk"),
+                Some("ShouldBeSkipped"),
+                None,
+            ),
+            drive_mapping(
+                "d",
+                FeatureState::MandatoryOn,
+                "",
+                Some(host_dir.to_string_lossy().as_ref()),
+                Some(" local_disk "),
+                Some("  Data Drive  "),
+                Some("  AABB-CCDD  "),
+            ),
+            drive_mapping(
+                "Z",
+                FeatureState::OptionalOn,
+                ".",
+                None,
+                Some("network_share"),
+                None,
+                None,
+            ),
+            drive_mapping(
+                "1",
+                FeatureState::OptionalOn,
+                ".",
+                None,
+                Some("cdrom"),
+                None,
+                None,
+            ),
+            drive_mapping(
+                "E",
+                FeatureState::OptionalOff,
+                ".",
+                None,
+                Some("floppy"),
+                None,
+                None,
+            ),
+        ];
+
+        let resolved = resolve_active_drive_mappings(&drives, &game_root).expect("resolve drives");
+
+        assert_eq!(resolved.len(), 2);
+        assert_eq!(resolved[0].letter, 'D');
+        assert_eq!(resolved[0].target_path, host_dir);
+        assert_eq!(resolved[0].drive_type.as_deref(), Some("hd"));
+        assert_eq!(resolved[0].label.as_deref(), Some("Data Drive"));
+        assert_eq!(resolved[0].serial.as_deref(), Some("AABB-CCDD"));
+
+        assert_eq!(resolved[1].letter, 'Z');
+        assert_eq!(resolved[1].target_path, PathBuf::from("/"));
+        assert_eq!(resolved[1].drive_type.as_deref(), Some("network"));
+    }
+
+    #[test]
+    fn resolves_active_drive_mappings_returns_errors_for_mandatory_invalid_cases() {
+        let test_dir = create_test_dir("winecfg-drive-errors");
+        let game_root = test_dir.path.join("game-root");
+        fs::create_dir_all(&game_root).expect("create game_root");
+
+        let invalid_letter = vec![drive_mapping(
+            "11",
+            FeatureState::MandatoryOn,
+            ".",
+            None,
+            None,
+            None,
+            None,
+        )];
+        let err = resolve_active_drive_mappings(&invalid_letter, &game_root)
+            .expect_err("mandatory invalid letter must error");
+        assert!(err.to_string().contains("invalid drive letter"));
+
+        let relative_host_path = vec![drive_mapping(
+            "D",
+            FeatureState::MandatoryOn,
+            "",
+            Some("relative/path"),
+            None,
+            None,
+            None,
+        )];
+        let err = resolve_active_drive_mappings(&relative_host_path, &game_root)
+            .expect_err("mandatory relative host_path must error");
+        assert!(err.to_string().contains("must be absolute"));
+
+        let traversal_source = vec![drive_mapping(
+            "E",
+            FeatureState::MandatoryOn,
+            "../outside",
+            None,
+            None,
+            None,
+            None,
+        )];
+        let err = resolve_active_drive_mappings(&traversal_source, &game_root)
+            .expect_err("mandatory traversal in source_relative_path must error");
+        assert!(err
+            .to_string()
+            .contains("invalid winecfg drive source_relative_path"));
+
+        let missing_host_target = vec![drive_mapping(
+            "F",
+            FeatureState::MandatoryOn,
+            "",
+            Some("/tmp/luthier-does-not-exist-drive-target"),
+            None,
+            None,
+            None,
+        )];
+        let err = resolve_active_drive_mappings(&missing_host_target, &game_root)
+            .expect_err("mandatory target path that does not exist must error");
+        assert!(err.to_string().contains("target path does not exist"));
+    }
+
+    fn drive_mapping(
+        letter: &str,
+        state: FeatureState,
+        source_relative_path: &str,
+        host_path: Option<&str>,
+        drive_type: Option<&str>,
+        label: Option<&str>,
+        serial: Option<&str>,
+    ) -> WineDriveMapping {
+        WineDriveMapping {
+            letter: letter.to_string(),
+            source_relative_path: source_relative_path.to_string(),
+            state,
+            host_path: host_path.map(ToString::to_string),
+            drive_type: drive_type.map(ToString::to_string),
+            label: label.map(ToString::to_string),
+            serial: serial.map(ToString::to_string),
+        }
+    }
+
+    struct TestDir {
+        path: PathBuf,
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn create_test_dir(label: &str) -> TestDir {
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "luthier-orchestrator-winecfg-apply-{label}-{}-{ts}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&path).expect("create test dir");
+        TestDir { path }
+    }
+}
