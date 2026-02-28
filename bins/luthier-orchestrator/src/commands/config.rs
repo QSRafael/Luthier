@@ -28,6 +28,60 @@ pub fn run_config_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
         cli.set_gamemode,
         &mut overrides.gamemode,
     )?;
+    changed |= apply_toggle_request(
+        "umu",
+        config.requirements.umu,
+        cli.set_umu,
+        &mut overrides.umu,
+    )?;
+    changed |= apply_toggle_request(
+        "winetricks",
+        config.requirements.winetricks,
+        cli.set_winetricks,
+        &mut overrides.winetricks,
+    )?;
+    changed |= apply_toggle_request(
+        "steam_runtime",
+        config.requirements.steam_runtime,
+        cli.set_steam_runtime,
+        &mut overrides.steam_runtime,
+    )?;
+    changed |= apply_toggle_request(
+        "prime_offload",
+        config.environment.prime_offload,
+        cli.set_prime_offload,
+        &mut overrides.prime_offload,
+    )?;
+    changed |= apply_toggle_request(
+        "wine_wayland",
+        config.compatibility.wine_wayland,
+        cli.set_wine_wayland,
+        &mut overrides.wine_wayland,
+    )?;
+    changed |= apply_toggle_request(
+        "hdr",
+        config.compatibility.hdr,
+        cli.set_hdr,
+        &mut overrides.hdr,
+    )?;
+    changed |= apply_toggle_request(
+        "auto_dxvk_nvapi",
+        config.compatibility.auto_dxvk_nvapi,
+        cli.set_auto_dxvk_nvapi,
+        &mut overrides.auto_dxvk_nvapi,
+    )?;
+    changed |= apply_toggle_request(
+        "easy_anti_cheat_runtime",
+        config.compatibility.easy_anti_cheat_runtime,
+        cli.set_easy_anti_cheat_runtime,
+        &mut overrides.easy_anti_cheat_runtime,
+    )?;
+    changed |= apply_toggle_request(
+        "battleye_runtime",
+        config.compatibility.battleye_runtime,
+        cli.set_battleye_runtime,
+        &mut overrides.battleye_runtime,
+    )?;
 
     if let Some(requested) = cli.set_gamescope {
         if !feature_overridable(config.environment.gamescope.state)
@@ -67,6 +121,43 @@ pub fn run_config_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
             overrides.gamescope,
         ),
         build_feature_view("gamemode", config.requirements.gamemode, overrides.gamemode),
+        build_feature_view("umu", config.requirements.umu, overrides.umu),
+        build_feature_view(
+            "winetricks",
+            config.requirements.winetricks,
+            overrides.winetricks,
+        ),
+        build_feature_view(
+            "steam_runtime",
+            config.requirements.steam_runtime,
+            overrides.steam_runtime,
+        ),
+        build_feature_view(
+            "prime_offload",
+            config.environment.prime_offload,
+            overrides.prime_offload,
+        ),
+        build_feature_view(
+            "wine_wayland",
+            config.compatibility.wine_wayland,
+            overrides.wine_wayland,
+        ),
+        build_feature_view("hdr", config.compatibility.hdr, overrides.hdr),
+        build_feature_view(
+            "auto_dxvk_nvapi",
+            config.compatibility.auto_dxvk_nvapi,
+            overrides.auto_dxvk_nvapi,
+        ),
+        build_feature_view(
+            "easy_anti_cheat_runtime",
+            config.compatibility.easy_anti_cheat_runtime,
+            overrides.easy_anti_cheat_runtime,
+        ),
+        build_feature_view(
+            "battleye_runtime",
+            config.compatibility.battleye_runtime,
+            overrides.battleye_runtime,
+        ),
     ];
 
     let output = serde_json::json!({
@@ -75,7 +166,7 @@ pub fn run_config_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
         "changed": changed,
         "features": features,
         "usage": {
-            "set": "--config --set-mangohud on|off|default --set-gamescope on|off|default --set-gamemode on|off|default",
+            "set": "--config --set-mangohud on|off|default --set-gamescope on|off|default --set-gamemode on|off|default --set-umu on|off|default --set-winetricks on|off|default --set-steam-runtime on|off|default --set-prime-offload on|off|default --set-wine-wayland on|off|default --set-hdr on|off|default --set-auto-dxvk-nvapi on|off|default --set-easy-anti-cheat-runtime on|off|default --set-battleye-runtime on|off|default",
             "play": "--play"
         }
     });

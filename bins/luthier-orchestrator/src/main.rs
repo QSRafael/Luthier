@@ -16,7 +16,8 @@ use luthier_orchestrator_core::observability::{new_trace_id, LogLevel};
 
 use crate::cli::Cli;
 use crate::commands::{
-    run_config_command, run_doctor_command, run_play, run_show_embedded_config, run_winecfg_command,
+    run_config_command, run_doctor_command, run_play, run_save_payload_command,
+    run_show_payload_command, run_winecfg_command,
 };
 use crate::infrastructure::payload_loader::try_load_embedded_config;
 use crate::logging::log_event;
@@ -28,7 +29,9 @@ async fn main() -> anyhow::Result<()> {
     let trace_id = new_trace_id();
 
     validate_cli_flags(&cli)?;
-    log_startup_event(&trace_id, &cli);
+    if should_log_startup_event(&cli) {
+        log_startup_event(&trace_id, &cli);
+    }
 
     if route_explicit_commands(&trace_id, &cli)? {
         return Ok(());
@@ -49,9 +52,32 @@ fn validate_cli_flags(cli: &Cli) -> anyhow::Result<()> {
         ));
     }
 
-    if cli.splash && !cli.play {
+    if cli.play && cli.play_splash {
         return Err(anyhow!(
-            "--splash requires --play (or execute the generated launcher without arguments)"
+            "choose only one play mode: --play or --play-splash"
+        ));
+    }
+
+    if cli.verbose && !cli.doctor {
+        return Err(anyhow!(
+            "--verbose is only supported together with --doctor"
+        ));
+    }
+
+    let command_modes = [
+        cli.play,
+        cli.play_splash,
+        cli.config,
+        cli.doctor,
+        cli.winecfg,
+        cli.show_payload,
+        cli.show_hero_image_base64,
+        cli.save_payload,
+    ];
+    let active_modes = command_modes.into_iter().filter(|mode| *mode).count();
+    if active_modes > 1 {
+        return Err(anyhow!(
+            "command modes are mutually exclusive: choose only one of --play, --play-splash, --config, --doctor, --winecfg, --show-payload, --show-base64-hero-image, --save-payload"
         ));
     }
 
@@ -59,7 +85,18 @@ fn validate_cli_flags(cli: &Cli) -> anyhow::Result<()> {
 }
 
 fn has_config_override_flags(cli: &Cli) -> bool {
-    cli.set_mangohud.is_some() || cli.set_gamescope.is_some() || cli.set_gamemode.is_some()
+    cli.set_mangohud.is_some()
+        || cli.set_gamescope.is_some()
+        || cli.set_gamemode.is_some()
+        || cli.set_umu.is_some()
+        || cli.set_winetricks.is_some()
+        || cli.set_steam_runtime.is_some()
+        || cli.set_prime_offload.is_some()
+        || cli.set_wine_wayland.is_some()
+        || cli.set_hdr.is_some()
+        || cli.set_auto_dxvk_nvapi.is_some()
+        || cli.set_easy_anti_cheat_runtime.is_some()
+        || cli.set_battleye_runtime.is_some()
 }
 
 fn log_startup_event(trace_id: &str, cli: &Cli) {
@@ -71,24 +108,50 @@ fn log_startup_event(trace_id: &str, cli: &Cli) {
         "luthier_orchestrator_started",
         serde_json::json!({
             "play": cli.play,
-            "splash": cli.splash,
+            "play_splash": cli.play_splash,
             "config": cli.config,
             "doctor": cli.doctor,
             "winecfg": cli.winecfg,
-            "show_config": cli.show_config,
+            "show_payload": cli.show_payload,
+            "show_base64_hero_image": cli.show_hero_image_base64,
+            "save_payload": cli.save_payload,
             "lang": cli.lang,
             "verbose": cli.verbose,
             "set_mangohud": cli.set_mangohud.as_ref().map(|v| format!("{v:?}")),
             "set_gamescope": cli.set_gamescope.as_ref().map(|v| format!("{v:?}")),
             "set_gamemode": cli.set_gamemode.as_ref().map(|v| format!("{v:?}")),
+            "set_umu": cli.set_umu.as_ref().map(|v| format!("{v:?}")),
+            "set_winetricks": cli.set_winetricks.as_ref().map(|v| format!("{v:?}")),
+            "set_steam_runtime": cli.set_steam_runtime.as_ref().map(|v| format!("{v:?}")),
+            "set_prime_offload": cli.set_prime_offload.as_ref().map(|v| format!("{v:?}")),
+            "set_wine_wayland": cli.set_wine_wayland.as_ref().map(|v| format!("{v:?}")),
+            "set_hdr": cli.set_hdr.as_ref().map(|v| format!("{v:?}")),
+            "set_auto_dxvk_nvapi": cli.set_auto_dxvk_nvapi.as_ref().map(|v| format!("{v:?}")),
+            "set_easy_anti_cheat_runtime": cli.set_easy_anti_cheat_runtime.as_ref().map(|v| format!("{v:?}")),
+            "set_battleye_runtime": cli.set_battleye_runtime.as_ref().map(|v| format!("{v:?}")),
         }),
     );
 }
 
+fn should_log_startup_event(cli: &Cli) -> bool {
+    !cli.doctor
+}
+
 fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
-    if cli.show_config {
-        run_show_embedded_config(trace_id)
-            .context("failed to print embedded config from current executable")?;
+    if cli.show_payload {
+        run_show_payload_command(trace_id, false)
+            .context("failed to print embedded payload from current executable")?;
+        return Ok(true);
+    }
+
+    if cli.show_hero_image_base64 {
+        run_show_payload_command(trace_id, true)
+            .context("failed to print embedded payload with hero image base64")?;
+        return Ok(true);
+    }
+
+    if cli.save_payload {
+        run_save_payload_command(trace_id).context("failed to save embedded payload")?;
         return Ok(true);
     }
 
@@ -107,7 +170,7 @@ fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
         return Ok(true);
     }
 
-    if cli.play {
+    if cli.play || cli.play_splash {
         route_play_command(trace_id, cli)?;
         return Ok(true);
     }
@@ -116,7 +179,7 @@ fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
 }
 
 fn route_play_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
-    if cli.splash {
+    if cli.play_splash {
         run_splash_flow(
             SplashLaunchMode::ExplicitPlayWithSplash,
             cli.lang.as_deref(),
@@ -141,6 +204,6 @@ fn route_implicit_splash(cli: &Cli) -> anyhow::Result<bool> {
 
 fn print_noop_hint() {
     println!(
-        "Nada para executar. Use --show-config, --doctor, --winecfg, --config, --play ou --play --splash."
+        "Nada para executar. Use --show-payload, --show-base64-hero-image, --save-payload, --doctor, --winecfg, --config, --play ou --play-splash."
     );
 }
