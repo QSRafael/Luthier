@@ -717,3 +717,224 @@ fn discover_shared_library_with_ldconfig(names: &[&str]) -> Option<PathBuf> {
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::config::{FeatureState, RuntimeCandidate};
+
+    use super::{
+        discover_steam_runtime, evaluate_capability_component, evaluate_component,
+        probe_hdr_support, probe_nvapi_support, probe_staging_support, CapabilityProbe,
+        CheckStatus, RuntimeDiscovery,
+    };
+
+    #[test]
+    fn steam_runtime_policy_matrix_covers_feature_states() {
+        let available = Some(PathBuf::from("/tmp/steam-runtime"));
+
+        let mandatory_on_available = evaluate_component(
+            "steam-runtime",
+            Some(FeatureState::MandatoryOn),
+            available.clone(),
+        );
+        assert_eq!(mandatory_on_available.status, CheckStatus::OK);
+        assert!(mandatory_on_available.found);
+        assert_eq!(mandatory_on_available.note, "required and available");
+
+        let mandatory_on_missing =
+            evaluate_component("steam-runtime", Some(FeatureState::MandatoryOn), None);
+        assert_eq!(mandatory_on_missing.status, CheckStatus::BLOCKER);
+        assert!(!mandatory_on_missing.found);
+        assert_eq!(mandatory_on_missing.note, "required but missing");
+
+        let optional_on_missing =
+            evaluate_component("steam-runtime", Some(FeatureState::OptionalOn), None);
+        assert_eq!(optional_on_missing.status, CheckStatus::WARN);
+        assert!(!optional_on_missing.found);
+        assert_eq!(optional_on_missing.note, "enabled in payload but missing");
+
+        let optional_off_available = evaluate_component(
+            "steam-runtime",
+            Some(FeatureState::OptionalOff),
+            available.clone(),
+        );
+        assert_eq!(optional_off_available.status, CheckStatus::INFO);
+        assert!(optional_off_available.found);
+        assert_eq!(
+            optional_off_available.note,
+            "not required by current payload (available)"
+        );
+
+        let mandatory_off_available =
+            evaluate_component("steam-runtime", Some(FeatureState::MandatoryOff), available);
+        assert_eq!(mandatory_off_available.status, CheckStatus::INFO);
+        assert_eq!(mandatory_off_available.note, "forced off by policy");
+    }
+
+    #[test]
+    fn steam_runtime_discovery_prefers_umu_run_for_proton_umu_runtime() {
+        let runtime = runtime_discovery(
+            Some(RuntimeCandidate::ProtonUmu),
+            Some("/opt/proton/proton"),
+            Some("/usr/bin/wine"),
+            Some("/usr/bin/umu-run"),
+        );
+
+        let discovered = discover_steam_runtime(&runtime)
+            .expect("ProtonUmu selection must reuse umu-run as steam-runtime capability path");
+        assert_eq!(discovered, PathBuf::from("/usr/bin/umu-run"));
+    }
+
+    #[test]
+    fn wine_wayland_policy_matrix_covers_feature_states() {
+        let available_probe = CapabilityProbe {
+            supported: true,
+            resolved_path: Some(PathBuf::from("/usr/lib/wine/x86_64-unix/winewayland.drv")),
+            note: "winewayland driver was detected".to_string(),
+        };
+        let missing_probe = CapabilityProbe {
+            supported: false,
+            resolved_path: None,
+            note: "Wayland session not detected".to_string(),
+        };
+
+        assert_capability_state_matrix("wine-wayland", available_probe, missing_probe);
+    }
+
+    #[test]
+    fn hdr_probe_and_policy_matrix_are_deterministic() {
+        let available_wine_wayland = CapabilityProbe {
+            supported: true,
+            resolved_path: Some(PathBuf::from("/opt/proton/proton")),
+            note: "selected runtime is Proton in a Wayland session".to_string(),
+        };
+        let unavailable_wine_wayland = CapabilityProbe {
+            supported: false,
+            resolved_path: None,
+            note: "Wayland session not detected".to_string(),
+        };
+
+        let available_probe = probe_hdr_support(FeatureState::OptionalOn, &available_wine_wayland);
+        assert!(available_probe.supported);
+        assert!(available_probe
+            .note
+            .contains("wine-wayland support is available"));
+
+        let missing_probe = probe_hdr_support(FeatureState::MandatoryOn, &unavailable_wine_wayland);
+        assert!(!missing_probe.supported);
+        assert!(missing_probe
+            .note
+            .contains("wine-wayland support is unavailable"));
+
+        let disabled_probe = probe_hdr_support(FeatureState::OptionalOff, &available_wine_wayland);
+        assert!(!disabled_probe.supported);
+        assert_eq!(disabled_probe.note, "HDR requires wine-wayland enabled");
+
+        assert_capability_state_matrix("hdr", available_probe, missing_probe);
+    }
+
+    #[test]
+    fn dxvk_nvapi_probe_and_policy_matrix_are_deterministic() {
+        let proton_runtime = runtime_discovery(
+            Some(RuntimeCandidate::ProtonNative),
+            Some("/opt/proton/proton"),
+            None,
+            None,
+        );
+        let available_probe = probe_nvapi_support(&proton_runtime);
+        assert!(available_probe.supported);
+        assert!(available_probe.note.contains("selected runtime is Proton"));
+
+        let no_runtime = runtime_discovery(None, None, None, None);
+        let missing_probe = probe_nvapi_support(&no_runtime);
+        assert!(!missing_probe.supported);
+        assert_eq!(missing_probe.note, "no runtime selected");
+
+        assert_capability_state_matrix("dxvk-nvapi", available_probe, missing_probe);
+    }
+
+    #[test]
+    fn staging_probe_and_policy_matrix_are_deterministic_without_host() {
+        let proton_runtime = runtime_discovery(
+            Some(RuntimeCandidate::ProtonNative),
+            Some("/opt/proton/proton"),
+            None,
+            None,
+        );
+        let missing_probe = probe_staging_support(&proton_runtime);
+        assert!(!missing_probe.supported);
+        assert!(missing_probe
+            .note
+            .contains("staging requires a Wine runtime build, not Proton"));
+
+        let wine_runtime_without_path =
+            runtime_discovery(Some(RuntimeCandidate::Wine), None, None, None);
+        let wine_probe = probe_staging_support(&wine_runtime_without_path);
+        assert!(!wine_probe.supported);
+        assert!(wine_probe
+            .note
+            .contains("failed to query Wine version for staging support"));
+
+        let available_probe = CapabilityProbe {
+            supported: true,
+            resolved_path: Some(PathBuf::from("/usr/bin/wine-staging")),
+            note: "Wine version indicates staging build (wine-9.0 (Staging))".to_string(),
+        };
+
+        assert_capability_state_matrix("staging", available_probe, missing_probe);
+    }
+
+    fn assert_capability_state_matrix(
+        name: &str,
+        available_probe: CapabilityProbe,
+        missing_probe: CapabilityProbe,
+    ) {
+        let mandatory_on =
+            evaluate_capability_component(name, FeatureState::MandatoryOn, missing_probe.clone());
+        assert_eq!(mandatory_on.status, CheckStatus::BLOCKER);
+        assert!(!mandatory_on.found);
+        assert!(mandatory_on.note.starts_with("required but missing ("));
+        assert!(mandatory_on.note.contains(&missing_probe.note));
+
+        let optional_on =
+            evaluate_capability_component(name, FeatureState::OptionalOn, missing_probe.clone());
+        assert_eq!(optional_on.status, CheckStatus::WARN);
+        assert!(!optional_on.found);
+        assert!(optional_on
+            .note
+            .starts_with("enabled in payload but missing ("));
+        assert!(optional_on.note.contains(&missing_probe.note));
+
+        let optional_off =
+            evaluate_capability_component(name, FeatureState::OptionalOff, available_probe.clone());
+        assert_eq!(optional_off.status, CheckStatus::INFO);
+        assert!(optional_off.found);
+        assert!(optional_off
+            .note
+            .starts_with("not required by current payload (available: "));
+        assert!(optional_off.note.contains(&available_probe.note));
+
+        let mandatory_off =
+            evaluate_capability_component(name, FeatureState::MandatoryOff, missing_probe);
+        assert_eq!(mandatory_off.status, CheckStatus::INFO);
+        assert_eq!(mandatory_off.note, "forced off by policy");
+    }
+
+    fn runtime_discovery(
+        selected_runtime: Option<RuntimeCandidate>,
+        proton: Option<&str>,
+        wine: Option<&str>,
+        umu_run: Option<&str>,
+    ) -> RuntimeDiscovery {
+        RuntimeDiscovery {
+            proton: proton.map(str::to_string),
+            wine: wine.map(str::to_string),
+            umu_run: umu_run.map(str::to_string),
+            selected_runtime,
+            runtime_status: CheckStatus::INFO,
+            runtime_note: "test runtime".to_string(),
+        }
+    }
+}
