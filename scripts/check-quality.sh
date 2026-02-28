@@ -5,12 +5,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 RUN_FRONTEND=true
 RUN_RUST_QUALITY=true
+RUN_RUST_TESTS=true
 RUN_RUST_ARCHITECTURE=true
 RUN_RUST_SECURITY=true
 RUN_RUST_DEADCODE=true
 
 EXCLUDE_TAURI=true
-RUST_WITH_TESTS=true
+RUST_WITH_TESTS=false
 RUST_WITH_TESTS_EXPLICIT=false
 MODE="full"
 
@@ -19,7 +20,7 @@ usage() {
 Usage: scripts/check-quality.sh [options]
 
 Modes:
-  --full             Run full project gate (default, includes rust tests)
+  --full             Run full project gate (default, includes frontend + rust tests)
   --fast             Run quick gate (frontend + rust quality)
 
 Subset controls:
@@ -27,6 +28,7 @@ Subset controls:
   --rust-only        Run all rust gates (quality, architecture, security, deadcode)
   --skip-frontend
   --skip-rust-quality
+  --skip-rust-tests
   --skip-rust-architecture
   --skip-rust-security
   --skip-rust-deadcode
@@ -49,12 +51,25 @@ run_step() {
   "$script_path" "$@"
 }
 
+run_rust_workspace_tests() {
+  echo "[quality] rust-tests"
+  if command -v cargo >/dev/null 2>&1; then
+    cargo test --workspace --all-targets
+  elif [[ -x "$HOME/.cargo/bin/cargo" ]]; then
+    "$HOME/.cargo/bin/cargo" test --workspace --all-targets
+  else
+    echo "cargo not found in PATH or ~/.cargo/bin/cargo" >&2
+    exit 127
+  fi
+}
+
 for arg in "$@"; do
   case "$arg" in
     --full)
       MODE="full"
       RUN_FRONTEND=true
       RUN_RUST_QUALITY=true
+      RUN_RUST_TESTS=true
       RUN_RUST_ARCHITECTURE=true
       RUN_RUST_SECURITY=true
       RUN_RUST_DEADCODE=true
@@ -63,6 +78,7 @@ for arg in "$@"; do
       MODE="fast"
       RUN_FRONTEND=true
       RUN_RUST_QUALITY=true
+      RUN_RUST_TESTS=false
       RUN_RUST_ARCHITECTURE=false
       RUN_RUST_SECURITY=false
       RUN_RUST_DEADCODE=false
@@ -71,6 +87,7 @@ for arg in "$@"; do
       MODE="frontend-only"
       RUN_FRONTEND=true
       RUN_RUST_QUALITY=false
+      RUN_RUST_TESTS=false
       RUN_RUST_ARCHITECTURE=false
       RUN_RUST_SECURITY=false
       RUN_RUST_DEADCODE=false
@@ -79,6 +96,7 @@ for arg in "$@"; do
       MODE="rust-only"
       RUN_FRONTEND=false
       RUN_RUST_QUALITY=true
+      RUN_RUST_TESTS=true
       RUN_RUST_ARCHITECTURE=true
       RUN_RUST_SECURITY=true
       RUN_RUST_DEADCODE=true
@@ -88,6 +106,9 @@ for arg in "$@"; do
       ;;
     --skip-rust-quality)
       RUN_RUST_QUALITY=false
+      ;;
+    --skip-rust-tests)
+      RUN_RUST_TESTS=false
       ;;
     --skip-rust-architecture)
       RUN_RUST_ARCHITECTURE=false
@@ -118,15 +139,12 @@ for arg in "$@"; do
 done
 
 if [[ "$RUST_WITH_TESTS_EXPLICIT" == false ]]; then
-  if [[ "$MODE" == "full" ]]; then
-    RUST_WITH_TESTS=true
-  else
-    RUST_WITH_TESTS=false
-  fi
+  RUST_WITH_TESTS=false
 fi
 
 if [[ "$RUN_FRONTEND" == false ]] \
   && [[ "$RUN_RUST_QUALITY" == false ]] \
+  && [[ "$RUN_RUST_TESTS" == false ]] \
   && [[ "$RUN_RUST_ARCHITECTURE" == false ]] \
   && [[ "$RUN_RUST_SECURITY" == false ]] \
   && [[ "$RUN_RUST_DEADCODE" == false ]]; then
@@ -155,6 +173,10 @@ fi
 
 if [[ "$RUN_RUST_QUALITY" == true ]]; then
   run_step "rust-quality" "$ROOT_DIR/scripts/check-rust-quality.sh" "${RUST_QUALITY_ARGS[@]}"
+fi
+
+if [[ "$RUN_RUST_TESTS" == true ]]; then
+  run_rust_workspace_tests
 fi
 
 if [[ "$RUN_RUST_ARCHITECTURE" == true ]]; then
