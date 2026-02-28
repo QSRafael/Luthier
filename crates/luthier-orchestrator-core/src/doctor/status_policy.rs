@@ -37,7 +37,10 @@ pub(super) fn worse_status(a: CheckStatus, b: CheckStatus) -> CheckStatus {
 }
 
 fn should_preserve_dependency_status(name: &str) -> bool {
-    matches!(name, "gamemoderun" | "gamemode-umu-runtime")
+    matches!(
+        name,
+        "gamemoderun" | "gamemode-umu-runtime" | "wine-wayland" | "hdr" | "dxvk-nvapi" | "staging"
+    )
 }
 
 fn map_feature_state_and_presence_to_status(
