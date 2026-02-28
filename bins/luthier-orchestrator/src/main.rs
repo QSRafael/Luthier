@@ -29,6 +29,16 @@ async fn main() -> anyhow::Result<()> {
     let trace_id = new_trace_id();
 
     validate_cli_flags(&cli)?;
+    let has_explicit_mode = has_explicit_command_mode(&cli);
+
+    if has_config_override_flags(&cli) {
+        run_config_command(&trace_id, &cli, !has_explicit_mode)
+            .context("failed to apply runtime override flags")?;
+        if !has_explicit_mode {
+            return Ok(());
+        }
+    }
+
     if should_log_startup_event(&cli) {
         log_startup_event(&trace_id, &cli);
     }
@@ -46,12 +56,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn validate_cli_flags(cli: &Cli) -> anyhow::Result<()> {
-    if has_config_override_flags(cli) && !cli.config {
-        return Err(anyhow!(
-            "override flags require --config (use --config --set-<feature> ...)"
-        ));
-    }
-
     if cli.play && cli.play_splash {
         return Err(anyhow!(
             "choose only one play mode: --play or --play-splash"
@@ -64,20 +68,17 @@ fn validate_cli_flags(cli: &Cli) -> anyhow::Result<()> {
         ));
     }
 
-    let command_modes = [
-        cli.play,
-        cli.play_splash,
-        cli.config,
+    let utility_modes = [
         cli.doctor,
         cli.winecfg,
         cli.show_payload,
         cli.show_hero_image_base64,
         cli.save_payload,
     ];
-    let active_modes = command_modes.into_iter().filter(|mode| *mode).count();
-    if active_modes > 1 {
+    let active_utility_modes = utility_modes.into_iter().filter(|mode| *mode).count();
+    if active_utility_modes > 1 {
         return Err(anyhow!(
-            "command modes are mutually exclusive: choose only one of --play, --play-splash, --config, --doctor, --winecfg, --show-payload, --show-base64-hero-image, --save-payload"
+            "utility command modes are mutually exclusive: choose only one of --doctor, --winecfg, --show-payload, --show-base64-hero-image, --save-payload"
         ));
     }
 
@@ -109,7 +110,6 @@ fn log_startup_event(trace_id: &str, cli: &Cli) {
         serde_json::json!({
             "play": cli.play,
             "play_splash": cli.play_splash,
-            "config": cli.config,
             "doctor": cli.doctor,
             "winecfg": cli.winecfg,
             "show_payload": cli.show_payload,
@@ -134,7 +134,11 @@ fn log_startup_event(trace_id: &str, cli: &Cli) {
 }
 
 fn should_log_startup_event(cli: &Cli) -> bool {
-    !cli.doctor
+    if cli.doctor || cli.show_payload || cli.show_hero_image_base64 || cli.save_payload {
+        return false;
+    }
+
+    cli.play || cli.play_splash || cli.winecfg
 }
 
 fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
@@ -157,16 +161,14 @@ fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
 
     if cli.doctor {
         run_doctor_command(trace_id, cli.verbose).context("doctor command failed")?;
+        if cli.play || cli.play_splash {
+            route_play_command(trace_id, cli).context("play flow failed after doctor")?;
+        }
         return Ok(true);
     }
 
     if cli.winecfg {
         run_winecfg_command(trace_id).context("winecfg command failed")?;
-        return Ok(true);
-    }
-
-    if cli.config {
-        run_config_command(trace_id, cli).context("config command failed")?;
         return Ok(true);
     }
 
@@ -193,6 +195,10 @@ fn route_play_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
 }
 
 fn route_implicit_splash(cli: &Cli) -> anyhow::Result<bool> {
+    if !should_try_implicit_splash(cli) {
+        return Ok(false);
+    }
+
     if try_load_embedded_config()?.is_some() {
         run_splash_flow(SplashLaunchMode::ImplicitDoubleClick, cli.lang.as_deref())
             .context("implicit splash flow failed")?;
@@ -202,8 +208,22 @@ fn route_implicit_splash(cli: &Cli) -> anyhow::Result<bool> {
     Ok(false)
 }
 
+fn should_try_implicit_splash(cli: &Cli) -> bool {
+    !has_explicit_command_mode(cli) && !has_config_override_flags(cli)
+}
+
+fn has_explicit_command_mode(cli: &Cli) -> bool {
+    cli.play
+        || cli.play_splash
+        || cli.doctor
+        || cli.winecfg
+        || cli.show_payload
+        || cli.show_hero_image_base64
+        || cli.save_payload
+}
+
 fn print_noop_hint() {
     println!(
-        "Nada para executar. Use --show-payload, --show-base64-hero-image, --save-payload, --doctor, --winecfg, --config, --play ou --play-splash."
+        "Nada para executar. Use --show-payload, --show-base64-hero-image, --save-payload, --doctor, --winecfg, --set-<feature> on|off|default, --play ou --play-splash."
     );
 }

@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Context};
-use luthier_orchestrator_core::observability::LogLevel;
 
 use crate::{
     application::runtime_overrides::{
@@ -8,10 +7,9 @@ use crate::{
     },
     cli::Cli,
     infrastructure::payload_loader::load_embedded_config_required,
-    logging::log_event,
 };
 
-pub fn run_config_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
+pub fn run_config_command(_trace_id: &str, cli: &Cli, print_output: bool) -> anyhow::Result<()> {
     let config = load_embedded_config_required()?;
     let mut overrides = load_runtime_overrides(&config.exe_hash)?;
     let mut changed = false;
@@ -100,81 +98,70 @@ pub fn run_config_command(trace_id: &str, cli: &Cli) -> anyhow::Result<()> {
         runtime_overrides_path(&config.exe_hash)?
     };
 
-    log_event(
-        trace_id,
-        LogLevel::Info,
-        "config",
-        "GO-UI-002",
-        "config_overrides_loaded",
-        serde_json::json!({
-            "exe_hash": config.exe_hash,
-            "changed": changed,
+    if print_output {
+        let features = vec![
+            build_feature_view("mangohud", config.requirements.mangohud, overrides.mangohud),
+            build_feature_view(
+                "gamescope",
+                config.environment.gamescope.state,
+                overrides.gamescope,
+            ),
+            build_feature_view("gamemode", config.requirements.gamemode, overrides.gamemode),
+            build_feature_view("umu", config.requirements.umu, overrides.umu),
+            build_feature_view(
+                "winetricks",
+                config.requirements.winetricks,
+                overrides.winetricks,
+            ),
+            build_feature_view(
+                "steam_runtime",
+                config.requirements.steam_runtime,
+                overrides.steam_runtime,
+            ),
+            build_feature_view(
+                "prime_offload",
+                config.environment.prime_offload,
+                overrides.prime_offload,
+            ),
+            build_feature_view(
+                "wine_wayland",
+                config.compatibility.wine_wayland,
+                overrides.wine_wayland,
+            ),
+            build_feature_view("hdr", config.compatibility.hdr, overrides.hdr),
+            build_feature_view(
+                "auto_dxvk_nvapi",
+                config.compatibility.auto_dxvk_nvapi,
+                overrides.auto_dxvk_nvapi,
+            ),
+            build_feature_view(
+                "easy_anti_cheat_runtime",
+                config.compatibility.easy_anti_cheat_runtime,
+                overrides.easy_anti_cheat_runtime,
+            ),
+            build_feature_view(
+                "battleye_runtime",
+                config.compatibility.battleye_runtime,
+                overrides.battleye_runtime,
+            ),
+        ];
+
+        let output = serde_json::json!({
+            "status": "OK",
             "override_file": override_path,
-        }),
-    );
+            "changed": changed,
+            "features": features,
+            "usage": {
+                "set": "--set-mangohud on|off|default --set-gamescope on|off|default --set-gamemode on|off|default --set-umu on|off|default --set-winetricks on|off|default --set-steam-runtime on|off|default --set-prime-offload on|off|default --set-wine-wayland on|off|default --set-hdr on|off|default --set-auto-dxvk-nvapi on|off|default --set-easy-anti-cheat-runtime on|off|default --set-battleye-runtime on|off|default",
+                "play": "--play"
+            }
+        });
 
-    let features = vec![
-        build_feature_view("mangohud", config.requirements.mangohud, overrides.mangohud),
-        build_feature_view(
-            "gamescope",
-            config.environment.gamescope.state,
-            overrides.gamescope,
-        ),
-        build_feature_view("gamemode", config.requirements.gamemode, overrides.gamemode),
-        build_feature_view("umu", config.requirements.umu, overrides.umu),
-        build_feature_view(
-            "winetricks",
-            config.requirements.winetricks,
-            overrides.winetricks,
-        ),
-        build_feature_view(
-            "steam_runtime",
-            config.requirements.steam_runtime,
-            overrides.steam_runtime,
-        ),
-        build_feature_view(
-            "prime_offload",
-            config.environment.prime_offload,
-            overrides.prime_offload,
-        ),
-        build_feature_view(
-            "wine_wayland",
-            config.compatibility.wine_wayland,
-            overrides.wine_wayland,
-        ),
-        build_feature_view("hdr", config.compatibility.hdr, overrides.hdr),
-        build_feature_view(
-            "auto_dxvk_nvapi",
-            config.compatibility.auto_dxvk_nvapi,
-            overrides.auto_dxvk_nvapi,
-        ),
-        build_feature_view(
-            "easy_anti_cheat_runtime",
-            config.compatibility.easy_anti_cheat_runtime,
-            overrides.easy_anti_cheat_runtime,
-        ),
-        build_feature_view(
-            "battleye_runtime",
-            config.compatibility.battleye_runtime,
-            overrides.battleye_runtime,
-        ),
-    ];
-
-    let output = serde_json::json!({
-        "status": "OK",
-        "override_file": override_path,
-        "changed": changed,
-        "features": features,
-        "usage": {
-            "set": "--config --set-mangohud on|off|default --set-gamescope on|off|default --set-gamemode on|off|default --set-umu on|off|default --set-winetricks on|off|default --set-steam-runtime on|off|default --set-prime-offload on|off|default --set-wine-wayland on|off|default --set-hdr on|off|default --set-auto-dxvk-nvapi on|off|default --set-easy-anti-cheat-runtime on|off|default --set-battleye-runtime on|off|default",
-            "play": "--play"
-        }
-    });
-
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&output).context("failed to serialize config output")?
-    );
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&output).context("failed to serialize config output")?
+        );
+    }
 
     Ok(())
 }
