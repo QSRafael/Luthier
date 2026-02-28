@@ -1,147 +1,129 @@
 # Luthier
 
-Luthier is a Linux desktop application (Tauri + SolidJS) that builds a portable native Linux launcher next to a Windows game's `.exe`.
+Luthier é um app desktop Linux para criar lançadores nativos de jogos Windows.
 
-The generated launcher (internally called **Luthier Orchestrator**) reads an embedded configuration payload, validates the host environment, prepares Wine/Proton prefix/runtime state, applies compatibility settings, and launches the game with optional wrappers such as Gamescope, MangoHud, and GameMode.
+Ele gera um executável Linux ao lado do `.exe` do jogo. Esse executável (internamente chamado de **Luthier Orchestrator**) carrega uma configuração embutida, valida o ambiente, prepara runtime/prefixo e executa o jogo com Wine/Proton e recursos opcionais (Gamescope, MangoHud, GameMode, entre outros).
 
-## Project Status
+## Por que isso é importante
 
-This repository is actively developed and already supports an end-to-end local workflow:
-- author game profiles in the Luthier app
-- generate a native launcher with embedded payload
-- inspect config (`--show-config`), run diagnostics (`--doctor`), configure runtime toggles (`--config`), open `winecfg` (`--winecfg`), and launch (`--play`)
-- use a splash screen with pre-launch progress, optional quick config, and post-game feedback UI
+- Padroniza o setup de execução no Linux sem depender de “tutorial manual” por jogo.
+- Diminui suporte repetitivo (dependências, runtime, ajustes de compatibilidade).
+- Entrega um launcher portátil com diagnóstico (`--doctor`) e execução assistida (`--play` / splash).
 
-Open work is tracked in:
-- [docs/planning/context.md](./docs/planning/context.md) (product/spec, Portuguese)
-- [docs/planning/debito.md](./docs/planning/debito.md) (current gaps, technical debt, and recommended next steps)
+## Para quem é
 
-## High-Level Architecture
+- Pessoas/equipes que distribuem jogos ou mods para Linux com Wine/Proton.
+- Usuários avançados que querem encapsular configurações de execução em um launcher único.
 
-### 1. Luthier (desktop app)
-- Linux desktop app built with Tauri + SolidJS
-- Builds and validates `GameConfig`
-- Computes hashes, extracts icons, imports `.reg`, prepares hero images
-- Copies a base `luthier-orchestrator` binary and injects the JSON payload
+## Como instalar
 
-### 2. Luthier Orchestrator (generated launcher)
-- Native Linux executable placed next to the Windows game executable
-- Reads its own embedded payload
-- Runs doctor/runtime selection and dependency checks
-- Prepares prefix and mounts
-- Applies registry and part of `winecfg` overrides
-- Launches the game with configured wrappers/runtime
-- Emits NDJSON logs for diagnostics and AI-assisted support
+## Opção A: usar release pronta (recomendado para usuário final)
 
-### 3. Shared Rust crates
-- `luthier-orchestrator-core`: config models, doctor/prefix/trailer/injector utilities
-- `luthier-core`: reusable backend logic for the Luthier app and CLI tooling
+Quando houver release publicada, baixe o pacote em **Releases** do GitHub e instale normalmente no Linux.
 
-## Repository Layout
+## Opção B: rodar/buildar a partir do código-fonte
 
-```text
-apps/luthier/                    # Tauri + SolidJS desktop app (frontend + Rust backend)
-bins/luthier-orchestrator/       # Generated launcher runtime (internal name)
-bins/luthier-cli/                # CLI helpers for local hash/test/create flows
-bins/luthier-orchestrator-injector/
-crates/luthier-core/             # Local backend logic shared by app/CLI
-crates/luthier-orchestrator-core/# Shared runtime models and execution utilities
-scripts/                         # Quality checks and local tooling
-scripts/dev/                     # Local dev convenience scripts
-.github/workflows/ci.yml         # CI (frontend + Rust core)
-docs/planning/                   # Product planning/spec and debt tracking
-docs/audits/                     # Point-in-time architecture audit reports
-docs/archive/                    # Historical logs/checkpoints
-docs_ia/                         # AI operational docs and quality gates
-```
-
-## Prerequisites (Linux)
-
-### Required (development)
-- Rust toolchain (`cargo`, `rustc`)
+Pré-requisitos (Linux):
+- Rust (`cargo`, `rustc`)
 - Node.js 20+
 - npm
+- Pacotes de GUI/WebKit/GTK para Tauri (varia por distro)
 
-### Required for the Tauri app (local desktop dev/build)
-You need Linux GUI/webkit/GTK development packages installed (varies by distro). This repository includes local compatibility helpers (`pkgconfig/`, `libshims/`) used by the provided scripts, but host packages are still required.
+Executar o app desktop em modo desenvolvimento:
 
-### Optional but recommended
-- `mise` (the helper scripts auto-detect it)
-
-## Quick Start
-
-### 1. Quality checks (recommended first)
-```bash
-./scripts/check-quality.sh
-```
-
-Run only frontend checks:
-```bash
-./scripts/check-frontend-quality.sh
-```
-
-Run Rust checks (excluding Tauri backend system deps):
-```bash
-./scripts/check-rust-quality.sh --exclude-tauri
-```
-
-### 2. Run Luthier frontend only (browser)
-```bash
-cd apps/luthier
-npm install
-npm run dev
-```
-
-### 3. Run the full Luthier desktop app (Tauri)
 ```bash
 cd apps/luthier
 npm install
 npm run tauri:dev
 ```
 
-### 4. Build the Luthier desktop app (no bundle)
-```bash
-./scripts/dev/build-luthier-and-open.sh
-```
+Gerar build desktop:
 
-### 5. Run the frontend on LAN (UI-only testing)
-```bash
-./scripts/dev/run-luthier-lan.sh
-# Optional: PORT=1421 ./scripts/dev/run-luthier-lan.sh
-```
-
-## Common Developer Workflows
-
-### Build the orchestrator binary directly
-```bash
-cargo build -p luthier-orchestrator
-cargo build -p luthier-orchestrator --release
-```
-
-### Use the CLI helpers
-```bash
-cargo run -p luthier-cli -- --help
-cargo run -p luthier-orchestrator -- --help
-```
-
-### Prepare the orchestrator base binary used by the app
 ```bash
 cd apps/luthier
-./scripts/prepare-luthier-orchestrator-base.sh debug
-./scripts/prepare-luthier-orchestrator-base.sh release
+npm run tauri:bundle
 ```
 
-## Notes for Publishing / GitHub
+## Como usar (visão rápida)
 
-- The project brand is **Luthier**.
-- `orchestrator` remains the internal technical name for the generated runtime binary/component.
-- `docs/planning/context.md` and most technical planning/checkpoint docs are in Portuguese.
-- `docs/planning/debito.md` tracks gaps vs the planned MVP and post-MVP scope.
+1. Abra o Luthier.
+2. Selecione o executável Windows do jogo (`.exe`) e complete os campos principais.
+3. Ajuste compatibilidade/runtime/winecfg conforme necessário.
+4. Gere o launcher nativo Linux.
+5. Distribua/use o launcher gerado junto do jogo.
 
-## Contributing
+## Uso do launcher gerado (Orchestrator)
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
+Exemplos úteis:
 
-## License
+```bash
+./meu-jogo --doctor
+./meu-jogo --play
+./meu-jogo --play-splash
+./meu-jogo --winecfg
+./meu-jogo --show-payload
+./meu-jogo --save-payload
+./meu-jogo --set-mangohud on --set-gamescope off --play
+```
 
-MIT — see [LICENSE](./LICENSE).
+Observações importantes:
+- O modo antigo `--config` foi removido.
+- Overrides de runtime/compatibilidade agora são feitos por flags `--set-<feature> on|off|default`.
+
+## Estado atual do projeto
+
+Fluxo ponta a ponta já funcional:
+- criação de perfil no app
+- geração de launcher com payload embutido
+- diagnóstico de ambiente (`--doctor`)
+- execução com e sem splash (`--play`, `--play-splash`)
+- fluxo de `winecfg` (`--winecfg`)
+
+Backlog funcional e débitos técnicos: [docs/planning/debito.md](./docs/planning/debito.md)
+
+## Estrutura do repositório
+
+```text
+apps/luthier/                    # App desktop (Tauri + SolidJS)
+bins/luthier-orchestrator/       # Runtime do launcher gerado
+bins/luthier-cli/                # CLI de apoio local
+bins/luthier-orchestrator-injector/
+crates/luthier-core/
+crates/luthier-orchestrator-core/
+scripts/                         # Gates de qualidade e scripts de suporte
+.github/workflows/ci.yml         # CI
+docs/planning/                   # Planejamento e backlog funcional
+```
+
+## Fluxo de desenvolvimento
+
+Rodar gate completo:
+
+```bash
+./scripts/check-quality.sh --full
+```
+
+Rodar apenas frontend:
+
+```bash
+./scripts/check-frontend-quality.sh
+```
+
+Rodar apenas qualidade Rust:
+
+```bash
+./scripts/check-rust-quality.sh --exclude-tauri
+```
+
+## Contribuição
+
+As regras de contribuição estão em [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Em resumo, o fluxo esperado inclui:
+- branch focada por mudança
+- validação local antes de abrir PR
+- explicação clara de mudança, motivação e validação
+
+## Licença
+
+MIT. Veja [LICENSE](./LICENSE).
