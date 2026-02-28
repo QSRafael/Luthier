@@ -567,3 +567,416 @@ fn validate_drive_serial(raw: &str) -> Option<String> {
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use luthier_orchestrator_core::config::{
+        CompatibilityConfig, DllOverrideRule, EnvConfig, FeatureState, FolderMount, GameConfig,
+        GamescopeConfig, RegistryKey, RequirementsConfig, RunnerConfig, RuntimeCandidate,
+        RuntimePolicy, RuntimePreference, ScriptsConfig, SplashConfig, SystemDependency,
+        VirtualDesktopConfig, WineDesktopFolderMapping, WineDriveMapping, WinecfgConfig,
+        WinecfgFeaturePolicy, WrapperCommand,
+    };
+
+    use super::{collect_game_config_validation_issues, validate_game_config_relative_paths};
+    use crate::{ConfigValidationIssue, LuthierError};
+
+    #[test]
+    fn reports_env_var_and_wrapper_issues_with_expected_code_and_field_paths() {
+        let mut cfg = sample_config();
+        cfg.environment
+            .custom_vars
+            .insert("1INVALID".to_string(), "x".to_string());
+        cfg.compatibility.wrapper_commands = vec![
+            WrapperCommand {
+                state: FeatureState::OptionalOn,
+                executable: r"C:\tools\wrapper.exe".to_string(),
+                args: String::new(),
+            },
+            WrapperCommand {
+                state: FeatureState::OptionalOn,
+                executable: "   ".to_string(),
+                args: String::new(),
+            },
+        ];
+
+        let issues = collect_game_config_validation_issues(&cfg);
+
+        let env_issue = find_issue(
+            &issues,
+            "env_var_name_invalid",
+            "environment.custom_vars.1INVALID",
+        )
+        .expect("invalid env var key must produce a field-scoped issue");
+        assert_eq!(env_issue.message, "must start with a letter or underscore");
+
+        let wrapper_invalid = find_issue(
+            &issues,
+            "wrapper_executable_invalid",
+            "compatibility.wrapper_commands[0]",
+        )
+        .expect("windows wrapper path must be rejected");
+        assert!(wrapper_invalid.message.contains("Windows path"));
+
+        let wrapper_required = find_issue(
+            &issues,
+            "wrapper_executable_required",
+            "compatibility.wrapper_commands[1]",
+        )
+        .expect("empty wrapper executable must be required");
+        assert_eq!(
+            wrapper_required.message,
+            "wrapper executable/command is required"
+        );
+    }
+
+    #[test]
+    fn reports_winecfg_desktop_and_drive_issues_with_precise_paths() {
+        let mut cfg = sample_config();
+        cfg.winecfg.desktop_folders = vec![WineDesktopFolderMapping {
+            folder_key: "desktop".to_string(),
+            shortcut_name: "Bad:Name".to_string(),
+            linux_path: "home/user/Desktop".to_string(),
+        }];
+        cfg.winecfg.drives = vec![WineDriveMapping {
+            letter: "D".to_string(),
+            source_relative_path: "drive_d".to_string(),
+            state: FeatureState::OptionalOn,
+            host_path: Some(r"C:\games\host".to_string()),
+            drive_type: None,
+            label: Some("Drive.".to_string()),
+            serial: Some("12-XY".to_string()),
+        }];
+
+        let issues = collect_game_config_validation_issues(&cfg);
+
+        assert!(find_issue(
+            &issues,
+            "winecfg_desktop_folder_shortcut_invalid",
+            "winecfg.desktop_folders[0].shortcut_name"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "winecfg_desktop_folder_linux_path_invalid",
+            "winecfg.desktop_folders[0].linux_path"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "winecfg_drive_host_path_invalid",
+            "winecfg.drives[0].host_path"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "winecfg_drive_label_invalid",
+            "winecfg.drives[0].label"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "winecfg_drive_serial_invalid",
+            "winecfg.drives[0].serial"
+        )
+        .is_some());
+    }
+
+    #[test]
+    fn reports_virtual_desktop_resolution_required_and_invalid_format() {
+        let mut cfg_missing_resolution = sample_config();
+        cfg_missing_resolution.winecfg.virtual_desktop.state = WinecfgFeaturePolicy {
+            state: FeatureState::OptionalOn,
+            use_wine_default: false,
+        };
+        cfg_missing_resolution.winecfg.virtual_desktop.resolution = None;
+
+        let missing = collect_game_config_validation_issues(&cfg_missing_resolution);
+        assert!(find_issue(
+            &missing,
+            "winecfg_virtual_desktop_resolution_required",
+            "winecfg.virtual_desktop.resolution"
+        )
+        .is_some());
+
+        let mut cfg_bad_format = sample_config();
+        cfg_bad_format.winecfg.virtual_desktop.state = WinecfgFeaturePolicy {
+            state: FeatureState::OptionalOn,
+            use_wine_default: false,
+        };
+        cfg_bad_format.winecfg.virtual_desktop.resolution = Some("1920-1080".to_string());
+
+        let invalid = collect_game_config_validation_issues(&cfg_bad_format);
+        let issue = find_issue(
+            &invalid,
+            "winecfg_virtual_desktop_resolution_invalid",
+            "winecfg.virtual_desktop.resolution",
+        )
+        .expect("invalid virtual desktop resolution format must be reported");
+        assert!(issue
+            .message
+            .contains("resolution must use the format WIDTHxHEIGHT"));
+    }
+
+    #[test]
+    fn reports_gamescope_dimension_and_limiter_issues_with_expected_codes() {
+        let mut cfg = sample_config();
+        cfg.environment.gamescope.state = FeatureState::OptionalOn;
+        cfg.environment.gamescope.game_width.clear();
+        cfg.environment.gamescope.game_height = "17000".to_string();
+        cfg.environment.gamescope.output_width = "1920".to_string();
+        cfg.environment.gamescope.output_height.clear();
+        cfg.environment.gamescope.enable_limiter = true;
+        cfg.environment.gamescope.fps_limiter = "0".to_string();
+        cfg.environment.gamescope.fps_limiter_no_focus = "abc".to_string();
+
+        let issues = collect_game_config_validation_issues(&cfg);
+
+        assert!(find_issue(
+            &issues,
+            "gamescope_game_width_required",
+            "environment.gamescope.game_width"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "gamescope_game_height_invalid",
+            "environment.gamescope.game_height"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "gamescope_output_height_required",
+            "environment.gamescope.output_height"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "gamescope_fps_limiter_invalid",
+            "environment.gamescope.fps_limiter"
+        )
+        .is_some());
+        assert!(find_issue(
+            &issues,
+            "gamescope_fps_limiter_no_focus_invalid",
+            "environment.gamescope.fps_limiter_no_focus"
+        )
+        .is_some());
+    }
+
+    #[test]
+    fn keeps_gamescope_output_dimensions_optional_when_auto_output_is_used() {
+        let mut cfg = sample_config();
+        cfg.environment.gamescope.state = FeatureState::OptionalOn;
+        cfg.environment.gamescope.game_width = "1280".to_string();
+        cfg.environment.gamescope.game_height = "720".to_string();
+        cfg.environment.gamescope.output_width.clear();
+        cfg.environment.gamescope.output_height.clear();
+
+        let issues = collect_game_config_validation_issues(&cfg);
+        assert!(find_issue(
+            &issues,
+            "gamescope_output_width_required",
+            "environment.gamescope.output_width",
+        )
+        .is_none());
+        assert!(find_issue(
+            &issues,
+            "gamescope_output_height_required",
+            "environment.gamescope.output_height",
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn reports_sensitive_deduplications_for_registry_and_folder_mount_targets() {
+        let mut cfg = sample_config();
+        cfg.registry_keys = vec![
+            RegistryKey {
+                path: r"HKCU\Software\MyGame".to_string(),
+                name: "InstallDir".to_string(),
+                value_type: "REG_SZ".to_string(),
+                value: "/games/my-game".to_string(),
+            },
+            RegistryKey {
+                path: r"hkcu\software\mygame".to_string(),
+                name: "installdir".to_string(),
+                value_type: "REG_SZ".to_string(),
+                value: "/games/other".to_string(),
+            },
+        ];
+        cfg.folder_mounts = vec![
+            FolderMount {
+                source_relative_path: "save_a".to_string(),
+                target_windows_path: r"C:\Users\steamuser\Documents\MyGame".to_string(),
+                create_source_if_missing: true,
+            },
+            FolderMount {
+                source_relative_path: "save_b".to_string(),
+                target_windows_path: r"c:/users/steamuser/documents/mygame".to_string(),
+                create_source_if_missing: true,
+            },
+        ];
+
+        let err = validate_game_config_relative_paths(&cfg)
+            .expect_err("duplicate mount targets must be rejected case-insensitively");
+        assert!(matches!(
+            &err,
+            LuthierError::DuplicateFolderMountTarget(value)
+                if value == r"c:/users/steamuser/documents/mygame"
+        ));
+
+        let issues = collect_game_config_validation_issues(&cfg);
+        let relative_paths = find_issue(&issues, "relative_paths", "payload.paths")
+            .expect("path-level failure must be mapped to payload.paths");
+        assert!(relative_paths
+            .message
+            .contains("duplicate folder mount target windows path"));
+
+        let registry_duplicate = find_issue(&issues, "registry_duplicate_pair", "registry_keys[1]")
+            .expect("duplicate registry path/name pair must be reported");
+        assert_eq!(
+            registry_duplicate.message,
+            "duplicate registry path/name entry"
+        );
+    }
+
+    #[test]
+    fn accepts_known_winecfg_audio_driver_without_issue() {
+        let mut cfg = sample_config();
+        cfg.winecfg.audio_driver = Some("pipewire".to_string());
+
+        let issues = collect_game_config_validation_issues(&cfg);
+        assert!(issues
+            .iter()
+            .all(|issue| issue.field.as_str() != "winecfg.audio_driver"));
+    }
+
+    fn find_issue<'a>(
+        issues: &'a [ConfigValidationIssue],
+        code: &str,
+        field: &str,
+    ) -> Option<&'a ConfigValidationIssue> {
+        issues
+            .iter()
+            .find(|issue| issue.code == code && issue.field == field)
+    }
+
+    fn sample_config() -> GameConfig {
+        GameConfig {
+            config_version: 1,
+            created_by: "test".to_string(),
+            game_name: "Sample".to_string(),
+            exe_hash: "a".repeat(64),
+            relative_exe_path: "./game.exe".to_string(),
+            launch_args: vec![],
+            runner: RunnerConfig {
+                proton_version: "GE-Proton9-10".to_string(),
+                auto_update: true,
+                esync: true,
+                fsync: true,
+                runtime_preference: RuntimePreference::Auto,
+            },
+            environment: EnvConfig {
+                gamemode: FeatureState::OptionalOn,
+                gamescope: GamescopeConfig {
+                    state: FeatureState::OptionalOff,
+                    resolution: None,
+                    fsr: false,
+                    game_width: String::new(),
+                    game_height: String::new(),
+                    output_width: String::new(),
+                    output_height: String::new(),
+                    upscale_method: "fsr".to_string(),
+                    window_type: "fullscreen".to_string(),
+                    enable_limiter: false,
+                    fps_limiter: String::new(),
+                    fps_limiter_no_focus: String::new(),
+                    force_grab_cursor: false,
+                    additional_options: String::new(),
+                },
+                mangohud: FeatureState::OptionalOff,
+                prime_offload: FeatureState::OptionalOff,
+                custom_vars: HashMap::new(),
+            },
+            compatibility: CompatibilityConfig {
+                wine_wayland: FeatureState::OptionalOff,
+                hdr: FeatureState::OptionalOff,
+                auto_dxvk_nvapi: FeatureState::OptionalOff,
+                easy_anti_cheat_runtime: FeatureState::OptionalOff,
+                battleye_runtime: FeatureState::OptionalOff,
+                staging: FeatureState::OptionalOff,
+                wrapper_commands: vec![],
+            },
+            winecfg: WinecfgConfig {
+                windows_version: None,
+                dll_overrides: vec![DllOverrideRule {
+                    dll: "d3d11.dll".to_string(),
+                    mode: "native,builtin".to_string(),
+                }],
+                auto_capture_mouse: WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
+                window_decorations: WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
+                window_manager_control: WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
+                virtual_desktop: VirtualDesktopConfig {
+                    state: WinecfgFeaturePolicy {
+                        state: FeatureState::OptionalOff,
+                        use_wine_default: true,
+                    },
+                    resolution: None,
+                },
+                screen_dpi: None,
+                desktop_integration: WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOn,
+                    use_wine_default: true,
+                },
+                mime_associations: WinecfgFeaturePolicy {
+                    state: FeatureState::OptionalOff,
+                    use_wine_default: true,
+                },
+                desktop_folders: vec![],
+                drives: vec![],
+                audio_driver: None,
+            },
+            dependencies: vec![],
+            extra_system_dependencies: vec![SystemDependency {
+                name: "gamescope".to_string(),
+                state: FeatureState::OptionalOff,
+                check_commands: vec!["gamescope".to_string()],
+                check_env_vars: vec![],
+                check_paths: vec!["/usr/bin/gamescope".to_string()],
+            }],
+            requirements: RequirementsConfig {
+                runtime: RuntimePolicy {
+                    strict: false,
+                    primary: RuntimeCandidate::ProtonNative,
+                    fallback_order: vec![RuntimeCandidate::Wine],
+                },
+                umu: FeatureState::OptionalOn,
+                winetricks: FeatureState::OptionalOff,
+                gamescope: FeatureState::OptionalOff,
+                gamemode: FeatureState::OptionalOn,
+                mangohud: FeatureState::OptionalOff,
+                steam_runtime: FeatureState::OptionalOff,
+            },
+            registry_keys: vec![],
+            integrity_files: vec!["./data/core.dll".to_string()],
+            folder_mounts: vec![],
+            splash: SplashConfig::default(),
+            scripts: ScriptsConfig {
+                pre_launch: String::new(),
+                post_launch: String::new(),
+            },
+        }
+    }
+}
