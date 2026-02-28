@@ -275,6 +275,7 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
         &config,
         &report,
         &prefix_setup.prefix_root_path,
+        &game_root,
         dry_run,
     )
     .context("failed to apply winecfg overrides")?;
