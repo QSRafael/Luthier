@@ -113,3 +113,134 @@ pub(crate) fn normalize_windows_mount_target(raw: &str) -> Result<String, Luthie
 
     Ok(format!(r"{drive}:\{}", segments.join("\\")))
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::{
+        normalize_relative_payload_path, normalize_windows_mount_target, path_to_unix_like,
+        to_relative_inside_game_root,
+    };
+    use crate::LuthierError;
+
+    #[test]
+    fn normalize_relative_payload_path_normalizes_mixed_separators_and_curdir_segments() {
+        let normalized = normalize_relative_payload_path(r" ./assets\.\bin//game.exe ")
+            .expect("path with mixed separators and '.' must normalize");
+
+        assert_eq!(normalized, "assets/bin/game.exe");
+    }
+
+    #[test]
+    fn normalize_relative_payload_path_is_idempotent_after_normalization() {
+        let once = normalize_relative_payload_path(r" .\mods//bin\game.exe ")
+            .expect("must normalize on first pass");
+        let twice = normalize_relative_payload_path(&once)
+            .expect("already-normalized path must stay valid");
+
+        assert_eq!(once, "mods/bin/game.exe");
+        assert_eq!(twice, once);
+    }
+
+    #[test]
+    fn normalize_relative_payload_path_rejects_path_traversal_with_consistent_error_message() {
+        for raw in [
+            r"../secret.dll",
+            r"mods/../secret.dll",
+            r".\mods\..\secret.dll",
+        ] {
+            let err = normalize_relative_payload_path(raw).expect_err("traversal must be rejected");
+
+            assert!(matches!(
+                &err,
+                LuthierError::PathTraversalNotAllowed(value) if value == raw
+            ));
+            assert_eq!(
+                err.to_string(),
+                format!("path traversal not allowed in game payload: {raw}")
+            );
+        }
+    }
+
+    #[test]
+    fn normalize_relative_payload_path_rejects_linux_and_windows_absolute_paths() {
+        for raw in [
+            "/opt/game/game.exe",
+            r"C:\Games\Demo\game.exe",
+            "d:/games/demo.exe",
+            "////",
+        ] {
+            let err = normalize_relative_payload_path(raw)
+                .expect_err("absolute path must not be accepted as relative payload path");
+
+            assert!(matches!(
+                &err,
+                LuthierError::AbsolutePathNotAllowed(value) if value == raw
+            ));
+            assert_eq!(
+                err.to_string(),
+                format!("absolute path not allowed in game payload: {raw}")
+            );
+        }
+    }
+
+    #[test]
+    fn normalize_relative_payload_path_rejects_empty_or_dot_only_input() {
+        for raw in ["", "   ", ".", "./", ".\\", ".//./"] {
+            let err = normalize_relative_payload_path(raw).expect_err("invalid relative path");
+            assert!(matches!(
+                &err,
+                LuthierError::InvalidRelativePath(value) if value == raw
+            ));
+            assert_eq!(
+                err.to_string(),
+                format!("invalid relative path in game payload: {raw}")
+            );
+        }
+    }
+
+    #[test]
+    fn to_relative_inside_game_root_normalizes_absolute_inside_root() {
+        let root = Path::new("/games/sample");
+        let candidate = Path::new("/games/sample/./bin\\game.exe");
+
+        let relative =
+            to_relative_inside_game_root(root, candidate).expect("candidate is inside game root");
+
+        assert_eq!(relative, "bin/game.exe");
+    }
+
+    #[test]
+    fn to_relative_inside_game_root_rejects_absolute_path_outside_root_with_coherent_message() {
+        let root = Path::new("/games/sample");
+        let outside = Path::new("/games/another/game.exe");
+        let outside_raw = outside.to_string_lossy().into_owned();
+
+        let err = to_relative_inside_game_root(root, outside)
+            .expect_err("absolute path outside game root must be rejected");
+
+        assert!(matches!(
+            &err,
+            LuthierError::PathOutsideGameRoot(value) if value == &outside_raw
+        ));
+        assert_eq!(
+            err.to_string(),
+            format!("path is outside game root: {outside_raw}")
+        );
+    }
+
+    #[test]
+    fn path_to_unix_like_skips_curdir_and_preserves_normal_components() {
+        let converted = path_to_unix_like(Path::new("./mods/./bin/game.exe"));
+        assert_eq!(converted, "mods/bin/game.exe");
+    }
+
+    #[test]
+    fn normalize_windows_mount_target_normalizes_separators_and_drive_letter_case() {
+        let normalized = normalize_windows_mount_target("c:/Users/steamuser/Documents/MyGame")
+            .expect("valid target must normalize");
+
+        assert_eq!(normalized, r"C:\Users\steamuser\Documents\MyGame");
+    }
+}
