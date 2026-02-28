@@ -10,7 +10,8 @@ RUN_RUST_SECURITY=true
 RUN_RUST_DEADCODE=true
 
 EXCLUDE_TAURI=true
-RUST_WITH_TESTS=false
+RUST_WITH_TESTS=true
+RUST_WITH_TESTS_EXPLICIT=false
 MODE="full"
 
 usage() {
@@ -18,7 +19,7 @@ usage() {
 Usage: scripts/check-quality.sh [options]
 
 Modes:
-  --full             Run full project gate (default)
+  --full             Run full project gate (default, includes rust tests)
   --fast             Run quick gate (frontend + rust quality)
 
 Subset controls:
@@ -32,7 +33,7 @@ Subset controls:
 
 Rust options:
   --include-tauri    Include luthier-backend in rust quality/deadcode checks
-  --with-tests       Run existing rust tests in rust quality gate
+  --with-tests       Force running existing rust tests in rust quality gate
 
 Other:
   -h, --help         Show this help
@@ -102,6 +103,7 @@ for arg in "$@"; do
       ;;
     --with-tests)
       RUST_WITH_TESTS=true
+      RUST_WITH_TESTS_EXPLICIT=true
       ;;
     -h|--help)
       usage
@@ -114,6 +116,14 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+if [[ "$RUST_WITH_TESTS_EXPLICIT" == false ]]; then
+  if [[ "$MODE" == "full" ]]; then
+    RUST_WITH_TESTS=true
+  else
+    RUST_WITH_TESTS=false
+  fi
+fi
 
 if [[ "$RUN_FRONTEND" == false ]] \
   && [[ "$RUN_RUST_QUALITY" == false ]] \
