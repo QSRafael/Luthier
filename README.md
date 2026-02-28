@@ -150,11 +150,38 @@ game --show-base64-hero-image
 game --save-payload
 ```
 
+## Orchestrator Play Flow
+
+When you run `game --play`, the Orchestrator executes this pipeline before and during launch:
+
+1. Load embedded payload from the generated executable.
+2. Load saved runtime overrides for that game hash and apply them.
+3. Acquire a per-game instance lock (prevents duplicate concurrent launch for the same game).
+4. Resolve game root and main `.exe` path.
+5. Validate required files (`integrity_files`) and block if something is missing.
+6. Run `doctor` with policy enforcement (`MandatoryOn` can block, optional items can degrade).
+7. Build and execute prefix setup plan (runtime-aware).
+8. Apply registry entries (when configured).
+9. Apply winecfg overrides (when configured).
+10. Apply folder mounts into the prefix (`folder_mounts`).
+11. Build final launch command (wrappers, runtime, env, cwd, args).
+12. Execute `pre_launch` script (if configured).
+13. Spawn game process and wait for completion.
+14. Execute `post_launch` script (if configured).
+
+For `game --play-splash`, the flow adds a pre-launch UI layer:
+
+1. Show splash pre-launch screen with hero image and countdown.
+2. Show optional toggles (only for configurable features) and persist override changes.
+3. Show blocker screen when doctor reports missing mandatory requirements.
+4. Start a child process with `--play` and stream structured progress messages in the splash.
+5. Show post-game feedback screen when execution ends.
+
 ## Runtime Support Notes
 
 Luthier is built for Linux hosts running Windows games through compatibility layers.
 
-- Runtime candidates: Proton (native), UMU-based Proton, Wine.
+- Runtime candidates: UMU-based Proton, Proton (native), Wine.
 - Environment detection uses PATH/env/system discovery.
 - Doctor output respects policy state and reports actionable blockers/warnings.
 - Optional feature overrides do not bypass mandatory policy constraints.
