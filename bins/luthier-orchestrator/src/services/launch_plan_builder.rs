@@ -778,3 +778,124 @@ fn proton_root_from_script(proton_binary_path: &str) -> Option<String> {
     let proton_dir = proton_path.parent()?;
     Some(proton_dir.to_string_lossy().into_owned())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_resolution_accepts_valid_formats() {
+        assert_eq!(parse_resolution("1920x1080"), Some((1920, 1080)));
+        assert_eq!(parse_resolution(" 1280 X 720 "), Some((1280, 720)));
+        assert_eq!(parse_resolution("800x600"), Some((800, 600)));
+    }
+
+    #[test]
+    fn parse_resolution_rejects_invalid_formats() {
+        assert_eq!(parse_resolution(""), None);
+        assert_eq!(parse_resolution("1920"), None);
+        assert_eq!(parse_resolution("1920x"), None);
+        assert_eq!(parse_resolution("x1080"), None);
+        assert_eq!(parse_resolution("abcx1080"), None);
+        assert_eq!(parse_resolution("1920xabc"), None);
+    }
+
+    #[test]
+    fn parse_u32_maybe_empty_handles_optional_and_invalid_values() {
+        assert_eq!(parse_u32_maybe_empty(""), None);
+        assert_eq!(parse_u32_maybe_empty("   "), None);
+        assert_eq!(parse_u32_maybe_empty("60"), Some(60));
+        assert_eq!(parse_u32_maybe_empty(" 144 "), Some(144));
+        assert_eq!(parse_u32_maybe_empty("-1"), None);
+        assert_eq!(parse_u32_maybe_empty("NaN"), None);
+    }
+
+    #[test]
+    fn apply_gamescope_upscale_flags_uses_modern_filter_flags_when_supported() {
+        let mut args = Vec::new();
+        apply_gamescope_upscale_flags(&mut args, "fsr", true);
+        assert_eq!(args, vec!["-F", "fsr"]);
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, " nis ", true);
+        assert_eq!(args, vec!["-F", "nis"]);
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, "integer", true);
+        assert_eq!(args, vec!["-S", "integer"]);
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, "stretch", true);
+        assert_eq!(args, vec!["-S", "stretch"]);
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, "unknown", true);
+        assert!(args.is_empty());
+    }
+
+    #[test]
+    fn apply_gamescope_upscale_flags_uses_legacy_flags_when_modern_filter_unavailable() {
+        let mut args = Vec::new();
+        apply_gamescope_upscale_flags(&mut args, "fsr", false);
+        assert_eq!(args, vec!["-U"]);
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, "nis", false);
+        assert_eq!(args, vec!["-Y"]);
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, "integer", false);
+        assert_eq!(args, vec!["-i"]);
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, "stretch", false);
+        assert!(args.is_empty());
+
+        args.clear();
+        apply_gamescope_upscale_flags(&mut args, "", false);
+        assert!(args.is_empty());
+    }
+
+    #[test]
+    fn protected_env_key_helper_identifies_reserved_keys() {
+        assert!(is_protected_env_key("WINEPREFIX"));
+        assert!(is_protected_env_key("PROTON_VERB"));
+        assert!(is_protected_env_key("STEAM_COMPAT_DATA_PATH"));
+        assert!(is_protected_env_key("PROTONPATH"));
+        assert!(is_protected_env_key("GAMEID"));
+        assert!(is_protected_env_key("UMU_RUNTIME_UPDATE"));
+
+        assert!(!is_protected_env_key("CUSTOM_ENV"));
+        assert!(!is_protected_env_key("PATH"));
+        assert!(!is_protected_env_key("STEAM_COMPAT_DATA_PATH_EXTRA"));
+    }
+
+    #[test]
+    fn upsert_and_remove_env_helpers_work_without_side_effects() {
+        let mut env_pairs = vec![
+            ("WINEPREFIX".to_string(), "/tmp/pfx".to_string()),
+            ("CUSTOM_A".to_string(), "1".to_string()),
+        ];
+
+        upsert_env(&mut env_pairs, "CUSTOM_B", "2");
+        assert!(env_pairs
+            .iter()
+            .any(|(key, value)| key == "CUSTOM_B" && value == "2"));
+
+        upsert_env(&mut env_pairs, "CUSTOM_A", "99");
+        assert!(env_pairs
+            .iter()
+            .any(|(key, value)| key == "CUSTOM_A" && value == "99"));
+        assert_eq!(
+            env_pairs
+                .iter()
+                .filter(|(key, _)| key == "CUSTOM_A")
+                .count(),
+            1
+        );
+
+        remove_env(&mut env_pairs, "CUSTOM_B");
+        assert!(!env_pairs.iter().any(|(key, _)| key == "CUSTOM_B"));
+        assert!(env_pairs.iter().any(|(key, _)| key == "WINEPREFIX"));
+    }
+}
