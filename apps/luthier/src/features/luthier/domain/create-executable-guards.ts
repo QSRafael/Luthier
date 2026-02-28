@@ -531,3 +531,9 @@ export function getCreateExecutableValidationErrors(ctx: CreateExecutableGuardsC
 
   return errors
 }
+
+/**
+ * Stable alias for unit tests and external consumers that should not depend on
+ * internal naming changes.
+ */
+export const validateCreateExecutableGuards = getCreateExecutableValidationErrors
