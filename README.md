@@ -1,35 +1,181 @@
 # Luthier
 
-Luthier é um app desktop Linux para criar lançadores nativos de jogos Windows.
+Luthier is a Linux desktop application that builds portable native launchers for Windows games.
 
-Ele gera um executável Linux ao lado do `.exe` do jogo. Esse executável (internamente chamado de **Luthier Orchestrator**) carrega uma configuração embutida, valida o ambiente, prepara runtime/prefixo e executa o jogo com Wine/Proton e recursos opcionais (Gamescope, MangoHud, GameMode, entre outros).
+For each game, Luthier generates a Linux executable next to the game `.exe`.  
+That generated executable (internally, **Luthier Orchestrator**) carries an embedded payload with launch policy, runtime preferences, compatibility options, and setup rules.
 
-## Por que isso é importante
+## Product Overview
 
-- Padroniza o setup de execução no Linux sem depender de “tutorial manual” por jogo.
-- Diminui suporte repetitivo (dependências, runtime, ajustes de compatibilidade).
-- Entrega um launcher portátil com diagnóstico (`--doctor`) e execução assistida (`--play` / splash).
+Luthier is designed to make Wine/Proton game packaging reproducible:
 
-## Para quem é
+- Build once, run consistently across Linux hosts.
+- Keep launcher behavior with the game folder.
+- Validate host requirements before launch.
+- Apply prefix/runtime/winecfg configuration automatically.
+- Support optional performance wrappers such as Gamescope, MangoHud, and GameMode.
 
-- Pessoas/equipes que distribuem jogos ou mods para Linux com Wine/Proton.
-- Usuários avançados que querem encapsular configurações de execução em um launcher único.
+## Core Capabilities
 
-## Como instalar
+- Native launcher generation with embedded payload.
+- Runtime strategy: Proton, UMU, and Wine fallback policy.
+- Prefix setup and dependency bootstrap.
+- Registry import and winecfg application pipeline.
+- Mount mappings from game-relative folders into Wine prefix paths.
+- Structured doctor checks with categorized output.
+- Splash-assisted launch mode and direct launch mode.
+- Runtime/compatibility override flags (`--set-*`) for optional features.
 
-## Opção A: usar release pronta (recomendado para usuário final)
+## Supported Configuration Surface (Luthier UI)
 
-Quando houver release publicada, baixe o pacote em **Releases** do GitHub e instale normalmente no Linux.
+Luthier currently covers the following tabs and domains:
 
-## Opção B: rodar/buildar a partir do código-fonte
+### 1) Game
+- Game name.
+- Main Windows executable (`.exe`).
+- Root folder and executable path validation.
+- SHA-256 hash calculation.
+- Hero image selection and icon extraction.
 
-Pré-requisitos (Linux):
-- Rust (`cargo`, `rustc`)
+### 2) Files & Launch
+- Launch arguments.
+- Required game files (`integrity_files`).
+- Root-relative validation for required artifacts.
+- Mounted folders (`folder_mounts`) from game root to Windows target paths.
+
+### 3) Runtime
+- Runtime preference and version field.
+- Runtime policy (`strict` vs fallback chain).
+- ESYNC/FSYNC toggles.
+- UMU required flow.
+- EAC runtime policy.
+- BattlEye runtime policy.
+
+### 4) Enhancements
+- Gamescope policy and options:
+  - Resolution inputs.
+  - Upscaling method (FSR/NIS/integer/stretch).
+  - Window mode.
+  - FPS limiter options.
+  - Cursor grab and extra options.
+- GameMode policy.
+- MangoHud policy.
+- Prime Offload policy.
+- Wine-Wayland policy.
+- HDR policy.
+- DXVK-NVAPI policy.
+
+### 5) Dependencies
+- Winetricks policy and verb list.
+- Extra system dependencies.
+- Registry entries and `.reg` import workflow.
+- Prefix-oriented dependency setup controls.
+
+### 6) Winecfg
+- DLL overrides.
+- Windows version override.
+- Graphics options:
+  - Mouse capture.
+  - Window decorations.
+  - Window manager control.
+  - Virtual desktop and resolution.
+  - Screen DPI.
+- Desktop integration options:
+  - Desktop integration policy.
+  - MIME associations policy.
+  - Special folders mapping.
+- Drive mappings.
+- Audio backend selection (`pipewire`, `pulseaudio`, `alsa`, or default).
+
+### 7) Launch & Environment
+- Custom wrapper commands.
+- Environment variables.
+- Pre-launch and post-launch scripts.
+- Validation and deduplication for path/command entries.
+
+### 8) Review & Generate
+- Consolidated summary of active configuration.
+- Full JSON payload preview.
+- Validation errors before generation.
+- Test action and create executable action.
+
+## Luthier Orchestrator CLI (Generated Game Executable)
+
+The generated Orchestrator supports:
+
+| Command | Purpose |
+| --- | --- |
+| `--help` | Print usage and examples. |
+| `--doctor` | Run categorized requirement checks and print result. |
+| `--show-payload` | Print embedded payload (hero base64 omitted). |
+| `--show-base64-hero-image` | Print payload including splash hero base64. |
+| `--save-payload` | Save embedded payload as `<executable-name>-payload.json` in game root. |
+| `--set-mangohud on/off/default` | Override optional MangoHud state. |
+| `--set-gamescope on/off/default` | Override optional Gamescope state. |
+| `--set-gamemode on/off/default` | Override optional GameMode state. |
+| `--set-umu on/off/default` | Override optional UMU state. |
+| `--set-winetricks on/off/default` | Override optional Winetricks state. |
+| `--set-steam-runtime on/off/default` | Override optional Steam Runtime state. |
+| `--set-prime-offload on/off/default` | Override optional Prime Offload state. |
+| `--set-wine-wayland on/off/default` | Override optional Wine-Wayland state. |
+| `--set-hdr on/off/default` | Override optional HDR state. |
+| `--set-auto-dxvk-nvapi on/off/default` | Override optional DXVK-NVAPI state. |
+| `--set-easy-anti-cheat-runtime on/off/default` | Override optional EAC runtime state. |
+| `--set-battleye-runtime on/off/default` | Override optional BattlEye runtime state. |
+| `--play` | Run full launch pipeline without splash. |
+| `--play-splash` | Run full launch pipeline with splash UI. |
+| `--winecfg` | Run winecfg apply flow only. |
+| `--lang <locale>` | Override splash/UI locale (for example `en-US`, `pt-BR`). |
+
+### Execution Order When Commands Are Combined
+
+When multiple flags are provided, execution is deterministic:
+
+1. `--doctor`
+2. payload output actions (`--show-payload`, `--show-base64-hero-image`, `--save-payload`)
+3. override mutations (`--set-*`)
+4. execution stage (`--play` or `--play-splash`, otherwise `--winecfg`)
+
+### CLI Examples (using `game` as launcher name)
+
+```bash
+game --doctor
+game --doctor --play
+game --play
+game --play-splash
+game --set-mangohud on --set-gamescope off
+game --set-mangohud off --play
+game --show-payload
+game --show-base64-hero-image
+game --save-payload
+```
+
+## Runtime Support Notes
+
+Luthier is built for Linux hosts running Windows games through compatibility layers.
+
+- Runtime candidates: Proton (native), UMU-based Proton, Wine.
+- Environment detection uses PATH/env/system discovery.
+- Doctor output respects policy state and reports actionable blockers/warnings.
+- Optional feature overrides do not bypass mandatory policy constraints.
+
+## Installation and Local Development
+
+### Option A: Use a GitHub release
+
+When releases are published, download from the repository Releases page and install on Linux.
+
+### Option B: Build from source
+
+Prerequisites:
+
+- Linux host
+- Rust toolchain (`cargo`, `rustc`)
 - Node.js 20+
 - npm
-- Pacotes de GUI/WebKit/GTK para Tauri (varia por distro)
+- Tauri system dependencies (WebKitGTK/GTK stack, distro specific)
 
-Executar o app desktop em modo desenvolvimento:
+Run desktop app in development:
 
 ```bash
 cd apps/luthier
@@ -37,93 +183,78 @@ npm install
 npm run tauri:dev
 ```
 
-Gerar build desktop:
+Build desktop artifacts:
 
 ```bash
 cd apps/luthier
 npm run tauri:bundle
 ```
 
-## Como usar (visão rápida)
+## Typical User Workflow
 
-1. Abra o Luthier.
-2. Selecione o executável Windows do jogo (`.exe`) e complete os campos principais.
-3. Ajuste compatibilidade/runtime/winecfg conforme necessário.
-4. Gere o launcher nativo Linux.
-5. Distribua/use o launcher gerado junto do jogo.
+1. Open the Luthier desktop app.
+2. Pick game `.exe`.
+3. Configure runtime, enhancements, dependencies, winecfg, wrappers, and environment.
+4. Review summary.
+5. Generate native launcher.
+6. Distribute/run the generated launcher with the game folder.
 
-## Uso do launcher gerado (Orchestrator)
+## Adding a New Language
 
-Exemplos úteis:
+Luthier currently ships with `pt-BR` and `en-US`.
 
-```bash
-./meu-jogo --doctor
-./meu-jogo --play
-./meu-jogo --play-splash
-./meu-jogo --winecfg
-./meu-jogo --show-payload
-./meu-jogo --save-payload
-./meu-jogo --set-mangohud on --set-gamescope off --play
-```
+To add a new locale end-to-end:
 
-Observações importantes:
-- O modo antigo `--config` foi removido.
-- Overrides de runtime/compatibilidade agora são feitos por flags `--set-<feature> on|off|default`.
+1. Add base UI strings in `apps/luthier/src/i18n.ts`.
+2. Add Luthier page strings in `apps/luthier/src/features/luthier/copy.<locale>.ts`.
+3. Add validation strings in `apps/luthier/src/features/luthier/copy.validation.<locale>.ts`.
+4. Register the locale merge in `apps/luthier/src/features/luthier/copy.ts`.
+5. Add Orchestrator splash strings in `bins/luthier-orchestrator/src/splash/text.rs`.
+6. Validate with `./scripts/check-quality.sh --full`.
 
-## Estado atual do projeto
+Tip: use `en-US` as the reference source to keep key coverage consistent.
 
-Fluxo ponta a ponta já funcional:
-- criação de perfil no app
-- geração de launcher com payload embutido
-- diagnóstico de ambiente (`--doctor`)
-- execução com e sem splash (`--play`, `--play-splash`)
-- fluxo de `winecfg` (`--winecfg`)
+## Screenshots
 
-Backlog funcional e débitos técnicos: [docs/planning/debito.md](./docs/planning/debito.md)
+### Game tab
 
-## Estrutura do repositório
+![Game tab](docs/images/GameTab.png)
+
+### Enhancements tab
+
+![Enhancements tab](docs/images/EnhacementsTab.png)
+
+### Dependencies tab
+
+![Dependencies tab](docs/images/DependenciesTab.png)
+
+## Repository Layout
 
 ```text
-apps/luthier/                    # App desktop (Tauri + SolidJS)
-bins/luthier-orchestrator/       # Runtime do launcher gerado
-bins/luthier-cli/                # CLI de apoio local
+apps/luthier/                      # Desktop app (Tauri + SolidJS)
+apps/luthier/src-tauri/            # Tauri backend
+bins/luthier-orchestrator/         # Generated launcher runtime
+bins/luthier-cli/                  # Local support CLI
 bins/luthier-orchestrator-injector/
 crates/luthier-core/
 crates/luthier-orchestrator-core/
-scripts/                         # Gates de qualidade e scripts de suporte
-.github/workflows/ci.yml         # CI
-docs/planning/                   # Planejamento e backlog funcional
+scripts/                           # Quality/security/architecture checks
+.github/workflows/ci.yml           # CI pipeline
+docs/planning/                     # Product planning and technical debt tracking
 ```
 
-## Fluxo de desenvolvimento
+## Quality Gate
 
-Rodar gate completo:
+Run the full local gate before opening a PR:
 
 ```bash
 ./scripts/check-quality.sh --full
 ```
 
-Rodar apenas frontend:
+## Contributing
 
-```bash
-./scripts/check-frontend-quality.sh
-```
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution flow and expectations.
 
-Rodar apenas qualidade Rust:
+## License
 
-```bash
-./scripts/check-rust-quality.sh --exclude-tauri
-```
-
-## Contribuição
-
-As regras de contribuição estão em [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-Em resumo, o fluxo esperado inclui:
-- branch focada por mudança
-- validação local antes de abrir PR
-- explicação clara de mudança, motivação e validação
-
-## Licença
-
-MIT. Veja [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE).
