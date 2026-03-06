@@ -138,10 +138,8 @@ export function LuthierAppShell() {
 
   const handleStartAction = (actionId: StartActionId) => {
     if (actionId === 'create_new') {
-      if (route() === 'creator') {
-        const confirmed = window.confirm(ct('luthier_home_create_new_confirm_reset'))
-        if (!confirmed) return
-      }
+      const confirmed = window.confirm(ct('luthier_home_create_new_confirm_reset'))
+      if (!confirmed) return
       resetCreator()
       return
     }
