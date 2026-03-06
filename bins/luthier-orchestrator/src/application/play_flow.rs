@@ -3,19 +3,14 @@ use luthier_orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
     observability::LogLevel,
     prefix::build_prefix_setup_plan,
+    process::{ExternalCommand, StepStatus},
 };
 use serde_json::Value;
 
 use crate::{
-    application::runtime_overrides::{apply_runtime_overrides, load_runtime_overrides},
-    infrastructure::{
-        mounts_adapter::{apply_folder_mounts, MountStatus},
-        paths::{resolve_game_root, resolve_relative_path},
-        payload_loader::load_embedded_config_required,
-        process_adapter::{
-            execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
-            ExternalCommand, StepStatus,
-        },
+    application::{
+        ports::{FlowMountStatus, OrchestratorRuntimeFlowPort},
+        runtime_overrides::{apply_runtime_overrides, load_runtime_overrides},
     },
     instance_lock::acquire_instance_lock,
     logging::log_event,
@@ -57,8 +52,11 @@ impl PlayFlowExecution {
     }
 }
 
-pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
-    let mut config = load_embedded_config_required()?;
+pub fn execute_play_flow(
+    trace_id: &str,
+    runtime_flow: &dyn OrchestratorRuntimeFlowPort,
+) -> anyhow::Result<PlayFlowExecution> {
+    let mut config = runtime_flow.load_embedded_config_required()?;
     let overrides = load_runtime_overrides(&config.exe_hash)?;
     apply_runtime_overrides(&mut config, &overrides);
 
@@ -109,10 +107,13 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
         }),
     );
 
-    let game_root = resolve_game_root().context("failed to resolve game root")?;
+    let game_root = runtime_flow
+        .resolve_game_root()
+        .context("failed to resolve game root")?;
     let dry_run = dry_run_enabled();
 
-    let game_exe_path = resolve_relative_path(&game_root, &config.relative_exe_path)
+    let game_exe_path = runtime_flow
+        .resolve_relative_path(&game_root, &config.relative_exe_path)
         .with_context(|| format!("invalid relative_exe_path '{}'", config.relative_exe_path))?;
     if !game_exe_path.exists() {
         let output = serde_json::json!({
@@ -198,7 +199,8 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
     let prefix_setup = build_prefix_setup_execution_context(&config, &prefix_plan, &report)
         .context("failed to build runtime-aware prefix setup context")?;
-    let setup_results = execute_prefix_setup_plan(&prefix_setup.plan, &prefix_setup.env, dry_run);
+    let setup_results =
+        runtime_flow.execute_prefix_setup_plan(&prefix_setup.plan, &prefix_setup.env, dry_run);
 
     log_event(
         trace_id,
@@ -213,7 +215,7 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
         }),
     );
 
-    if has_mandatory_failures(&setup_results) {
+    if runtime_flow.has_mandatory_failures(&setup_results) {
         let output = serde_json::json!({
             "doctor": report,
             "prefix_setup_plan": prefix_plan,
@@ -316,7 +318,7 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
         }
     }
 
-    let mount_results = match apply_folder_mounts(
+    let mount_results = match runtime_flow.apply_folder_mounts(
         &config,
         &game_root,
         &prefix_setup.effective_prefix_path,
@@ -350,15 +352,15 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
 
     let mounted_count = mount_results
         .iter()
-        .filter(|result| matches!(result.status, MountStatus::Mounted))
+        .filter(|result| matches!(result.status, FlowMountStatus::Mounted))
         .count();
     let unchanged_count = mount_results
         .iter()
-        .filter(|result| matches!(result.status, MountStatus::Unchanged))
+        .filter(|result| matches!(result.status, FlowMountStatus::Unchanged))
         .count();
     let planned_count = mount_results
         .iter()
-        .filter(|result| matches!(result.status, MountStatus::Planned))
+        .filter(|result| matches!(result.status, FlowMountStatus::Planned))
         .count();
 
     log_event(
@@ -442,7 +444,7 @@ pub fn execute_play_flow(trace_id: &str) -> anyhow::Result<PlayFlowExecution> {
         }),
     );
 
-    let game_result = execute_external_command(
+    let game_result = runtime_flow.execute_external_command(
         &ExternalCommand {
             name: "game-launch".to_string(),
             program: launch_plan.program.clone(),

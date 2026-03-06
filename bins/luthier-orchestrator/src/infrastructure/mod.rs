@@ -1,3 +1,4 @@
+pub mod flow_runtime_adapter;
 pub mod mounts_adapter;
 pub mod paths;
 pub mod payload_loader;

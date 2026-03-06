@@ -1,10 +1,10 @@
 use crate::error::{BackendError, BackendResult};
 
-pub(crate) fn validate_search_hero_game_name<'a>(raw: &'a str) -> BackendResult<&'a str> {
+pub(crate) fn validate_search_hero_game_name(raw: &str) -> BackendResult<&str> {
     validate_trimmed_non_empty(raw, "game name is empty", "empty_game_name")
 }
 
-pub(crate) fn validate_prepare_hero_image_url_input<'a>(raw: &'a str) -> BackendResult<&'a str> {
+pub(crate) fn validate_prepare_hero_image_url_input(raw: &str) -> BackendResult<&str> {
     validate_trimmed_non_empty(raw, "hero image URL is empty", "empty_hero_image_url")
 }
 

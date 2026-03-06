@@ -459,28 +459,29 @@ fn dedupe_urls_preserve_order(urls: impl IntoIterator<Item = String>) -> Vec<Str
 }
 
 fn extract_steamgriddb_hero_url(item: &serde_json::Value) -> Option<String> {
-    for candidate in [
+    for value in [
         item.get("thumb"),
         item.get("url"),
         item.get("thumbnail"),
         item.get("image"),
-    ] {
-        if let Some(value) = candidate {
-            if let Some(url) = value.as_str() {
-                if domain_validation::validate_hero_http_url(url).is_some()
-                    && domain_validation::is_hero_image_url(url)
-                {
-                    return Some(url.to_string());
-                }
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if let Some(url) = value.as_str() {
+            if domain_validation::validate_hero_http_url(url).is_some()
+                && domain_validation::is_hero_image_url(url)
+            {
+                return Some(url.to_string());
             }
-            if let Some(obj) = value.as_object() {
-                for key in ["url", "thumb", "small", "medium", "large"] {
-                    if let Some(url) = obj.get(key).and_then(|v| v.as_str()) {
-                        if domain_validation::validate_hero_http_url(url).is_some()
-                            && domain_validation::is_hero_image_url(url)
-                        {
-                            return Some(url.to_string());
-                        }
+        }
+        if let Some(obj) = value.as_object() {
+            for key in ["url", "thumb", "small", "medium", "large"] {
+                if let Some(url) = obj.get(key).and_then(|v| v.as_str()) {
+                    if domain_validation::validate_hero_http_url(url).is_some()
+                        && domain_validation::is_hero_image_url(url)
+                    {
+                        return Some(url.to_string());
                     }
                 }
             }

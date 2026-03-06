@@ -4,23 +4,10 @@ use luthier_core::CreateOrchestratorRequest;
 use luthier_orchestrator_core::GameConfig;
 
 use crate::application::ports::{
-    BackendLogEvent, BackendLogLevel, BackendLoggerPort, LuthierCorePort,
+    BackendLogEvent, BackendLogLevel, BackendLoggerPort, BaseBinaryResolverPort, LuthierCorePort,
 };
 use crate::error::{BackendError, BackendResult, BackendResultExt, CommandStringResult};
 use crate::models::dto::{CreateExecutableInput, CreateExecutableOutput};
-
-pub trait BaseBinaryResolverPort: Send + Sync {
-    fn resolve_base_orchestrator_binary(
-        &self,
-        requested: &str,
-        extra_hints: &[PathBuf],
-    ) -> BackendResult<PathBuf>;
-    fn collect_base_orchestrator_binary_candidates(
-        &self,
-        requested: &str,
-        extra_hints: &[PathBuf],
-    ) -> Vec<PathBuf>;
-}
 
 pub struct CreateExecutableUseCase<'a> {
     luthier_core: &'a dyn LuthierCorePort,
@@ -89,17 +76,15 @@ impl<'a> CreateExecutableUseCase<'a> {
 
         self.luthier_core
             .validate_game_config(&request.config)
-            .map_err(|err| {
-                self.log_create_failed(&err, &request.base_binary_path, &request.output_path);
-                err
+            .inspect_err(|err| {
+                self.log_create_failed(err, &request.base_binary_path, &request.output_path);
             })?;
 
         let result = self
             .luthier_core
             .create_orchestrator_binary(&request)
-            .map_err(|err| {
-                self.log_create_failed(&err, &request.base_binary_path, &request.output_path);
-                err
+            .inspect_err(|err| {
+                self.log_create_failed(err, &request.base_binary_path, &request.output_path);
             })?;
 
         let icon_sidecar_path = None;

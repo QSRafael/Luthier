@@ -1,7 +1,8 @@
 use serde_json::Value;
 
+use super::child_process::{ChildProcessEvent, ChildProcessStream};
 use super::state::ProgressViewState;
-use super::text::{t, t_installing_winetricks, SplashTextKey};
+use super::text::{t, t_installing_winetricks, t_process_exit, SplashTextKey};
 
 pub(crate) fn parse_ndjson_event(line: &str) -> Option<Value> {
     if !line.starts_with('{') || !line.contains("\"event_code\"") {
@@ -80,4 +81,35 @@ pub(crate) fn map_external_runtime_line_to_status(line: &str) -> Option<String> 
     }
 
     None
+}
+
+pub(crate) fn handle_child_event(progress: &mut ProgressViewState, event: ChildProcessEvent) {
+    match event {
+        ChildProcessEvent::Exited(code) => {
+            progress.exit_code = code;
+            progress.child_finished = true;
+            if code == Some(0) {
+                progress.push_message(t(SplashTextKey::StatusGameClosed).to_string());
+            } else {
+                progress.push_message(t_process_exit(code));
+            }
+        }
+        ChildProcessEvent::Line(stream, line) => {
+            if let Some(event) = parse_ndjson_event(&line) {
+                apply_progress_from_log_event(progress, &event);
+                return;
+            }
+
+            match stream {
+                ChildProcessStream::Stdout | ChildProcessStream::Stderr => {
+                    if let Some(msg) = map_external_runtime_line_to_status(&line) {
+                        progress.set_status(msg);
+                    }
+                    if line.contains("Starting program with command-launcher service.") {
+                        progress.game_runtime_start_seen = true;
+                    }
+                }
+            }
+        }
+    }
 }

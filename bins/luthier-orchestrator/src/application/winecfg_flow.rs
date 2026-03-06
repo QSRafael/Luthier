@@ -3,18 +3,12 @@ use luthier_orchestrator_core::{
     doctor::{run_doctor, CheckStatus},
     observability::LogLevel,
     prefix::build_prefix_setup_plan,
+    process::{ExternalCommand, StepStatus},
 };
 use serde_json::Value;
 
 use crate::{
-    infrastructure::{
-        paths::resolve_game_root,
-        payload_loader::load_embedded_config_required,
-        process_adapter::{
-            execute_external_command, execute_prefix_setup_plan, has_mandatory_failures,
-            ExternalCommand, StepStatus,
-        },
-    },
+    application::ports::OrchestratorRuntimeFlowPort,
     logging::log_event,
     services::{
         launch_plan_builder::build_winecfg_command,
@@ -53,13 +47,21 @@ impl WinecfgFlowExecution {
     }
 }
 
-pub fn run_winecfg_flow(trace_id: &str) -> anyhow::Result<WinecfgFlowExecution> {
-    execute_winecfg_flow(trace_id)
+pub fn run_winecfg_flow(
+    trace_id: &str,
+    runtime_flow: &dyn OrchestratorRuntimeFlowPort,
+) -> anyhow::Result<WinecfgFlowExecution> {
+    execute_winecfg_flow(trace_id, runtime_flow)
 }
 
-pub fn execute_winecfg_flow(trace_id: &str) -> anyhow::Result<WinecfgFlowExecution> {
-    let config = load_embedded_config_required()?;
-    let game_root = resolve_game_root().context("failed to resolve game root")?;
+pub fn execute_winecfg_flow(
+    trace_id: &str,
+    runtime_flow: &dyn OrchestratorRuntimeFlowPort,
+) -> anyhow::Result<WinecfgFlowExecution> {
+    let config = runtime_flow.load_embedded_config_required()?;
+    let game_root = runtime_flow
+        .resolve_game_root()
+        .context("failed to resolve game root")?;
     let dry_run = dry_run_enabled();
 
     let report = run_doctor(Some(&config));
@@ -93,9 +95,10 @@ pub fn execute_winecfg_flow(trace_id: &str) -> anyhow::Result<WinecfgFlowExecuti
     let prefix_plan = build_prefix_setup_plan(&config).context("failed to build prefix plan")?;
     let prefix_setup = build_prefix_setup_execution_context(&config, &prefix_plan, &report)
         .context("failed to build runtime-aware prefix setup context")?;
-    let setup_results = execute_prefix_setup_plan(&prefix_setup.plan, &prefix_setup.env, dry_run);
+    let setup_results =
+        runtime_flow.execute_prefix_setup_plan(&prefix_setup.plan, &prefix_setup.env, dry_run);
 
-    if has_mandatory_failures(&setup_results) {
+    if runtime_flow.has_mandatory_failures(&setup_results) {
         let output = serde_json::json!({
             "doctor": report,
             "prefix_setup_plan": prefix_plan,
@@ -165,7 +168,7 @@ pub fn execute_winecfg_flow(trace_id: &str) -> anyhow::Result<WinecfgFlowExecuti
         }),
     );
 
-    let result = execute_external_command(
+    let result = runtime_flow.execute_external_command(
         &ExternalCommand {
             name: "winecfg".to_string(),
             program: command_plan.program.clone(),

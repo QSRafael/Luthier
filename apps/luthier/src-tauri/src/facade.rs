@@ -7,9 +7,9 @@ use luthier_orchestrator_core::{doctor::DoctorReport, prefix::PrefixSetupPlan, G
 
 use crate::application::{
     ports::{
-        ExternalCommandOutput, ExternalCommandRequest, JsonCodecPort, LuthierCorePort,
-        OrchestratorRuntimeInspectorPort, ProcessRunnerPort, RegistryParseOutput,
-        RegistryParserPort, RuntimeEnvironmentPort,
+        BaseBinaryResolverPort, ExternalCommandOutput, ExternalCommandRequest, HeroSearchPort,
+        JsonCodecPort, LuthierCorePort, OrchestratorRuntimeInspectorPort, ProcessRunnerPort,
+        RegistryParseOutput, RegistryParserPort, RuntimeEnvironmentPort,
     },
     use_cases,
 };
@@ -58,7 +58,7 @@ impl LuthierCorePort for NativeLuthierCoreAdapter {
 #[derive(Debug, Clone, Copy, Default)]
 struct NativeBaseBinaryResolverAdapter;
 
-impl use_cases::create_executable::BaseBinaryResolverPort for NativeBaseBinaryResolverAdapter {
+impl BaseBinaryResolverPort for NativeBaseBinaryResolverAdapter {
     fn resolve_base_orchestrator_binary(
         &self,
         requested: &str,
@@ -88,7 +88,7 @@ impl NativeHeroSearchAdapter {
     }
 }
 
-impl use_cases::search_hero::HeroSearchPort for NativeHeroSearchAdapter {
+impl HeroSearchPort for NativeHeroSearchAdapter {
     fn search_hero_image_via_steamgriddb_public(
         &self,
         game_name: &str,

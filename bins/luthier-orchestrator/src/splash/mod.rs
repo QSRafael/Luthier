@@ -25,14 +25,12 @@ pub mod state;
 pub mod text;
 pub mod theme;
 
-use child_process::{spawn_play_child, ChildProcessEvent, ChildProcessStream};
+use child_process::{spawn_play_child, ChildProcessEvent};
 use input::*;
-use progress_events::{
-    apply_progress_from_log_event, map_external_runtime_line_to_status, parse_ndjson_event,
-};
+use progress_events::handle_child_event;
 use renderer::*;
 pub use state::*;
-use text::{initialize_splash_locale, t_process_exit};
+use text::initialize_splash_locale;
 pub(crate) use text::{t, SplashTextKey};
 use theme::*;
 
@@ -505,39 +503,6 @@ fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<Fe
             .update_with_buffer(&buffer, WIN_W, WIN_H)
             .context("failed to present post-game feedback splash")?;
         thread::sleep(Duration::from_millis(1000 / FPS));
-    }
-}
-
-// ── Child process management ──────────────────────────────────────────────────
-
-fn handle_child_event(progress: &mut ProgressViewState, event: ChildProcessEvent) {
-    match event {
-        ChildProcessEvent::Exited(code) => {
-            progress.exit_code = code;
-            progress.child_finished = true;
-            if code == Some(0) {
-                progress.push_message(t(SplashTextKey::StatusGameClosed).to_string());
-            } else {
-                progress.push_message(t_process_exit(code));
-            }
-        }
-        ChildProcessEvent::Line(stream, line) => {
-            if let Some(event) = parse_ndjson_event(&line) {
-                apply_progress_from_log_event(progress, &event);
-                return;
-            }
-
-            match stream {
-                ChildProcessStream::Stdout | ChildProcessStream::Stderr => {
-                    if let Some(msg) = map_external_runtime_line_to_status(&line) {
-                        progress.set_status(msg);
-                    }
-                    if line.contains("Starting program with command-launcher service.") {
-                        progress.game_runtime_start_seen = true;
-                    }
-                }
-            }
-        }
     }
 }
 

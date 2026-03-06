@@ -1,20 +1,10 @@
-use crate::application::ports::{BackendLogEvent, BackendLogLevel, BackendLoggerPort};
+use crate::application::ports::{
+    BackendLogEvent, BackendLogLevel, BackendLoggerPort, HeroSearchPort,
+};
 use crate::domain::validation as domain_validation;
 use crate::error::{BackendResult, BackendResultExt, CommandStringResult};
 use crate::models::dto::{SearchHeroImageInput, SearchHeroImageOutput};
 use crate::models::hero::HeroSearchResult;
-
-pub trait HeroSearchPort: Send + Sync {
-    fn search_hero_image_via_steamgriddb_public(
-        &self,
-        game_name: &str,
-    ) -> BackendResult<Option<HeroSearchResult>>;
-    fn search_hero_image_via_steamgriddb_api(
-        &self,
-        game_name: &str,
-    ) -> BackendResult<Option<HeroSearchResult>>;
-    fn search_hero_image_via_usebottles(&self, game_name: &str) -> BackendResult<HeroSearchResult>;
-}
 
 pub struct SearchHeroUseCase<'a> {
     hero_search: &'a dyn HeroSearchPort,

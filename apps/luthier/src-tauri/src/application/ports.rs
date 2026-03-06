@@ -7,6 +7,7 @@ use luthier_orchestrator_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::BackendResult;
+use crate::models::hero::HeroSearchResult;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BackendLogLevel {
@@ -203,6 +204,31 @@ pub trait LuthierCorePort: Send + Sync {
     ) -> BackendResult<CreateOrchestratorResult>;
     fn sha256_file(&self, path: &Path) -> BackendResult<String>;
     fn validate_game_config(&self, config: &GameConfig) -> BackendResult<()>;
+}
+
+pub trait BaseBinaryResolverPort: Send + Sync {
+    fn resolve_base_orchestrator_binary(
+        &self,
+        requested: &str,
+        extra_hints: &[PathBuf],
+    ) -> BackendResult<PathBuf>;
+    fn collect_base_orchestrator_binary_candidates(
+        &self,
+        requested: &str,
+        extra_hints: &[PathBuf],
+    ) -> Vec<PathBuf>;
+}
+
+pub trait HeroSearchPort: Send + Sync {
+    fn search_hero_image_via_steamgriddb_public(
+        &self,
+        game_name: &str,
+    ) -> BackendResult<Option<HeroSearchResult>>;
+    fn search_hero_image_via_steamgriddb_api(
+        &self,
+        game_name: &str,
+    ) -> BackendResult<Option<HeroSearchResult>>;
+    fn search_hero_image_via_usebottles(&self, game_name: &str) -> BackendResult<HeroSearchResult>;
 }
 
 pub trait OrchestratorRuntimeInspectorPort: Send + Sync {

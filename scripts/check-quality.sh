@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 RUN_FRONTEND=true
 RUN_RUST_QUALITY=true
+RUN_BACKEND_TAURI_CLIPPY=true
 RUN_RUST_TESTS=true
 RUN_RUST_ARCHITECTURE=true
 RUN_RUST_SECURITY=true
@@ -28,6 +29,7 @@ Subset controls:
   --rust-only        Run all rust gates (quality, architecture, security, deadcode)
   --skip-frontend
   --skip-rust-quality
+  --skip-backend-tauri-clippy
   --skip-rust-tests
   --skip-rust-architecture
   --skip-rust-security
@@ -69,6 +71,7 @@ for arg in "$@"; do
       MODE="full"
       RUN_FRONTEND=true
       RUN_RUST_QUALITY=true
+      RUN_BACKEND_TAURI_CLIPPY=true
       RUN_RUST_TESTS=true
       RUN_RUST_ARCHITECTURE=true
       RUN_RUST_SECURITY=true
@@ -78,6 +81,7 @@ for arg in "$@"; do
       MODE="fast"
       RUN_FRONTEND=true
       RUN_RUST_QUALITY=true
+      RUN_BACKEND_TAURI_CLIPPY=false
       RUN_RUST_TESTS=false
       RUN_RUST_ARCHITECTURE=false
       RUN_RUST_SECURITY=false
@@ -87,6 +91,7 @@ for arg in "$@"; do
       MODE="frontend-only"
       RUN_FRONTEND=true
       RUN_RUST_QUALITY=false
+      RUN_BACKEND_TAURI_CLIPPY=false
       RUN_RUST_TESTS=false
       RUN_RUST_ARCHITECTURE=false
       RUN_RUST_SECURITY=false
@@ -96,6 +101,7 @@ for arg in "$@"; do
       MODE="rust-only"
       RUN_FRONTEND=false
       RUN_RUST_QUALITY=true
+      RUN_BACKEND_TAURI_CLIPPY=true
       RUN_RUST_TESTS=true
       RUN_RUST_ARCHITECTURE=true
       RUN_RUST_SECURITY=true
@@ -106,6 +112,9 @@ for arg in "$@"; do
       ;;
     --skip-rust-quality)
       RUN_RUST_QUALITY=false
+      ;;
+    --skip-backend-tauri-clippy)
+      RUN_BACKEND_TAURI_CLIPPY=false
       ;;
     --skip-rust-tests)
       RUN_RUST_TESTS=false
@@ -144,6 +153,7 @@ fi
 
 if [[ "$RUN_FRONTEND" == false ]] \
   && [[ "$RUN_RUST_QUALITY" == false ]] \
+  && [[ "$RUN_BACKEND_TAURI_CLIPPY" == false ]] \
   && [[ "$RUN_RUST_TESTS" == false ]] \
   && [[ "$RUN_RUST_ARCHITECTURE" == false ]] \
   && [[ "$RUN_RUST_SECURITY" == false ]] \
@@ -173,6 +183,10 @@ fi
 
 if [[ "$RUN_RUST_QUALITY" == true ]]; then
   run_step "rust-quality" "$ROOT_DIR/scripts/check-rust-quality.sh" "${RUST_QUALITY_ARGS[@]}"
+fi
+
+if [[ "$RUN_BACKEND_TAURI_CLIPPY" == true ]]; then
+  run_step "backend-tauri-clippy" "$ROOT_DIR/scripts/check-backend-tauri-clippy.sh"
 fi
 
 if [[ "$RUN_RUST_TESTS" == true ]]; then

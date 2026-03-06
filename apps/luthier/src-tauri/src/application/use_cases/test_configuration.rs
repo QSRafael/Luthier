@@ -49,9 +49,8 @@ impl<'a> TestConfigurationUseCase<'a> {
 
         self.luthier_core
             .validate_game_config(&config)
-            .map_err(|err| {
-                self.log_validation_failed(&err);
-                err
+            .inspect_err(|err| {
+                self.log_validation_failed(err);
             })?;
 
         let game_root = PathBuf::from(&input.game_root);

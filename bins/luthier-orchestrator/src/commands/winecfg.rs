@@ -1,8 +1,10 @@
 use crate::application::winecfg_flow;
+use crate::infrastructure::flow_runtime_adapter::NativeOrchestratorRuntimeFlowAdapter;
 use anyhow::Context;
 
 pub fn run_winecfg_command(trace_id: &str) -> anyhow::Result<()> {
-    let execution = winecfg_flow::run_winecfg_flow(trace_id)?;
+    let runtime_flow = NativeOrchestratorRuntimeFlowAdapter;
+    let execution = winecfg_flow::run_winecfg_flow(trace_id, &runtime_flow)?;
 
     println!(
         "{}",
