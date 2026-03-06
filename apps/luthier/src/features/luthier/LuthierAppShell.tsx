@@ -35,6 +35,10 @@ export function LuthierAppShell() {
   const [locale, setLocale] = createSignal<Locale>(detectLocale())
   const [creatorHasInProgressData, setCreatorHasInProgressData] = createSignal(false)
 
+  const [resetAppliedRequestId, setResetAppliedRequestId] = createSignal<number | null>(null)
+  const [queuedResetRequestId, setQueuedResetRequestId] = createSignal<number | null>(null)
+  const [queuedStartAction, setQueuedStartAction] = createSignal<StartActionId | null>(null)
+
   const [importPayloadDialogOpen, setImportPayloadDialogOpen] = createSignal(false)
   const [extractPayloadDialogOpen, setExtractPayloadDialogOpen] = createSignal(false)
   const [discardChangesDialogOpen, setDiscardChangesDialogOpen] = createSignal(false)
@@ -115,6 +119,39 @@ export function LuthierAppShell() {
     }
   })
 
+  createEffect(() => {
+    const actionId = queuedStartAction()
+    const targetResetId = queuedResetRequestId()
+    const appliedResetId = resetAppliedRequestId()
+    if (!actionId || targetResetId === null || appliedResetId === null) return
+    if (appliedResetId !== targetResetId) return
+
+    setQueuedStartAction(null)
+    setQueuedResetRequestId(null)
+
+    if (actionId === 'create_new') {
+      navigate('creator')
+      return
+    }
+
+    if (actionId === 'import_payload') {
+      navigate('home')
+      setImportPayloadDialogOpen(true)
+      return
+    }
+
+    if (actionId === 'extract_payload') {
+      navigate('home')
+      setExtractPayloadDialogOpen(true)
+      return
+    }
+  })
+
+  const handleResetApplied = (requestId: number) => {
+    setResetAppliedRequestId(requestId)
+    setCreatorHasInProgressData(false)
+  }
+
   let nextImportRequestId = 0
   const applyImportedConfig = (payload: {
     source: 'json' | 'orchestrator'
@@ -133,7 +170,7 @@ export function LuthierAppShell() {
     setResetRequest(null)
     setImportPayloadDialogOpen(false)
     setExtractPayloadDialogOpen(false)
-    setCreatorHasInProgressData(false)
+    setCreatorHasInProgressData(true)
     navigate('creator')
   }
 
@@ -147,46 +184,36 @@ export function LuthierAppShell() {
   }
 
   let nextResetRequestId = 0
-  const requestCreatorReset = () => {
+  const requestCreatorReset = (): number => {
     nextResetRequestId += 1
-    setResetRequest({ id: nextResetRequestId })
+    const requestId = nextResetRequestId
+    setResetRequest({ id: requestId })
     setImportRequest(null)
     setInitialTabRequest(null)
-    setCreatorHasInProgressData(false)
+    return requestId
   }
 
-  const resetCreatorAndNavigate = () => {
-    requestCreatorReset()
+  const queueActionAfterReset = (actionId: StartActionId) => {
+    const requestId = requestCreatorReset()
     setImportPayloadDialogOpen(false)
     setExtractPayloadDialogOpen(false)
-    navigate('creator')
-  }
-
-  const openImportPayloadDialog = () => {
-    requestCreatorReset()
-    setExtractPayloadDialogOpen(false)
-    setImportPayloadDialogOpen(true)
-  }
-
-  const openExtractPayloadDialog = () => {
-    requestCreatorReset()
-    setImportPayloadDialogOpen(false)
-    setExtractPayloadDialogOpen(true)
+    setQueuedStartAction(actionId)
+    setQueuedResetRequestId(requestId)
   }
 
   const runStartAction = (actionId: StartActionId) => {
     if (actionId === 'create_new') {
-      resetCreatorAndNavigate()
+      queueActionAfterReset(actionId)
       return
     }
 
     if (actionId === 'import_payload') {
-      openImportPayloadDialog()
+      queueActionAfterReset(actionId)
       return
     }
 
     if (actionId === 'extract_payload') {
-      openExtractPayloadDialog()
+      queueActionAfterReset(actionId)
       return
     }
 
@@ -260,6 +287,7 @@ export function LuthierAppShell() {
           importRequest={importRequest()}
           initialTabRequest={initialTabRequest()}
           resetRequest={resetRequest()}
+          onResetApplied={handleResetApplied}
           onNavigateHome={() => navigate('home')}
           onDirtyStateChange={setCreatorHasInProgressData}
         />

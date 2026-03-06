@@ -25,6 +25,7 @@ type LuthierPageProps = {
   importRequest: ImportedPayloadRequest | null
   initialTabRequest: InitialTabRequest | null
   resetRequest: ResetCreatorRequest | null
+  onResetApplied: (requestId: number) => void
   onNavigateHome: () => void
   onDirtyStateChange: (dirty: boolean) => void
 }
@@ -96,6 +97,7 @@ export default function LuthierPage(props: LuthierPageProps) {
 
     lastResetRequestId = currentRequest.id
     resetToDefaultConfig()
+    props.onResetApplied(currentRequest.id)
     setMobileSidebarOpen(false)
   })
 

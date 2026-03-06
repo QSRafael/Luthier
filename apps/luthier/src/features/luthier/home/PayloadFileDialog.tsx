@@ -26,6 +26,7 @@ import {
   listenTauriFileDrop,
 } from '../infrastructure/payload-import-tauri'
 import { sonnerNotifier } from '../infrastructure/sonner-notifier'
+import { basenamePath, formatBytes, normalizeDroppedPath } from './payload-file-path'
 
 export type PayloadDialogMode = 'payload_json' | 'orchestrator_executable'
 
@@ -177,14 +178,6 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
 
     const normalizedPath = normalizeDroppedPath(rawPath)
     const fileName = basenamePath(normalizedPath)
-
-    if (props.mode === 'payload_json' && !isJsonPath(normalizedPath)) {
-      const message = props.ct('luthier_import_payload_json_required')
-      setErrorMessage(message)
-      sonnerNotifier.notify(message, { tone: 'error' })
-      return
-    }
-
     setSelectedInput({
       kind: 'tauri_path',
       path: normalizedPath,
@@ -198,14 +191,6 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
     if (!files || files.length === 0) return
     const [file] = Array.from(files)
     if (!file) return
-
-    if (props.mode === 'payload_json' && !isJsonFile(file)) {
-      const message = props.ct('luthier_import_payload_json_required')
-      setErrorMessage(message)
-      sonnerNotifier.notify(message, { tone: 'error' })
-      return
-    }
-
     setSelectedInput({
       kind: 'browser_file',
       file,
@@ -390,48 +375,6 @@ async function loadConfigFromSelectedInput(
     return importConfigFromPayloadPath(input.path)
   }
   return importConfigFromOrchestratorPath(input.path)
-}
-
-function isJsonFile(file: File): boolean {
-  const lowerName = file.name.toLowerCase()
-  return lowerName.endsWith('.json') || file.type.includes('json')
-}
-
-function isJsonPath(path: string): boolean {
-  return path.toLowerCase().endsWith('.json')
-}
-
-function normalizeDroppedPath(rawPath: string): string {
-  const trimmed = rawPath.trim()
-  if (!trimmed.startsWith('file://')) {
-    return trimmed
-  }
-
-  try {
-    const url = new URL(trimmed)
-    return decodeURIComponent(url.pathname)
-  } catch {
-    return trimmed.replace(/^file:\/\//, '')
-  }
-}
-
-function basenamePath(path: string): string {
-  const normalized = path.replace(/\\/g, '/')
-  const lastSlash = normalized.lastIndexOf('/')
-  if (lastSlash < 0) return normalized
-  return normalized.slice(lastSlash + 1)
-}
-
-function formatBytes(sizeInBytes: number): string {
-  if (!Number.isFinite(sizeInBytes) || sizeInBytes <= 0) {
-    return '0 KB'
-  }
-
-  if (sizeInBytes < 1024 * 1024) {
-    return `${Math.max(1, Math.round(sizeInBytes / 1024))} KB`
-  }
-
-  return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function mapImportErrorMessage(
