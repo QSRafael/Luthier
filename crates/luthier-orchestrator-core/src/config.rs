@@ -94,7 +94,9 @@ pub struct AppSettings {
 pub enum FeatureState {
     MandatoryOn,
     MandatoryOff,
+    #[serde(alias = "Enabled")]
     OptionalOn,
+    #[serde(alias = "Disabled")]
     OptionalOff,
 }
 
@@ -338,5 +340,17 @@ mod tests {
         let raw = serde_json::to_string(&state).expect("serialize");
         let parsed: FeatureState = serde_json::from_str(&raw).expect("deserialize");
         assert_eq!(parsed, state);
+    }
+
+    #[test]
+    fn feature_state_deserializes_enabled_legacy_alias() {
+        let parsed: FeatureState = serde_json::from_str("\"Enabled\"").expect("deserialize");
+        assert_eq!(parsed, FeatureState::OptionalOn);
+    }
+
+    #[test]
+    fn feature_state_deserializes_disabled_legacy_alias() {
+        let parsed: FeatureState = serde_json::from_str("\"Disabled\"").expect("deserialize");
+        assert_eq!(parsed, FeatureState::OptionalOff);
     }
 }

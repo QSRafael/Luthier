@@ -315,7 +315,7 @@ export function RuntimeAndBrowserDialogs(props: RuntimeAndBrowserDialogsProps) {
                       check_commands: splitCommaList(draft.command),
                       check_env_vars: splitCommaList(draft.env_vars),
                       check_paths: splitCommaList(draft.paths),
-                      state: 'Enabled' as FeatureState,
+                      state: 'OptionalOn',
                     },
                   ],
                 }))
