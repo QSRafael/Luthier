@@ -39,6 +39,17 @@ export type WinetricksUseCaseDeps = {
   messages: WinetricksMessages
 }
 
+type WinetricksCatalogCache = {
+  source: string
+  components: string[]
+}
+
+let winetricksCatalogCache: WinetricksCatalogCache | null = null
+
+export function resetWinetricksCatalogCacheForTests(): void {
+  winetricksCatalogCache = null
+}
+
 export function createWinetricksUseCase({
   backend,
   notifier,
@@ -48,6 +59,17 @@ export function createWinetricksUseCase({
   const loadWinetricksCatalog = async () => {
     if (state.readState().winetricksLoading) return
 
+    if (winetricksCatalogCache) {
+      state.setWinetricksAvailable(winetricksCatalogCache.components)
+      state.setWinetricksSource(winetricksCatalogCache.source)
+      state.setWinetricksCatalogError(false)
+      state.setWinetricksLoaded(true)
+      state.setStatusMessage(
+        messages.catalogLoadedCount({ count: winetricksCatalogCache.components.length })
+      )
+      return
+    }
+
     try {
       state.setWinetricksLoading(true)
       const result = await backend.winetricksAvailable()
@@ -56,6 +78,10 @@ export function createWinetricksUseCase({
       state.setWinetricksCatalogError(false)
       state.setWinetricksLoaded(true)
       state.setStatusMessage(messages.catalogLoadedCount({ count: result.components.length }))
+      winetricksCatalogCache = {
+        source: result.source,
+        components: [...result.components],
+      }
     } catch (error) {
       state.setWinetricksAvailable([])
       state.setWinetricksSource('fallback')

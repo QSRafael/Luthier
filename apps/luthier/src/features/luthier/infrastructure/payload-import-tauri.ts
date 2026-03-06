@@ -1,20 +1,26 @@
+import { invokeCommand } from '../../../api/tauri'
 import type { GameConfig } from '../../../models/config'
-import {
-  extractPayloadJsonFromOrchestratorBytes,
-  parseImportedGameConfigJson,
-} from '../domain/orchestrator-payload'
+import { parseImportedGameConfigJson } from '../domain/orchestrator-payload'
+
+type ReadPayloadFileOutput = {
+  payload_json: string
+}
 
 export async function importConfigFromPayloadPath(path: string): Promise<GameConfig> {
-  const fs = await import('@tauri-apps/api/fs')
-  const raw = await fs.readTextFile(path)
-  return parseImportedGameConfigJson(raw)
+  const output = await invokeCommand<ReadPayloadFileOutput>('cmd_read_payload_json_file', {
+    path,
+  })
+  return parseImportedGameConfigJson(output.payload_json)
 }
 
 export async function importConfigFromOrchestratorPath(path: string): Promise<GameConfig> {
-  const fs = await import('@tauri-apps/api/fs')
-  const bytes = await fs.readBinaryFile(path)
-  const payloadJson = await extractPayloadJsonFromOrchestratorBytes(bytes)
-  return parseImportedGameConfigJson(payloadJson)
+  const output = await invokeCommand<ReadPayloadFileOutput>(
+    'cmd_extract_payload_json_from_orchestrator',
+    {
+      path,
+    }
+  )
+  return parseImportedGameConfigJson(output.payload_json)
 }
 
 export async function listenTauriFileDrop(

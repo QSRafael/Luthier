@@ -116,3 +116,13 @@ pub struct ListDirectoryEntriesOutput {
     pub directories: Vec<String>,
     pub files: Vec<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReadPayloadFileInput {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReadPayloadFileOutput {
+    pub payload_json: String,
+}

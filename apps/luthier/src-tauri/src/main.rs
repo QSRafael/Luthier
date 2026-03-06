@@ -3,14 +3,16 @@ use std::path::PathBuf;
 
 #[cfg(feature = "tauri-commands")]
 use luthier_backend::{
-    create_executable_with_base_hints, extract_executable_icon, hash_executable,
-    import_registry_file, list_child_directories, list_directory_entries, prepare_hero_image,
+    create_executable_with_base_hints, extract_executable_icon,
+    extract_payload_json_from_orchestrator, hash_executable, import_registry_file,
+    list_child_directories, list_directory_entries, prepare_hero_image, read_payload_json_file,
     search_hero_image, test_configuration, winetricks_available, CreateExecutableInput,
     CreateExecutableOutput, ExtractExecutableIconInput, ExtractExecutableIconOutput, HashExeInput,
     HashExeOutput, ImportRegistryFileInput, ImportRegistryFileOutput, ListChildDirectoriesInput,
     ListChildDirectoriesOutput, ListDirectoryEntriesInput, ListDirectoryEntriesOutput,
-    PrepareHeroImageInput, PrepareHeroImageOutput, SearchHeroImageInput, SearchHeroImageOutput,
-    TestConfigurationInput, TestConfigurationOutput, WinetricksAvailableOutput,
+    PrepareHeroImageInput, PrepareHeroImageOutput, ReadPayloadFileInput, ReadPayloadFileOutput,
+    SearchHeroImageInput, SearchHeroImageOutput, TestConfigurationInput, TestConfigurationOutput,
+    WinetricksAvailableOutput,
 };
 #[cfg(feature = "tauri-commands")]
 use tauri::async_runtime::spawn_blocking;
@@ -121,6 +123,28 @@ async fn cmd_list_directory_entries(
 
 #[cfg(feature = "tauri-commands")]
 #[tauri::command]
+async fn cmd_read_payload_json_file(
+    input: ReadPayloadFileInput,
+) -> CommandResult<ReadPayloadFileOutput> {
+    run_blocking_command("read payload json file", move || {
+        read_payload_json_file(input)
+    })
+    .await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
+async fn cmd_extract_payload_json_from_orchestrator(
+    input: ReadPayloadFileInput,
+) -> CommandResult<ReadPayloadFileOutput> {
+    run_blocking_command("extract payload from orchestrator", move || {
+        extract_payload_json_from_orchestrator(input)
+    })
+    .await
+}
+
+#[cfg(feature = "tauri-commands")]
+#[tauri::command]
 async fn cmd_search_hero_image(
     input: SearchHeroImageInput,
 ) -> CommandResult<SearchHeroImageOutput> {
@@ -147,6 +171,8 @@ fn main() {
             cmd_import_registry_file,
             cmd_list_child_directories,
             cmd_list_directory_entries,
+            cmd_read_payload_json_file,
+            cmd_extract_payload_json_from_orchestrator,
             cmd_search_hero_image,
             cmd_prepare_hero_image
         ])

@@ -3,6 +3,7 @@ pub mod extract_icon;
 pub mod hash_executable;
 pub mod import_registry;
 pub mod list_fs;
+pub mod payload_import;
 pub mod prepare_hero;
 pub mod search_hero;
 pub mod test_configuration;

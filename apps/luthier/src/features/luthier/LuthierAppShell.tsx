@@ -1,6 +1,15 @@
 import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from 'solid-js'
 import { Toaster } from 'solid-sonner'
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog'
+import { Button } from '../../components/ui/button'
 import { useTheme } from '../../components/theme-provider'
 import { detectLocale, type Locale } from '../../i18n'
 import type { LuthierTab } from '../../models/config'
@@ -21,6 +30,7 @@ export function LuthierAppShell() {
 
   const [importPayloadDialogOpen, setImportPayloadDialogOpen] = createSignal(false)
   const [extractPayloadDialogOpen, setExtractPayloadDialogOpen] = createSignal(false)
+  const [createNewConfirmOpen, setCreateNewConfirmOpen] = createSignal(false)
 
   const [importRequest, setImportRequest] = createSignal<ImportedPayloadRequest | null>(null)
   const [initialTabRequest, setInitialTabRequest] = createSignal<InitialTabRequest | null>(null)
@@ -136,11 +146,14 @@ export function LuthierAppShell() {
     navigate('creator')
   }
 
+  const confirmCreateNew = () => {
+    setCreateNewConfirmOpen(false)
+    resetCreator()
+  }
+
   const handleStartAction = (actionId: StartActionId) => {
     if (actionId === 'create_new') {
-      const confirmed = window.confirm(ct('luthier_home_create_new_confirm_reset'))
-      if (!confirmed) return
-      resetCreator()
+      setCreateNewConfirmOpen(true)
       return
     }
 
@@ -186,6 +199,23 @@ export function LuthierAppShell() {
           onOpenCreatorTab={openCreatorAtTab}
         />
       </Show>
+
+      <Dialog open={createNewConfirmOpen()} onOpenChange={setCreateNewConfirmOpen}>
+        <DialogContent class="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{ct('luthier_home_create_new_title')}</DialogTitle>
+            <DialogDescription>{ct('luthier_home_create_new_confirm_reset')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCreateNewConfirmOpen(false)}>
+              {ct('luthier_label_cancel')}
+            </Button>
+            <Button type="button" onClick={confirmCreateNew}>
+              {ct('luthier_label_confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <PayloadFileDialog
         open={importPayloadDialogOpen()}

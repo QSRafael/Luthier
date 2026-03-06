@@ -31,8 +31,9 @@ pub use crate::models::dto::{
     ExtractExecutableIconOutput, HashExeInput, HashExeOutput, ImportRegistryFileInput,
     ImportRegistryFileOutput, ListChildDirectoriesInput, ListChildDirectoriesOutput,
     ListDirectoryEntriesInput, ListDirectoryEntriesOutput, PrepareHeroImageInput,
-    PrepareHeroImageOutput, SearchHeroImageInput, SearchHeroImageOutput, TestConfigurationInput,
-    TestConfigurationOutput, WinetricksAvailableOutput,
+    PrepareHeroImageOutput, ReadPayloadFileInput, ReadPayloadFileOutput, SearchHeroImageInput,
+    SearchHeroImageOutput, TestConfigurationInput, TestConfigurationOutput,
+    WinetricksAvailableOutput,
 };
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -317,4 +318,24 @@ pub fn list_directory_entries(
     let file_system = LocalFileSystemRepository::new();
     let logger = StderrJsonBackendLogger::new();
     use_cases::list_fs::list_directory_entries_command(input, &file_system, &logger)
+}
+
+pub fn read_payload_json_file(
+    input: ReadPayloadFileInput,
+) -> Result<ReadPayloadFileOutput, String> {
+    let file_system = LocalFileSystemRepository::new();
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::payload_import::read_payload_json_file_command(input, &file_system, &logger)
+}
+
+pub fn extract_payload_json_from_orchestrator(
+    input: ReadPayloadFileInput,
+) -> Result<ReadPayloadFileOutput, String> {
+    let file_system = LocalFileSystemRepository::new();
+    let logger = StderrJsonBackendLogger::new();
+    use_cases::payload_import::extract_payload_json_from_orchestrator_command(
+        input,
+        &file_system,
+        &logger,
+    )
 }
