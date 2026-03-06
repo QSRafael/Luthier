@@ -157,7 +157,22 @@ export function useLuthierController() {
   const [cleanConfigSnapshot, setCleanConfigSnapshot] = createSignal(
     serializeConfigSnapshot(config())
   )
+  const defaultConfigSnapshot = serializeConfigSnapshot(defaultGameConfig())
   const hasPendingChanges = createMemo(() => hasDirtyConfig(config(), cleanConfigSnapshot()))
+  const hasInProgressData = createMemo(() => {
+    if (hasPendingChanges()) return true
+    if (serializeConfigSnapshot(config()) !== defaultConfigSnapshot) return true
+
+    return (
+      exePath().trim().length > 0 ||
+      registryImportPath().trim().length > 0 ||
+      iconPreviewPath().trim().length > 0 ||
+      resultJson().trim().length > 0 ||
+      gameRootManualOverride() ||
+      gameRoot() !== './tmp' ||
+      outputPath() !== './tmp/luthier'
+    )
+  })
 
   const markConfigAsClean = (nextConfig: GameConfig) => {
     setCleanConfigSnapshot(serializeConfigSnapshot(nextConfig))
@@ -270,6 +285,7 @@ export function useLuthierController() {
     createExecutableValidationErrors,
     createExecutableBlockedReason,
     hasPendingChanges,
+    hasInProgressData,
     config,
     patchConfig,
     loadImportedPayload,

@@ -41,7 +41,7 @@ export default function LuthierPage(props: LuthierPageProps) {
     loadImportedPayload,
     setTab,
     resetToDefaultConfig,
-    hasPendingChanges,
+    hasInProgressData,
   } = controller
 
   const { setMobileSidebarOpen, mobileSidebarOpen } = dialogState
@@ -100,7 +100,7 @@ export default function LuthierPage(props: LuthierPageProps) {
   })
 
   createEffect(() => {
-    props.onDirtyStateChange(hasPendingChanges())
+    props.onDirtyStateChange(hasInProgressData())
   })
 
   return (

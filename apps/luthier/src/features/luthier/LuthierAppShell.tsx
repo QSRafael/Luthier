@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js'
+import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js'
 import { Toaster } from 'solid-sonner'
 
 import { Button } from '../../components/ui/button'
@@ -33,7 +33,7 @@ function isConfirmableStartAction(actionId: StartActionId): boolean {
 export function LuthierAppShell() {
   const [route, setRoute] = createSignal<AppRoute>(readCurrentRoute())
   const [locale, setLocale] = createSignal<Locale>(detectLocale())
-  const [creatorDirty, setCreatorDirty] = createSignal(false)
+  const [creatorHasInProgressData, setCreatorHasInProgressData] = createSignal(false)
 
   const [importPayloadDialogOpen, setImportPayloadDialogOpen] = createSignal(false)
   const [extractPayloadDialogOpen, setExtractPayloadDialogOpen] = createSignal(false)
@@ -133,7 +133,7 @@ export function LuthierAppShell() {
     setResetRequest(null)
     setImportPayloadDialogOpen(false)
     setExtractPayloadDialogOpen(false)
-    setCreatorDirty(false)
+    setCreatorHasInProgressData(false)
     navigate('creator')
   }
 
@@ -147,28 +147,46 @@ export function LuthierAppShell() {
   }
 
   let nextResetRequestId = 0
-  const resetCreator = () => {
+  const requestCreatorReset = () => {
     nextResetRequestId += 1
     setResetRequest({ id: nextResetRequestId })
     setImportRequest(null)
     setInitialTabRequest(null)
-    setCreatorDirty(false)
+    setCreatorHasInProgressData(false)
+  }
+
+  const resetCreatorAndNavigate = () => {
+    requestCreatorReset()
+    setImportPayloadDialogOpen(false)
+    setExtractPayloadDialogOpen(false)
     navigate('creator')
+  }
+
+  const openImportPayloadDialog = () => {
+    requestCreatorReset()
+    setExtractPayloadDialogOpen(false)
+    setImportPayloadDialogOpen(true)
+  }
+
+  const openExtractPayloadDialog = () => {
+    requestCreatorReset()
+    setImportPayloadDialogOpen(false)
+    setExtractPayloadDialogOpen(true)
   }
 
   const runStartAction = (actionId: StartActionId) => {
     if (actionId === 'create_new') {
-      resetCreator()
+      resetCreatorAndNavigate()
       return
     }
 
     if (actionId === 'import_payload') {
-      setImportPayloadDialogOpen(true)
+      openImportPayloadDialog()
       return
     }
 
     if (actionId === 'extract_payload') {
-      setExtractPayloadDialogOpen(true)
+      openExtractPayloadDialog()
       return
     }
 
@@ -179,7 +197,7 @@ export function LuthierAppShell() {
   }
 
   const requestStartAction = (actionId: StartActionId) => {
-    const shouldConfirm = isConfirmableStartAction(actionId) && creatorDirty()
+    const shouldConfirm = isConfirmableStartAction(actionId) && creatorHasInProgressData()
     if (shouldConfirm) {
       setPendingDiscardAction(actionId)
       setDiscardChangesDialogOpen(true)
@@ -243,7 +261,7 @@ export function LuthierAppShell() {
           initialTabRequest={initialTabRequest()}
           resetRequest={resetRequest()}
           onNavigateHome={() => navigate('home')}
-          onDirtyStateChange={setCreatorDirty}
+          onDirtyStateChange={setCreatorHasInProgressData}
         />
       </div>
 
@@ -264,21 +282,25 @@ export function LuthierAppShell() {
         </DialogContent>
       </Dialog>
 
-      <PayloadFileDialog
-        open={importPayloadDialogOpen()}
-        mode="payload_json"
-        ct={ct}
-        onOpenChange={setImportPayloadDialogOpen}
-        onConfigImported={applyImportedConfig}
-      />
+      <Show when={importPayloadDialogOpen()}>
+        <PayloadFileDialog
+          open={importPayloadDialogOpen()}
+          mode="payload_json"
+          ct={ct}
+          onOpenChange={setImportPayloadDialogOpen}
+          onConfigImported={applyImportedConfig}
+        />
+      </Show>
 
-      <PayloadFileDialog
-        open={extractPayloadDialogOpen()}
-        mode="orchestrator_executable"
-        ct={ct}
-        onOpenChange={setExtractPayloadDialogOpen}
-        onConfigImported={applyImportedConfig}
-      />
+      <Show when={extractPayloadDialogOpen()}>
+        <PayloadFileDialog
+          open={extractPayloadDialogOpen()}
+          mode="orchestrator_executable"
+          ct={ct}
+          onOpenChange={setExtractPayloadDialogOpen}
+          onConfigImported={applyImportedConfig}
+        />
+      </Show>
 
       <Toaster position="bottom-center" theme={theme()} richColors closeButton visibleToasts={5} />
     </>
