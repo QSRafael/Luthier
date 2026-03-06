@@ -507,4 +507,52 @@ export const luthierMessagesEnUS = {
   luthier_test_command_optional: 'Test command (optional)',
   luthier_windows_registry_value_type: 'Registry value type',
   luthier_wrapper_executable: 'Wrapper executable',
+  luthier_home_label: 'Home',
+  luthier_home_quick_actions_label: 'Start actions',
+  luthier_home_title: 'Luthier',
+  luthier_home_subtitle:
+    'Choose how to start: create a new orchestrator, import payload JSON, or extract payload from an existing orchestrator executable.',
+  luthier_home_create_new_title: 'Create New',
+  luthier_home_create_new_description:
+    'Open the Orchestrator Creation screen with a new empty configuration.',
+  luthier_home_import_payload_title: 'Import Payload',
+  luthier_home_import_payload_description:
+    'Load a payload .json and continue editing it in the Orchestrator Creation screen.',
+  luthier_home_extract_payload_title: 'Extract Payload from Orchestrator',
+  luthier_home_extract_payload_description:
+    'Select an existing generated orchestrator executable and load its embedded payload.',
+  luthier_home_search_online_title: 'Find Orchestrator on Website',
+  luthier_home_search_online_description:
+    'Planned feature to fetch orchestrators from an online catalog.',
+  luthier_home_help_title: 'Help',
+  luthier_home_help_description: 'Planned entry point for guides and troubleshooting resources.',
+  luthier_home_future_action_description: 'This action is planned for a future iteration.',
+  luthier_coming_soon: 'Coming soon',
+  luthier_click_to_browse: 'click to browse',
+  luthier_continue: 'Continue',
+  luthier_home_import_payload_modal_description:
+    'Select or drag a payload .json file to load its configuration into the Orchestrator Creation screen.',
+  luthier_home_extract_payload_modal_description:
+    'Select or drag a generated orchestrator executable to extract and import its embedded payload.',
+  luthier_import_payload_dropzone_title_json: 'Upload payload JSON',
+  luthier_import_payload_dropzone_title_orchestrator: 'Upload orchestrator executable',
+  luthier_import_payload_dropzone_secondary: 'Drag and drop a file here or',
+  luthier_import_payload_json_required: 'Select a valid .json payload file.',
+  luthier_import_payload_confirm_replace_file:
+    'This will replace the current creation settings with data from {fileName}. Continue?',
+  luthier_import_payload_processing: 'Processing...',
+  luthier_import_payload_success: 'Payload loaded successfully.',
+  luthier_import_payload_failed_title: 'Could not import payload',
+  luthier_import_payload_invalid_json: 'The selected file is not valid JSON.',
+  luthier_import_payload_invalid_schema:
+    'The payload JSON does not match the expected GameConfig structure.',
+  luthier_import_payload_orchestrator_not_detected:
+    'The selected executable is not a valid Luthier Orchestrator.',
+  luthier_import_payload_orchestrator_corrupted:
+    'The selected orchestrator payload is corrupted or incomplete.',
+  luthier_import_payload_unexpected_error: 'Unexpected payload import error',
+  luthier_payload_source_json: 'JSON payload',
+  luthier_payload_source_orchestrator: 'Orchestrator executable',
+  luthier_import_payload_loaded_source_file:
+    'Loaded {source} from {fileName} into the creation screen.',
 } as const

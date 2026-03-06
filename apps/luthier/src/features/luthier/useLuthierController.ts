@@ -1,3 +1,4 @@
+import type { GameConfig } from '../../models/config'
 import { createLuthierBuildActions } from './controller-build-actions'
 import { createLuthierComputed } from './controller-computed'
 import { createLuthierConfigActions } from './controller-config-actions'
@@ -17,6 +18,7 @@ import {
   type UpscaleMethod,
 } from './controller-utils'
 import { createLuthierWinetricksActions } from './controller-winetricks-actions'
+import { shouldRefreshImportedHeroImage } from './domain/imported-payload'
 import { luthierBackendApi } from './infrastructure/luthier-backend-api'
 import { sonnerNotifier } from './infrastructure/sonner-notifier'
 
@@ -150,6 +152,48 @@ export function useLuthierController() {
 
   createLuthierStatus(state, computed, { hashExecutablePath, loadWinetricksCatalog })
 
+  const loadImportedPayload = (
+    importedConfig: GameConfig,
+    source: 'json' | 'orchestrator',
+    fileName: string
+  ) => {
+    state.setConfig(importedConfig)
+
+    setExePath('')
+    setGameRoot('./tmp')
+    setGameRootManualOverride(false)
+    setOutputPath('./tmp/luthier')
+    setRegistryImportPath('')
+    setIconPreviewPath('')
+    setResultJson('')
+
+    state.setHashingExePath('')
+    state.setLastHashedExePath('')
+    state.setLastPreparedHeroImageUrl('')
+    state.setHeroImageSearchCacheGameName('')
+    state.setHeroImageSearchCacheGameId(null)
+    state.setHeroImageSearchCandidates([])
+    state.setHeroImageSearchIndex(0)
+
+    setActiveTab('game')
+
+    const sourceLabel =
+      source === 'json'
+        ? ct('luthier_payload_source_json')
+        : ct('luthier_payload_source_orchestrator')
+
+    setStatusMessage(
+      ctf('luthier_import_payload_loaded_source_file', {
+        source: sourceLabel,
+        fileName,
+      })
+    )
+
+    if (shouldRefreshImportedHeroImage(importedConfig)) {
+      void prepareHeroImageFromUrl(importedConfig.splash.hero_image_url.trim())
+    }
+  }
+
   return {
     ORCHESTRATOR_BASE_PATH,
     AUDIO_DRIVERS,
@@ -195,6 +239,7 @@ export function useLuthierController() {
     createExecutableBlockedReason,
     config,
     patchConfig,
+    loadImportedPayload,
     setHeroImageUrl,
     configPreview,
     t,

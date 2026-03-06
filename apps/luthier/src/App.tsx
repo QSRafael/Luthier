@@ -1,10 +1,10 @@
 import { ThemeProvider } from './components/theme-provider'
-import LuthierPage from './features/luthier/LuthierPage'
+import { LuthierAppShell } from './features/luthier/LuthierAppShell'
 
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="luthier-ui-theme">
-      <LuthierPage />
+      <LuthierAppShell />
     </ThemeProvider>
   )
 }

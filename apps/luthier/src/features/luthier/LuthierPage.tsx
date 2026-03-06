@@ -1,6 +1,5 @@
-import { Show } from 'solid-js'
+import { Show, createEffect } from 'solid-js'
 import { IconMenu2 } from '@tabler/icons-solidjs'
-import { Toaster } from 'solid-sonner'
 
 import { FormControlsI18nProvider } from '../../components/form/FormControls'
 import { Button } from '../../components/ui/button'
@@ -18,18 +17,27 @@ import { PerformanceTabSection } from './sections/performance-tab'
 import { ReviewTabSection } from './sections/review-tab'
 import { RuntimeTabSection } from './sections/runtime-tab'
 import { WinecfgTabSection } from './sections/winecfg-tab'
+import type { StartActionId } from './home/start-actions'
+import type { ImportedPayloadRequest } from './home/imported-payload-request'
+import type { InitialTabRequest } from './home/initial-tab-request'
 
-export default function LuthierPage() {
+type LuthierPageProps = {
+  importRequest: ImportedPayloadRequest | null
+  initialTabRequest: InitialTabRequest | null
+  onNavigateHome: () => void
+  onStartActionSelected: (actionId: StartActionId) => void
+}
+
+export default function LuthierPage(props: LuthierPageProps) {
   const controller = useLuthierController()
   const dialogState = createLuthierPageDialogState()
   const effects = createLuthierPageEffects(controller, dialogState)
 
-  const { activeTab, tabs, ct } = controller
+  const { activeTab, tabs, ct, loadImportedPayload, setTab } = controller
 
   const { setMobileSidebarOpen, mobileSidebarOpen } = dialogState
 
   const {
-    theme,
     formControlsI18n,
     tabIndex,
     canGoPrevTab,
@@ -49,6 +57,36 @@ export default function LuthierPage() {
     ...effects,
   }
 
+  let lastImportedRequestId = 0
+  createEffect(() => {
+    const currentRequest = props.importRequest
+    if (!currentRequest) return
+    if (currentRequest.id === lastImportedRequestId) return
+
+    lastImportedRequestId = currentRequest.id
+    loadImportedPayload(currentRequest.config, currentRequest.source, currentRequest.fileName)
+    setMobileSidebarOpen(false)
+  })
+
+  let lastInitialTabRequestId = 0
+  createEffect(() => {
+    const currentRequest = props.initialTabRequest
+    if (!currentRequest) return
+    if (currentRequest.id === lastInitialTabRequestId) return
+
+    lastInitialTabRequestId = currentRequest.id
+    setTab(currentRequest.tab)
+    setMobileSidebarOpen(false)
+  })
+
+  const startActionLabel = (actionId: StartActionId): string => {
+    if (actionId === 'create_new') return ct('luthier_home_create_new_title')
+    if (actionId === 'import_payload') return ct('luthier_home_import_payload_title')
+    if (actionId === 'extract_payload') return ct('luthier_home_extract_payload_title')
+    if (actionId === 'search_online') return ct('luthier_home_search_online_title')
+    return ct('luthier_home_help_title')
+  }
+
   return (
     <FormControlsI18nProvider value={formControlsI18n()}>
       <div class="luthier-page">
@@ -63,6 +101,12 @@ export default function LuthierPage() {
               themeLabel={sidebarThemeLabel()}
               onCycleLocale={cycleLocale}
               onCycleTheme={cycleTheme}
+              onNavigateHome={props.onNavigateHome}
+              onStartActionSelected={props.onStartActionSelected}
+              actionLabel={startActionLabel}
+              homeLabel={ct('luthier_home_label')}
+              comingSoonLabel={ct('luthier_coming_soon')}
+              isHomeRoute={false}
             />
           </div>
 
@@ -82,6 +126,12 @@ export default function LuthierPage() {
                 themeLabel={sidebarThemeLabel()}
                 onCycleLocale={cycleLocale}
                 onCycleTheme={cycleTheme}
+                onNavigateHome={props.onNavigateHome}
+                onStartActionSelected={props.onStartActionSelected}
+                actionLabel={startActionLabel}
+                homeLabel={ct('luthier_home_label')}
+                comingSoonLabel={ct('luthier_coming_soon')}
+                isHomeRoute={false}
               />
             </div>
           </Show>
@@ -162,14 +212,6 @@ export default function LuthierPage() {
         </div>
 
         <LuthierDialogs view={sectionView} />
-
-        <Toaster
-          position="bottom-center"
-          theme={theme()}
-          richColors
-          closeButton
-          visibleToasts={5}
-        />
       </div>
     </FormControlsI18nProvider>
   )
