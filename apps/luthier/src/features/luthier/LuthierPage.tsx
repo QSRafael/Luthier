@@ -26,6 +26,7 @@ type LuthierPageProps = {
   initialTabRequest: InitialTabRequest | null
   resetRequest: ResetCreatorRequest | null
   onNavigateHome: () => void
+  onDirtyStateChange: (dirty: boolean) => void
 }
 
 export default function LuthierPage(props: LuthierPageProps) {
@@ -33,7 +34,15 @@ export default function LuthierPage(props: LuthierPageProps) {
   const dialogState = createLuthierPageDialogState()
   const effects = createLuthierPageEffects(controller, dialogState)
 
-  const { activeTab, tabs, ct, loadImportedPayload, setTab, resetToDefaultConfig } = controller
+  const {
+    activeTab,
+    tabs,
+    ct,
+    loadImportedPayload,
+    setTab,
+    resetToDefaultConfig,
+    hasPendingChanges,
+  } = controller
 
   const { setMobileSidebarOpen, mobileSidebarOpen } = dialogState
 
@@ -88,6 +97,10 @@ export default function LuthierPage(props: LuthierPageProps) {
     lastResetRequestId = currentRequest.id
     resetToDefaultConfig()
     setMobileSidebarOpen(false)
+  })
+
+  createEffect(() => {
+    props.onDirtyStateChange(hasPendingChanges())
   })
 
   return (

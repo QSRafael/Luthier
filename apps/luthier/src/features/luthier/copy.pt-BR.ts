@@ -521,6 +521,9 @@ export const luthierMessagesPtBR = {
     'Abre a tela de Criação de Orquestrador com uma configuração vazia.',
   luthier_home_create_new_confirm_reset:
     'Isso vai descartar as configurações atuais e iniciar uma configuração vazia. Deseja continuar?',
+  luthier_home_discard_changes_title: 'Descartar alterações atuais?',
+  luthier_home_discard_changes_for_action:
+    'Existem alterações não salvas. Deseja continuar com {action} e apagar a configuração atual?',
   luthier_create_new_reset_done: 'Nova configuração vazia criada.',
   luthier_home_import_payload_title: 'Importar payload',
   luthier_home_import_payload_description:

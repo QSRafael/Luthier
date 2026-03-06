@@ -1,6 +1,7 @@
-import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js'
 import { Toaster } from 'solid-sonner'
 
+import { Button } from '../../components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,28 +10,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog'
-import { Button } from '../../components/ui/button'
 import { useTheme } from '../../components/theme-provider'
 import { detectLocale, type Locale } from '../../i18n'
 import type { LuthierTab } from '../../models/config'
 import { luthierFormat, luthierTranslate, type LuthierCopyKey } from './copy'
+import LuthierPage from './LuthierPage'
 import { LuthierHomeRoute } from './home/LuthierHomeRoute'
-import { PayloadFileDialog } from './home/PayloadFileDialog'
 import { pathnameForRoute, routeFromPathname, type AppRoute } from './home/app-route'
 import type { ImportedPayloadRequest } from './home/imported-payload-request'
 import type { InitialTabRequest } from './home/initial-tab-request'
+import { PayloadFileDialog } from './home/PayloadFileDialog'
 import type { ResetCreatorRequest } from './home/reset-creator-request'
 import type { StartActionId } from './home/start-actions'
 import { sonnerNotifier } from './infrastructure/sonner-notifier'
-import LuthierPage from './LuthierPage'
+
+function isConfirmableStartAction(actionId: StartActionId): boolean {
+  return (
+    actionId === 'create_new' || actionId === 'import_payload' || actionId === 'extract_payload'
+  )
+}
 
 export function LuthierAppShell() {
   const [route, setRoute] = createSignal<AppRoute>(readCurrentRoute())
   const [locale, setLocale] = createSignal<Locale>(detectLocale())
+  const [creatorDirty, setCreatorDirty] = createSignal(false)
 
   const [importPayloadDialogOpen, setImportPayloadDialogOpen] = createSignal(false)
   const [extractPayloadDialogOpen, setExtractPayloadDialogOpen] = createSignal(false)
-  const [createNewConfirmOpen, setCreateNewConfirmOpen] = createSignal(false)
+  const [discardChangesDialogOpen, setDiscardChangesDialogOpen] = createSignal(false)
+  const [pendingDiscardAction, setPendingDiscardAction] = createSignal<StartActionId | null>(null)
 
   const [importRequest, setImportRequest] = createSignal<ImportedPayloadRequest | null>(null)
   const [initialTabRequest, setInitialTabRequest] = createSignal<InitialTabRequest | null>(null)
@@ -125,6 +133,7 @@ export function LuthierAppShell() {
     setResetRequest(null)
     setImportPayloadDialogOpen(false)
     setExtractPayloadDialogOpen(false)
+    setCreatorDirty(false)
     navigate('creator')
   }
 
@@ -143,17 +152,13 @@ export function LuthierAppShell() {
     setResetRequest({ id: nextResetRequestId })
     setImportRequest(null)
     setInitialTabRequest(null)
+    setCreatorDirty(false)
     navigate('creator')
   }
 
-  const confirmCreateNew = () => {
-    setCreateNewConfirmOpen(false)
-    resetCreator()
-  }
-
-  const handleStartAction = (actionId: StartActionId) => {
+  const runStartAction = (actionId: StartActionId) => {
     if (actionId === 'create_new') {
-      setCreateNewConfirmOpen(true)
+      resetCreator()
       return
     }
 
@@ -173,21 +178,53 @@ export function LuthierAppShell() {
     })
   }
 
+  const requestStartAction = (actionId: StartActionId) => {
+    const shouldConfirm = isConfirmableStartAction(actionId) && creatorDirty()
+    if (shouldConfirm) {
+      setPendingDiscardAction(actionId)
+      setDiscardChangesDialogOpen(true)
+      return
+    }
+
+    runStartAction(actionId)
+  }
+
+  const confirmDiscardAndRunAction = () => {
+    const actionId = pendingDiscardAction()
+    setDiscardChangesDialogOpen(false)
+    setPendingDiscardAction(null)
+    if (!actionId) return
+    runStartAction(actionId)
+  }
+
+  const cancelDiscardAction = () => {
+    setDiscardChangesDialogOpen(false)
+    setPendingDiscardAction(null)
+  }
+
+  const pendingActionLabel = createMemo(() => {
+    const actionId = pendingDiscardAction()
+    if (actionId === 'create_new') return ct('luthier_home_create_new_title')
+    if (actionId === 'import_payload') return ct('luthier_home_import_payload_title')
+    if (actionId === 'extract_payload') return ct('luthier_home_extract_payload_title')
+    return ''
+  })
+
+  const discardDescription = createMemo(() => {
+    const actionLabel = pendingActionLabel()
+    if (!actionLabel) {
+      return ct('luthier_home_create_new_confirm_reset')
+    }
+    return ctf('luthier_home_discard_changes_for_action', {
+      action: actionLabel,
+    })
+  })
+
   const isHomeRoute = createMemo(() => route() === 'home')
 
   return (
     <>
-      <Show
-        when={isHomeRoute()}
-        fallback={
-          <LuthierPage
-            importRequest={importRequest()}
-            initialTabRequest={initialTabRequest()}
-            resetRequest={resetRequest()}
-            onNavigateHome={() => navigate('home')}
-          />
-        }
-      >
+      <div classList={{ hidden: !isHomeRoute() }}>
         <LuthierHomeRoute
           ct={ct}
           appName="Luthier"
@@ -195,22 +232,32 @@ export function LuthierAppShell() {
           themeLabel={sidebarThemeLabel()}
           onCycleLocale={cycleLocale}
           onCycleTheme={cycleTheme}
-          onActionSelected={handleStartAction}
+          onActionSelected={requestStartAction}
           onOpenCreatorTab={openCreatorAtTab}
         />
-      </Show>
+      </div>
 
-      <Dialog open={createNewConfirmOpen()} onOpenChange={setCreateNewConfirmOpen}>
+      <div classList={{ hidden: isHomeRoute() }}>
+        <LuthierPage
+          importRequest={importRequest()}
+          initialTabRequest={initialTabRequest()}
+          resetRequest={resetRequest()}
+          onNavigateHome={() => navigate('home')}
+          onDirtyStateChange={setCreatorDirty}
+        />
+      </div>
+
+      <Dialog open={discardChangesDialogOpen()} onOpenChange={setDiscardChangesDialogOpen}>
         <DialogContent class="max-w-md">
           <DialogHeader>
-            <DialogTitle>{ct('luthier_home_create_new_title')}</DialogTitle>
-            <DialogDescription>{ct('luthier_home_create_new_confirm_reset')}</DialogDescription>
+            <DialogTitle>{ct('luthier_home_discard_changes_title')}</DialogTitle>
+            <DialogDescription>{discardDescription()}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCreateNewConfirmOpen(false)}>
+            <Button type="button" variant="outline" onClick={cancelDiscardAction}>
               {ct('luthier_label_cancel')}
             </Button>
-            <Button type="button" onClick={confirmCreateNew}>
+            <Button type="button" onClick={confirmDiscardAndRunAction}>
               {ct('luthier_label_confirm')}
             </Button>
           </DialogFooter>
@@ -221,7 +268,6 @@ export function LuthierAppShell() {
         open={importPayloadDialogOpen()}
         mode="payload_json"
         ct={ct}
-        ctf={ctf}
         onOpenChange={setImportPayloadDialogOpen}
         onConfigImported={applyImportedConfig}
       />
@@ -230,7 +276,6 @@ export function LuthierAppShell() {
         open={extractPayloadDialogOpen()}
         mode="orchestrator_executable"
         ct={ct}
-        ctf={ctf}
         onOpenChange={setExtractPayloadDialogOpen}
         onConfigImported={applyImportedConfig}
       />

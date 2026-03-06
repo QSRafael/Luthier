@@ -12,8 +12,8 @@ import {
   DialogTitle,
 } from '../../../components/ui/dialog'
 import { Spinner } from '../../../components/ui/spinner'
-import type { GameConfig } from '../../../models/config'
 import { cn } from '../../../lib/cva'
+import type { GameConfig } from '../../../models/config'
 import {
   importConfigFromOrchestratorFile,
   importConfigFromPayloadFile,
@@ -33,7 +33,6 @@ type PayloadFileDialogProps = {
   open: boolean
   mode: PayloadDialogMode
   ct: (key: LuthierCopyKey) => string
-  ctf: (key: LuthierCopyKey, params: Record<string, string | number>) => string
   onOpenChange: (open: boolean) => void
   onConfigImported: (payload: {
     source: 'json' | 'orchestrator'
@@ -233,14 +232,6 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
     const currentInput = selectedInput()
     if (!currentInput || busy()) return
 
-    const confirmationMessage = props.ctf('luthier_import_payload_confirm_replace_file', {
-      fileName: currentInput.fileName,
-    })
-
-    if (!window.confirm(confirmationMessage)) {
-      return
-    }
-
     setBusy(true)
     setErrorMessage('')
 
@@ -318,12 +309,15 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
               {props.ct('luthier_import_payload_dropzone_secondary')}{' '}
               <span class="font-medium text-primary">{props.ct('luthier_click_to_browse')}</span>
             </p>
+
             <input
               ref={fileInputRef}
               type="file"
               class="hidden"
               accept={inputAccept}
-              onChange={(event) => handleFileSelection(event.currentTarget.files)}
+              onChange={(event) => {
+                handleFileSelection(event.currentTarget.files)
+              }}
             />
           </div>
 
@@ -355,17 +349,15 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
             )}
           </Show>
 
-          <Show when={errorMessage()}>
-            {(message) => (
-              <Alert variant="destructive" class="mt-4">
-                <AlertTitle>{props.ct('luthier_import_payload_failed_title')}</AlertTitle>
-                <AlertDescription>{message()}</AlertDescription>
-              </Alert>
-            )}
+          <Show when={errorMessage().trim().length > 0}>
+            <Alert variant="destructive" class="mt-4">
+              <AlertTitle>{props.ct('luthier_import_payload_failed_title')}</AlertTitle>
+              <AlertDescription>{errorMessage()}</AlertDescription>
+            </Alert>
           </Show>
         </div>
 
-        <DialogFooter class="rounded-b-xl border-t border-border bg-muted/35 px-6 py-3">
+        <DialogFooter class="border-t border-border px-6 py-4">
           <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
             {props.ct('luthier_label_cancel')}
           </Button>
@@ -373,7 +365,7 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
             <Show when={busy()} fallback={props.ct('luthier_continue')}>
               <span class="inline-flex items-center gap-2">
                 <Spinner class="size-4" />
-                {props.ct('luthier_import_payload_processing')}
+                {props.ct('luthier_processing')}
               </span>
             </Show>
           </Button>
@@ -435,18 +427,16 @@ function formatBytes(sizeInBytes: number): string {
     return '0 KB'
   }
 
-  const sizeInKb = sizeInBytes / 1024
-  if (sizeInKb < 1024) {
-    return `${Math.max(1, Math.round(sizeInKb))} KB`
+  if (sizeInBytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(sizeInBytes / 1024))} KB`
   }
 
-  const sizeInMb = sizeInKb / 1024
-  return `${sizeInMb.toFixed(2)} MB`
+  return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function mapImportErrorMessage(
   error: unknown,
-  mode: PayloadDialogMode,
+  _mode: PayloadDialogMode,
   ct: (key: LuthierCopyKey) => string
 ): string {
   if (error instanceof OrchestratorPayloadError) {
@@ -458,15 +448,31 @@ function mapImportErrorMessage(
       return ct('luthier_import_payload_invalid_schema')
     }
 
-    if (mode === 'orchestrator_executable') {
-      if (error.code === 'trailer_not_found' || error.code === 'trailer_truncated') {
-        return ct('luthier_import_payload_orchestrator_not_detected')
-      }
-      if (error.code === 'invalid_checksum' || error.code === 'invalid_length') {
-        return ct('luthier_import_payload_orchestrator_corrupted')
-      }
+    if (error.code === 'trailer_not_found') {
+      return ct('luthier_import_payload_orchestrator_not_detected')
     }
+
+    if (
+      error.code === 'trailer_truncated' ||
+      error.code === 'invalid_length' ||
+      error.code === 'invalid_checksum'
+    ) {
+      return ct('luthier_import_payload_orchestrator_corrupted')
+    }
+
+    if (error.message.trim()) {
+      return `${ct('luthier_import_payload_failed_title')}\n${error.message}`
+    }
+
+    return ct('luthier_import_payload_failed_title')
   }
 
-  return `${ct('luthier_import_payload_unexpected_error')}: ${String(error)}`
+  const fallback = ct('luthier_import_payload_failed_title')
+
+  const rawMessage = error instanceof Error ? error.message : String(error)
+  if (!rawMessage.trim()) {
+    return fallback
+  }
+
+  return `${fallback}\n${ct('luthier_import_payload_unexpected_error')}: ${rawMessage}`
 }

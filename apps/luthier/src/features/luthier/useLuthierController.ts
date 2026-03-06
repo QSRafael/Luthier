@@ -1,3 +1,4 @@
+import { createMemo, createSignal } from 'solid-js'
 import { defaultGameConfig, type GameConfig } from '../../models/config'
 import { createLuthierBuildActions } from './controller-build-actions'
 import { createLuthierComputed } from './controller-computed'
@@ -18,6 +19,7 @@ import {
   type UpscaleMethod,
 } from './controller-utils'
 import { createLuthierWinetricksActions } from './controller-winetricks-actions'
+import { hasDirtyConfig, serializeConfigSnapshot } from './domain/config-dirty'
 import { shouldRefreshImportedHeroImage } from './domain/imported-payload'
 import { luthierBackendApi } from './infrastructure/luthier-backend-api'
 import { sonnerNotifier } from './infrastructure/sonner-notifier'
@@ -152,6 +154,19 @@ export function useLuthierController() {
 
   createLuthierStatus(state, computed, { hashExecutablePath, loadWinetricksCatalog })
 
+  const [cleanConfigSnapshot, setCleanConfigSnapshot] = createSignal(
+    serializeConfigSnapshot(config())
+  )
+  const hasPendingChanges = createMemo(() => hasDirtyConfig(config(), cleanConfigSnapshot()))
+
+  const markConfigAsClean = (nextConfig: GameConfig) => {
+    setCleanConfigSnapshot(serializeConfigSnapshot(nextConfig))
+  }
+
+  const markCurrentConfigAsClean = () => {
+    setCleanConfigSnapshot(serializeConfigSnapshot(config()))
+  }
+
   const resetTransientUiState = () => {
     setExePath('')
     setGameRoot('./tmp')
@@ -173,7 +188,9 @@ export function useLuthierController() {
   }
 
   const resetToDefaultConfig = () => {
-    state.setConfig(defaultGameConfig())
+    const nextConfig = defaultGameConfig()
+    state.setConfig(nextConfig)
+    markConfigAsClean(nextConfig)
     resetTransientUiState()
     setStatusMessage(ct('luthier_create_new_reset_done'))
   }
@@ -184,6 +201,7 @@ export function useLuthierController() {
     fileName: string
   ) => {
     state.setConfig(importedConfig)
+    markConfigAsClean(importedConfig)
     resetTransientUiState()
 
     const sourceLabel =
@@ -199,8 +217,13 @@ export function useLuthierController() {
     )
 
     if (shouldRefreshImportedHeroImage(importedConfig)) {
-      void prepareHeroImageFromUrl(importedConfig.splash.hero_image_url.trim())
+      void prepareHeroImageFromUrl(importedConfig.splash.hero_image_url.trim()).finally(() => {
+        markCurrentConfigAsClean()
+      })
+      return
     }
+
+    markCurrentConfigAsClean()
   }
 
   return {
@@ -246,6 +269,7 @@ export function useLuthierController() {
     creatingExecutable,
     createExecutableValidationErrors,
     createExecutableBlockedReason,
+    hasPendingChanges,
     config,
     patchConfig,
     loadImportedPayload,
