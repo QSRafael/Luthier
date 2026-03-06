@@ -19,7 +19,6 @@ import {
   importConfigFromPayloadFile,
 } from '../application/use-cases/payload-import'
 import type { LuthierCopyKey } from '../copy'
-import { OrchestratorPayloadError } from '../domain/orchestrator-payload'
 import {
   importConfigFromOrchestratorPath,
   importConfigFromPayloadPath,
@@ -27,6 +26,7 @@ import {
 } from '../infrastructure/payload-import-tauri'
 import { sonnerNotifier } from '../infrastructure/sonner-notifier'
 import { basenamePath, formatBytes, normalizeDroppedPath } from './payload-file-path'
+import { mapPayloadImportErrorMessage } from './payload-import-error-map'
 
 export type PayloadDialogMode = 'payload_json' | 'orchestrator_executable'
 
@@ -232,7 +232,7 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
       sonnerNotifier.notify(props.ct('luthier_import_payload_success'), { tone: 'success' })
       props.onOpenChange(false)
     } catch (error) {
-      const friendlyMessage = mapImportErrorMessage(error, props.mode, props.ct)
+      const friendlyMessage = mapPayloadImportErrorMessage(error, props.mode, props.ct)
       setErrorMessage(friendlyMessage)
       sonnerNotifier.notify(friendlyMessage, { tone: 'error' })
     } finally {
@@ -375,47 +375,4 @@ async function loadConfigFromSelectedInput(
     return importConfigFromPayloadPath(input.path)
   }
   return importConfigFromOrchestratorPath(input.path)
-}
-
-function mapImportErrorMessage(
-  error: unknown,
-  _mode: PayloadDialogMode,
-  ct: (key: LuthierCopyKey) => string
-): string {
-  if (error instanceof OrchestratorPayloadError) {
-    if (error.code === 'invalid_json') {
-      return ct('luthier_import_payload_invalid_json')
-    }
-
-    if (error.code === 'invalid_game_config') {
-      return ct('luthier_import_payload_invalid_schema')
-    }
-
-    if (error.code === 'trailer_not_found') {
-      return ct('luthier_import_payload_orchestrator_not_detected')
-    }
-
-    if (
-      error.code === 'trailer_truncated' ||
-      error.code === 'invalid_length' ||
-      error.code === 'invalid_checksum'
-    ) {
-      return ct('luthier_import_payload_orchestrator_corrupted')
-    }
-
-    if (error.message.trim()) {
-      return `${ct('luthier_import_payload_failed_title')}\n${error.message}`
-    }
-
-    return ct('luthier_import_payload_failed_title')
-  }
-
-  const fallback = ct('luthier_import_payload_failed_title')
-
-  const rawMessage = error instanceof Error ? error.message : String(error)
-  if (!rawMessage.trim()) {
-    return fallback
-  }
-
-  return `${fallback}\n${ct('luthier_import_payload_unexpected_error')}: ${rawMessage}`
 }
