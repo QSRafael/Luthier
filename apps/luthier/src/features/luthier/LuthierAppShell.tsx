@@ -10,6 +10,7 @@ import { PayloadFileDialog } from './home/PayloadFileDialog'
 import { pathnameForRoute, routeFromPathname, type AppRoute } from './home/app-route'
 import type { ImportedPayloadRequest } from './home/imported-payload-request'
 import type { InitialTabRequest } from './home/initial-tab-request'
+import type { ResetCreatorRequest } from './home/reset-creator-request'
 import type { StartActionId } from './home/start-actions'
 import { sonnerNotifier } from './infrastructure/sonner-notifier'
 import LuthierPage from './LuthierPage'
@@ -23,6 +24,7 @@ export function LuthierAppShell() {
 
   const [importRequest, setImportRequest] = createSignal<ImportedPayloadRequest | null>(null)
   const [initialTabRequest, setInitialTabRequest] = createSignal<InitialTabRequest | null>(null)
+  const [resetRequest, setResetRequest] = createSignal<ResetCreatorRequest | null>(null)
 
   const { theme, setTheme } = useTheme()
 
@@ -110,6 +112,7 @@ export function LuthierAppShell() {
     })
 
     setInitialTabRequest(null)
+    setResetRequest(null)
     setImportPayloadDialogOpen(false)
     setExtractPayloadDialogOpen(false)
     navigate('creator')
@@ -120,10 +123,14 @@ export function LuthierAppShell() {
     nextInitialTabRequestId += 1
     setInitialTabRequest({ id: nextInitialTabRequestId, tab })
     setImportRequest(null)
+    setResetRequest(null)
     navigate('creator')
   }
 
-  const openCreatorDefault = () => {
+  let nextResetRequestId = 0
+  const resetCreator = () => {
+    nextResetRequestId += 1
+    setResetRequest({ id: nextResetRequestId })
     setImportRequest(null)
     setInitialTabRequest(null)
     navigate('creator')
@@ -131,7 +138,11 @@ export function LuthierAppShell() {
 
   const handleStartAction = (actionId: StartActionId) => {
     if (actionId === 'create_new') {
-      openCreatorDefault()
+      if (route() === 'creator') {
+        const confirmed = window.confirm(ct('luthier_home_create_new_confirm_reset'))
+        if (!confirmed) return
+      }
+      resetCreator()
       return
     }
 
@@ -161,8 +172,8 @@ export function LuthierAppShell() {
           <LuthierPage
             importRequest={importRequest()}
             initialTabRequest={initialTabRequest()}
+            resetRequest={resetRequest()}
             onNavigateHome={() => navigate('home')}
-            onStartActionSelected={handleStartAction}
           />
         }
       >

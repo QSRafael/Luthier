@@ -1,4 +1,4 @@
-import type { GameConfig } from '../../models/config'
+import { defaultGameConfig, type GameConfig } from '../../models/config'
 import { createLuthierBuildActions } from './controller-build-actions'
 import { createLuthierComputed } from './controller-computed'
 import { createLuthierConfigActions } from './controller-config-actions'
@@ -152,13 +152,7 @@ export function useLuthierController() {
 
   createLuthierStatus(state, computed, { hashExecutablePath, loadWinetricksCatalog })
 
-  const loadImportedPayload = (
-    importedConfig: GameConfig,
-    source: 'json' | 'orchestrator',
-    fileName: string
-  ) => {
-    state.setConfig(importedConfig)
-
+  const resetTransientUiState = () => {
     setExePath('')
     setGameRoot('./tmp')
     setGameRootManualOverride(false)
@@ -176,6 +170,21 @@ export function useLuthierController() {
     state.setHeroImageSearchIndex(0)
 
     setActiveTab('game')
+  }
+
+  const resetToDefaultConfig = () => {
+    state.setConfig(defaultGameConfig())
+    resetTransientUiState()
+    setStatusMessage(ct('luthier_create_new_reset_done'))
+  }
+
+  const loadImportedPayload = (
+    importedConfig: GameConfig,
+    source: 'json' | 'orchestrator',
+    fileName: string
+  ) => {
+    state.setConfig(importedConfig)
+    resetTransientUiState()
 
     const sourceLabel =
       source === 'json'
@@ -240,6 +249,7 @@ export function useLuthierController() {
     config,
     patchConfig,
     loadImportedPayload,
+    resetToDefaultConfig,
     setHeroImageUrl,
     configPreview,
     t,

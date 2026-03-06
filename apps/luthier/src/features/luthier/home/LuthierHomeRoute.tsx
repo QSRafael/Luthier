@@ -3,11 +3,11 @@ import { IconMenu2 } from '@tabler/icons-solidjs'
 
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent } from '../../../components/ui/card'
+import type { LuthierTab } from '../../../models/config'
 import { AppSidebar } from '../AppSidebar'
 import type { LuthierCopyKey } from '../copy'
 import { LuthierHomePage } from './LuthierHomePage'
 import type { StartActionId } from './start-actions'
-import type { LuthierTab } from '../../../models/config'
 
 type LuthierHomeRouteProps = {
   ct: (key: LuthierCopyKey) => string
@@ -22,14 +22,6 @@ type LuthierHomeRouteProps = {
 
 export function LuthierHomeRoute(props: LuthierHomeRouteProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = createSignal(false)
-
-  const startActionLabel = (actionId: StartActionId): string => {
-    if (actionId === 'create_new') return props.ct('luthier_home_create_new_title')
-    if (actionId === 'import_payload') return props.ct('luthier_home_import_payload_title')
-    if (actionId === 'extract_payload') return props.ct('luthier_home_extract_payload_title')
-    if (actionId === 'search_online') return props.ct('luthier_home_search_online_title')
-    return props.ct('luthier_home_help_title')
-  }
 
   const tabLabel = (tab: LuthierTab): string => {
     if (tab === 'game') return props.ct('luthier_label_game')
@@ -58,10 +50,7 @@ export function LuthierHomeRoute(props: LuthierHomeRouteProps) {
             onNavigateHome={() => {
               // Home route already active.
             }}
-            onStartActionSelected={props.onActionSelected}
-            actionLabel={startActionLabel}
             homeLabel={props.ct('luthier_home_label')}
-            comingSoonLabel={props.ct('luthier_coming_soon')}
             isHomeRoute
           />
         </div>
@@ -89,13 +78,7 @@ export function LuthierHomeRoute(props: LuthierHomeRouteProps) {
                 onNavigateHome={() => {
                   // Home route already active.
                 }}
-                onStartActionSelected={(actionId) => {
-                  props.onActionSelected(actionId)
-                  setMobileSidebarOpen(false)
-                }}
-                actionLabel={startActionLabel}
                 homeLabel={props.ct('luthier_home_label')}
-                comingSoonLabel={props.ct('luthier_coming_soon')}
                 isHomeRoute
               />
             </div>

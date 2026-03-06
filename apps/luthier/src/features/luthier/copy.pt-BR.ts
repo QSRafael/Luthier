@@ -519,6 +519,9 @@ export const luthierMessagesPtBR = {
   luthier_home_create_new_title: 'Criar novo',
   luthier_home_create_new_description:
     'Abre a tela de Criação de Orquestrador com uma configuração vazia.',
+  luthier_home_create_new_confirm_reset:
+    'Isso vai descartar as configurações atuais e iniciar uma configuração vazia. Deseja continuar?',
+  luthier_create_new_reset_done: 'Nova configuração vazia criada.',
   luthier_home_import_payload_title: 'Importar payload',
   luthier_home_import_payload_description:
     'Carrega um payload .json e abre na tela de Criação de Orquestrador para edição.',

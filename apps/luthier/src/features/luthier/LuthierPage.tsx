@@ -17,15 +17,15 @@ import { PerformanceTabSection } from './sections/performance-tab'
 import { ReviewTabSection } from './sections/review-tab'
 import { RuntimeTabSection } from './sections/runtime-tab'
 import { WinecfgTabSection } from './sections/winecfg-tab'
-import type { StartActionId } from './home/start-actions'
 import type { ImportedPayloadRequest } from './home/imported-payload-request'
 import type { InitialTabRequest } from './home/initial-tab-request'
+import type { ResetCreatorRequest } from './home/reset-creator-request'
 
 type LuthierPageProps = {
   importRequest: ImportedPayloadRequest | null
   initialTabRequest: InitialTabRequest | null
+  resetRequest: ResetCreatorRequest | null
   onNavigateHome: () => void
-  onStartActionSelected: (actionId: StartActionId) => void
 }
 
 export default function LuthierPage(props: LuthierPageProps) {
@@ -33,7 +33,7 @@ export default function LuthierPage(props: LuthierPageProps) {
   const dialogState = createLuthierPageDialogState()
   const effects = createLuthierPageEffects(controller, dialogState)
 
-  const { activeTab, tabs, ct, loadImportedPayload, setTab } = controller
+  const { activeTab, tabs, ct, loadImportedPayload, setTab, resetToDefaultConfig } = controller
 
   const { setMobileSidebarOpen, mobileSidebarOpen } = dialogState
 
@@ -79,13 +79,16 @@ export default function LuthierPage(props: LuthierPageProps) {
     setMobileSidebarOpen(false)
   })
 
-  const startActionLabel = (actionId: StartActionId): string => {
-    if (actionId === 'create_new') return ct('luthier_home_create_new_title')
-    if (actionId === 'import_payload') return ct('luthier_home_import_payload_title')
-    if (actionId === 'extract_payload') return ct('luthier_home_extract_payload_title')
-    if (actionId === 'search_online') return ct('luthier_home_search_online_title')
-    return ct('luthier_home_help_title')
-  }
+  let lastResetRequestId = 0
+  createEffect(() => {
+    const currentRequest = props.resetRequest
+    if (!currentRequest) return
+    if (currentRequest.id === lastResetRequestId) return
+
+    lastResetRequestId = currentRequest.id
+    resetToDefaultConfig()
+    setMobileSidebarOpen(false)
+  })
 
   return (
     <FormControlsI18nProvider value={formControlsI18n()}>
@@ -102,10 +105,7 @@ export default function LuthierPage(props: LuthierPageProps) {
               onCycleLocale={cycleLocale}
               onCycleTheme={cycleTheme}
               onNavigateHome={props.onNavigateHome}
-              onStartActionSelected={props.onStartActionSelected}
-              actionLabel={startActionLabel}
               homeLabel={ct('luthier_home_label')}
-              comingSoonLabel={ct('luthier_coming_soon')}
               isHomeRoute={false}
             />
           </div>
@@ -127,10 +127,7 @@ export default function LuthierPage(props: LuthierPageProps) {
                 onCycleLocale={cycleLocale}
                 onCycleTheme={cycleTheme}
                 onNavigateHome={props.onNavigateHome}
-                onStartActionSelected={props.onStartActionSelected}
-                actionLabel={startActionLabel}
                 homeLabel={ct('luthier_home_label')}
-                comingSoonLabel={ct('luthier_coming_soon')}
                 isHomeRoute={false}
               />
             </div>

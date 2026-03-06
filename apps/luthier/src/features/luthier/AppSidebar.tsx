@@ -1,9 +1,8 @@
-import { For, JSX, Show, createEffect, createSignal } from 'solid-js'
+import { For, JSX } from 'solid-js'
 import {
   IconBrandGithub,
   IconBrandPatreon,
   IconChecklist,
-  IconChevronDown,
   IconCoffee,
   IconCpu,
   IconDeviceGamepad2,
@@ -28,7 +27,6 @@ import {
   SidebarMenuItem,
 } from '../../components/ui/sidebar'
 import { LuthierTab } from '../../models/config'
-import { START_ACTIONS, type StartActionId } from './home/start-actions'
 
 type AppSidebarProps = {
   activeTab: LuthierTab
@@ -40,10 +38,7 @@ type AppSidebarProps = {
   onCycleLocale: () => void
   onCycleTheme: () => void
   onNavigateHome: () => void
-  onStartActionSelected: (actionId: StartActionId) => void
-  actionLabel: (actionId: StartActionId) => string
   homeLabel: string
-  comingSoonLabel: string
   isHomeRoute: boolean
   class?: string
 }
@@ -65,23 +60,6 @@ const navMain: NavEntry[] = [
 ]
 
 export function AppSidebar(props: AppSidebarProps) {
-  const [homeActionsOpen, setHomeActionsOpen] = createSignal(props.isHomeRoute)
-
-  createEffect(() => {
-    if (props.isHomeRoute) {
-      setHomeActionsOpen(true)
-    }
-  })
-
-  const handleHomeSectionClick = () => {
-    if (!props.isHomeRoute) {
-      props.onNavigateHome()
-      setHomeActionsOpen(true)
-      return
-    }
-    setHomeActionsOpen((prev) => !prev)
-  }
-
   return (
     <Sidebar collapsible="offcanvas" class={props.class}>
       <SidebarHeader>
@@ -101,34 +79,11 @@ export function AppSidebar(props: AppSidebarProps) {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton active={props.isHomeRoute} onClick={handleHomeSectionClick}>
+            <SidebarMenuButton active={props.isHomeRoute} onClick={props.onNavigateHome}>
               <IconHome class="size-4 shrink-0" />
               <span class="text-left leading-tight">{props.homeLabel}</span>
-              <IconChevronDown
-                class={`ml-auto size-4 shrink-0 transition-transform ${homeActionsOpen() ? 'rotate-180' : ''}`}
-              />
             </SidebarMenuButton>
           </SidebarMenuItem>
-
-          <Show when={homeActionsOpen()}>
-            <For each={START_ACTIONS}>
-              {(action) => (
-                <SidebarMenuItem class="pl-3">
-                  <SidebarMenuButton
-                    class="py-1.5"
-                    disabled={action.disabled === true}
-                    onClick={() => props.onStartActionSelected(action.id)}
-                    title={action.disabled ? props.comingSoonLabel : undefined}
-                  >
-                    <action.icon class="size-4 shrink-0" />
-                    <span class="text-left leading-tight text-xs">
-                      {props.actionLabel(action.id)}
-                    </span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-            </For>
-          </Show>
         </SidebarMenu>
 
         <div class="my-1 border-t border-sidebar-border/80" />
@@ -138,7 +93,7 @@ export function AppSidebar(props: AppSidebarProps) {
             {(item) => (
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  active={props.activeTab === item.tab}
+                  active={!props.isHomeRoute && props.activeTab === item.tab}
                   class="items-start"
                   onClick={() => props.onTabChange(item.tab)}
                 >

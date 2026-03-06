@@ -20,6 +20,11 @@ import {
 } from '../application/use-cases/payload-import'
 import type { LuthierCopyKey } from '../copy'
 import { OrchestratorPayloadError } from '../domain/orchestrator-payload'
+import {
+  importConfigFromOrchestratorPath,
+  importConfigFromPayloadPath,
+  listenTauriFileDrop,
+} from '../infrastructure/payload-import-tauri'
 import { sonnerNotifier } from '../infrastructure/sonner-notifier'
 
 export type PayloadDialogMode = 'payload_json' | 'orchestrator_executable'
@@ -37,17 +42,31 @@ type PayloadFileDialogProps = {
   }) => void
 }
 
+type SelectedInput =
+  | {
+      kind: 'browser_file'
+      file: File
+      fileName: string
+      secondaryText: string
+    }
+  | {
+      kind: 'tauri_path'
+      path: string
+      fileName: string
+      secondaryText: string
+    }
+
 export function PayloadFileDialog(props: PayloadFileDialogProps) {
   let fileInputRef: HTMLInputElement | undefined
 
-  const [selectedFile, setSelectedFile] = createSignal<File | null>(null)
+  const [selectedInput, setSelectedInput] = createSignal<SelectedInput | null>(null)
   const [busy, setBusy] = createSignal(false)
   const [errorMessage, setErrorMessage] = createSignal('')
   const [dragActive, setDragActive] = createSignal(false)
 
   createEffect(() => {
     if (!props.open) {
-      setSelectedFile(null)
+      setSelectedInput(null)
       setErrorMessage('')
       setBusy(false)
       setDragActive(false)
@@ -70,6 +89,45 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
     return () => {
       window.removeEventListener('dragover', preventWindowDrop)
       window.removeEventListener('drop', preventWindowDrop)
+    }
+  })
+
+  createEffect(() => {
+    if (!props.open) return
+
+    let disposed = false
+    let unlisten: (() => void) | null = null
+
+    void (async () => {
+      try {
+        unlisten = await listenTauriFileDrop((event) => {
+          if (disposed || busy()) return
+
+          if (event.type === 'hover') {
+            setDragActive(true)
+            return
+          }
+
+          if (event.type === 'cancel') {
+            setDragActive(false)
+            return
+          }
+
+          setDragActive(false)
+          const [path] = event.paths
+          if (!path) return
+          handlePathSelection(path)
+        })
+      } catch {
+        // Ignore listener setup errors and keep browser DnD path working.
+      }
+    })()
+
+    return () => {
+      disposed = true
+      if (unlisten) {
+        unlisten()
+      }
     }
   })
 
@@ -115,6 +173,28 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
     handleFileSelection(files)
   }
 
+  const handlePathSelection = (rawPath: string) => {
+    if (!rawPath.trim()) return
+
+    const normalizedPath = normalizeDroppedPath(rawPath)
+    const fileName = basenamePath(normalizedPath)
+
+    if (props.mode === 'payload_json' && !isJsonPath(normalizedPath)) {
+      const message = props.ct('luthier_import_payload_json_required')
+      setErrorMessage(message)
+      sonnerNotifier.notify(message, { tone: 'error' })
+      return
+    }
+
+    setSelectedInput({
+      kind: 'tauri_path',
+      path: normalizedPath,
+      fileName,
+      secondaryText: normalizedPath,
+    })
+    setErrorMessage('')
+  }
+
   const handleFileSelection = (files: FileList | null) => {
     if (!files || files.length === 0) return
     const [file] = Array.from(files)
@@ -127,12 +207,17 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
       return
     }
 
-    setSelectedFile(file)
+    setSelectedInput({
+      kind: 'browser_file',
+      file,
+      fileName: file.name,
+      secondaryText: formatBytes(file.size),
+    })
     setErrorMessage('')
   }
 
-  const removeSelectedFile = () => {
-    setSelectedFile(null)
+  const removeSelectedInput = () => {
+    setSelectedInput(null)
     setErrorMessage('')
     if (fileInputRef) {
       fileInputRef.value = ''
@@ -145,11 +230,11 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
   }
 
   const runImport = async () => {
-    const currentFile = selectedFile()
-    if (!currentFile || busy()) return
+    const currentInput = selectedInput()
+    if (!currentInput || busy()) return
 
     const confirmationMessage = props.ctf('luthier_import_payload_confirm_replace_file', {
-      fileName: currentFile.name,
+      fileName: currentInput.fileName,
     })
 
     if (!window.confirm(confirmationMessage)) {
@@ -160,14 +245,11 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
     setErrorMessage('')
 
     try {
-      const importedConfig =
-        props.mode === 'payload_json'
-          ? await importConfigFromPayloadFile(currentFile)
-          : await importConfigFromOrchestratorFile(currentFile)
+      const importedConfig = await loadConfigFromSelectedInput(currentInput, props.mode)
 
       props.onConfigImported({
         source: props.mode === 'payload_json' ? 'json' : 'orchestrator',
-        fileName: currentFile.name,
+        fileName: currentInput.fileName,
         config: importedConfig,
       })
 
@@ -219,6 +301,12 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openNativePicker()
+              }
+            }}
             role="button"
             tabIndex={0}
           >
@@ -239,23 +327,23 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
             />
           </div>
 
-          <Show when={selectedFile()} keyed>
-            {(file) => (
+          <Show when={selectedInput()} keyed>
+            {(item) => (
               <div class="mt-4 rounded-lg border border-border bg-card p-3">
                 <div class="flex items-center gap-3">
                   <div class="inline-flex size-10 items-center justify-center rounded-md bg-muted">
                     <IconFile class="size-5 text-muted-foreground" />
                   </div>
                   <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium text-foreground">{file.name}</p>
-                    <p class="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+                    <p class="truncate text-sm font-medium text-foreground">{item.fileName}</p>
+                    <p class="truncate text-xs text-muted-foreground">{item.secondaryText}</p>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     class="text-muted-foreground hover:text-destructive"
-                    onClick={removeSelectedFile}
+                    onClick={removeSelectedInput}
                     disabled={busy()}
                     aria-label={props.ct('luthier_label_remove')}
                     title={props.ct('luthier_label_remove')}
@@ -281,7 +369,7 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
           <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
             {props.ct('luthier_label_cancel')}
           </Button>
-          <Button type="button" onClick={runImport} disabled={!selectedFile() || busy()}>
+          <Button type="button" onClick={runImport} disabled={!selectedInput() || busy()}>
             <Show when={busy()} fallback={props.ct('luthier_continue')}>
               <span class="inline-flex items-center gap-2">
                 <Spinner class="size-4" />
@@ -295,9 +383,51 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
   )
 }
 
+async function loadConfigFromSelectedInput(
+  input: SelectedInput,
+  mode: PayloadDialogMode
+): Promise<GameConfig> {
+  if (input.kind === 'browser_file') {
+    if (mode === 'payload_json') {
+      return importConfigFromPayloadFile(input.file)
+    }
+    return importConfigFromOrchestratorFile(input.file)
+  }
+
+  if (mode === 'payload_json') {
+    return importConfigFromPayloadPath(input.path)
+  }
+  return importConfigFromOrchestratorPath(input.path)
+}
+
 function isJsonFile(file: File): boolean {
   const lowerName = file.name.toLowerCase()
   return lowerName.endsWith('.json') || file.type.includes('json')
+}
+
+function isJsonPath(path: string): boolean {
+  return path.toLowerCase().endsWith('.json')
+}
+
+function normalizeDroppedPath(rawPath: string): string {
+  const trimmed = rawPath.trim()
+  if (!trimmed.startsWith('file://')) {
+    return trimmed
+  }
+
+  try {
+    const url = new URL(trimmed)
+    return decodeURIComponent(url.pathname)
+  } catch {
+    return trimmed.replace(/^file:\/\//, '')
+  }
+}
+
+function basenamePath(path: string): string {
+  const normalized = path.replace(/\\/g, '/')
+  const lastSlash = normalized.lastIndexOf('/')
+  if (lastSlash < 0) return normalized
+  return normalized.slice(lastSlash + 1)
 }
 
 function formatBytes(sizeInBytes: number): string {

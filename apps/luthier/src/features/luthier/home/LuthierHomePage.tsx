@@ -1,5 +1,4 @@
 import { For } from 'solid-js'
-import { IconArrowUpRight } from '@tabler/icons-solidjs'
 
 import { Card, CardContent } from '../../../components/ui/card'
 import { cn } from '../../../lib/cva'
@@ -65,16 +64,6 @@ export function LuthierHomePage(props: LuthierHomePageProps) {
                       {isDisabled ? props.ct('luthier_coming_soon') : ''}
                     </div>
                   </div>
-
-                  <span
-                    aria-hidden="true"
-                    class={cn(
-                      'pointer-events-none absolute right-6 top-6 text-muted-foreground/40 transition-colors',
-                      !isDisabled && 'group-hover:text-muted-foreground/70'
-                    )}
-                  >
-                    <IconArrowUpRight class="size-6" />
-                  </span>
                 </CardContent>
               </Card>
             )

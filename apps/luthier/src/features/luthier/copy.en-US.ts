@@ -515,6 +515,9 @@ export const luthierMessagesEnUS = {
   luthier_home_create_new_title: 'Create New',
   luthier_home_create_new_description:
     'Open the Orchestrator Creation screen with a new empty configuration.',
+  luthier_home_create_new_confirm_reset:
+    'This will discard the current creation settings and start from an empty configuration. Continue?',
+  luthier_create_new_reset_done: 'New empty configuration created.',
   luthier_home_import_payload_title: 'Import Payload',
   luthier_home_import_payload_description:
     'Load a payload .json and continue editing it in the Orchestrator Creation screen.',
