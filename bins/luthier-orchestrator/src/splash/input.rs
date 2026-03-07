@@ -49,7 +49,7 @@ pub fn cycle_override_for_key(overrides: &mut RuntimeOverrides, key: &str) {
 }
 
 /// Creates and positions the splash window with the proper scale.
-pub fn create_window(title: &str) -> anyhow::Result<Window> {
+pub fn create_window(title: &str, embedded_icon_png: Option<&[u8]>) -> anyhow::Result<Window> {
     let screen = detect_screen_size().unwrap_or((1280, 720));
     let scale = choose_splash_window_scale(screen);
     let mut window = Window::new(
@@ -73,7 +73,7 @@ pub fn create_window(title: &str) -> anyhow::Result<Window> {
     // Some X11 WMs only honor position after the window is mapped once.
     window.update();
     let _ = try_center_window(&mut window, scale.factor);
-    let _ = try_set_window_icon_from_sidecar(&mut window);
+    let _ = try_set_window_icon(&mut window, embedded_icon_png);
     window.set_target_fps(FPS as usize);
     Ok(window)
 }
@@ -152,10 +152,21 @@ pub fn detect_screen_size() -> Option<(usize, usize)> {
     None
 }
 
-pub fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<()> {
+pub fn choose_icon_png_source<'a>(
+    embedded_icon_png: Option<&'a [u8]>,
+    sidecar_icon_png: Option<&'a [u8]>,
+) -> Option<&'a [u8]> {
+    embedded_icon_png.or(sidecar_icon_png)
+}
+
+pub fn try_set_window_icon(
+    window: &mut Window,
+    embedded_icon_png: Option<&[u8]>,
+) -> anyhow::Result<()> {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = window;
+        let _ = embedded_icon_png;
         return Ok(());
     }
 
@@ -165,33 +176,41 @@ pub fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<(
             return Ok(());
         }
 
-        let exe = std::env::current_exe().context("failed to resolve current executable")?;
-        let icon_path = exe.with_extension("png");
-        if !icon_path.exists() {
-            return Ok(());
-        }
-
-        let raw = std::fs::read(&icon_path).with_context(|| {
-            format!(
-                "failed to read splash icon sidecar at {}",
-                icon_path.display()
-            )
-        })?;
-        let icon_buffer = decode_png_icon_to_x11_buffer(&raw).with_context(|| {
-            format!(
-                "failed to decode splash icon sidecar {}",
-                icon_path.display()
-            )
-        })?;
-
-        if let Ok(icon) = Icon::try_from(icon_buffer.as_slice()) {
-            // minifb panics on Wayland if set_icon is called at runtime.
-            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                window.set_icon(icon);
-            }));
+        let sidecar_icon = read_icon_sidecar_png_bytes().ok().flatten();
+        let icon_png = choose_icon_png_source(embedded_icon_png, sidecar_icon.as_deref());
+        if let Some(png_bytes) = icon_png {
+            let _ = try_set_window_icon_from_png_bytes(window, png_bytes);
         }
         Ok(())
     }
+}
+
+fn read_icon_sidecar_png_bytes() -> anyhow::Result<Option<Vec<u8>>> {
+    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+    let icon_path = exe.with_extension("png");
+    if !icon_path.exists() {
+        return Ok(None);
+    }
+
+    let raw = std::fs::read(&icon_path).with_context(|| {
+        format!(
+            "failed to read splash icon sidecar at {}",
+            icon_path.display()
+        )
+    })?;
+    Ok(Some(raw))
+}
+
+fn try_set_window_icon_from_png_bytes(window: &mut Window, png_bytes: &[u8]) -> anyhow::Result<()> {
+    let icon_buffer =
+        decode_png_icon_to_x11_buffer(png_bytes).context("failed to decode png icon")?;
+    if let Ok(icon) = Icon::try_from(icon_buffer.as_slice()) {
+        // minifb panics on Wayland if set_icon is called at runtime.
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            window.set_icon(icon);
+        }));
+    }
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]
@@ -353,4 +372,24 @@ pub struct PrelaunchRects {
 pub struct ConfigRects {
     pub save_button: Rect,
     pub cancel_button: Rect,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prefers_embedded_icon_over_sidecar_icon() {
+        let embedded = b"embedded";
+        let sidecar = b"sidecar";
+        let selected = choose_icon_png_source(Some(embedded), Some(sidecar));
+        assert_eq!(selected, Some(embedded.as_slice()));
+    }
+
+    #[test]
+    fn falls_back_to_sidecar_icon_when_embedded_icon_is_missing() {
+        let sidecar = b"sidecar";
+        let selected = choose_icon_png_source(None, Some(sidecar));
+        assert_eq!(selected, Some(sidecar.as_slice()));
+    }
 }

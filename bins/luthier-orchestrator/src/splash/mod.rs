@@ -3,8 +3,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context};
-use base64::{engine::general_purpose, Engine as _};
+use anyhow::Context;
 use image::imageops::FilterType;
 use luthier_orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use luthier_orchestrator_core::GameConfig;
@@ -14,7 +13,7 @@ use crate::application::runtime_overrides::{
     apply_runtime_overrides, build_feature_view, load_runtime_overrides, save_runtime_overrides,
     RuntimeOverrides,
 };
-use crate::infrastructure::payload_loader::load_embedded_config_required;
+use crate::infrastructure::payload_loader::load_embedded_payload_required;
 
 pub mod assets;
 pub mod child_process;
@@ -44,19 +43,26 @@ pub(crate) struct SplashWindowScale {
 
 pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> anyhow::Result<()> {
     initialize_splash_locale(lang_override);
-    let mut config =
-        load_embedded_config_required().context("embedded payload is required for splash mode")?;
-    let hero_background = decode_hero_background_from_config(&config)
+    let payload =
+        load_embedded_payload_required().context("embedded payload is required for splash mode")?;
+    let mut config = payload.config;
+    let hero_background = decode_hero_background_from_asset(payload.hero_image.as_deref())
         .ok()
         .flatten()
         .map(Arc::new);
+    let embedded_icon_png = payload.icon_png.map(Arc::new);
     let overrides =
         load_runtime_overrides(&config.exe_hash).unwrap_or_else(|_| RuntimeOverrides::default());
     apply_runtime_overrides(&mut config, &overrides);
 
     let doctor = run_doctor(Some(&config));
     if matches!(doctor.summary, CheckStatus::BLOCKER) {
-        show_doctor_block_window(&config, &doctor, hero_background.as_ref())?;
+        show_doctor_block_window(
+            &config,
+            &doctor,
+            hero_background.as_ref(),
+            embedded_icon_png.as_deref().map(Vec::as_slice),
+        )?;
         return Ok(());
     }
 
@@ -69,7 +75,11 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
         hero_background: hero_background.clone(),
     };
 
-    match show_prelaunch_window(&mut prelaunch, mode)? {
+    match show_prelaunch_window(
+        &mut prelaunch,
+        mode,
+        embedded_icon_png.as_deref().map(Vec::as_slice),
+    )? {
         PrelaunchDecision::Exit => Ok(()),
         PrelaunchDecision::Start {
             overrides,
@@ -81,6 +91,7 @@ pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> a
                 buffer,
                 &prelaunch.config.game_name,
                 prelaunch.hero_background.clone(),
+                embedded_icon_png.clone(),
             )?;
             let _ = show_post_game_feedback_window(outcome);
             let _ = overrides;
@@ -189,8 +200,9 @@ fn push_optional_toggle_row(
 fn show_prelaunch_window(
     state: &mut PrelaunchState,
     mode: SplashLaunchMode,
+    embedded_icon_png: Option<&[u8]>,
 ) -> anyhow::Result<PrelaunchDecision> {
-    let mut window = create_window(t(SplashTextKey::WindowTitle))?;
+    let mut window = create_window(t(SplashTextKey::WindowTitle), embedded_icon_png)?;
     let mut buffer = vec![0u32; WIN_W * WIN_H];
     let mut last_left_down = false;
     let mut config_open = false;
@@ -239,7 +251,7 @@ fn show_prelaunch_window(
                 save_runtime_overrides(&state.config.exe_hash, &config_working)
                     .context("failed to save runtime overrides from splash")?;
                 state.overrides = config_working.clone();
-                let mut fresh = load_embedded_config_required()?;
+                let mut fresh = load_embedded_payload_required()?.config;
                 apply_runtime_overrides(&mut fresh, &state.overrides);
                 state.doctor = run_doctor(Some(&fresh));
                 state.config = fresh;
@@ -252,6 +264,7 @@ fn show_prelaunch_window(
                         &state.config,
                         &state.doctor,
                         state.hero_background.as_ref(),
+                        embedded_icon_png,
                     )?;
                     return Ok(PrelaunchDecision::Exit);
                 }
@@ -329,8 +342,9 @@ fn show_doctor_block_window(
     config: &GameConfig,
     report: &DoctorReport,
     hero_background: Option<&Arc<HeroBackground>>,
+    embedded_icon_png: Option<&[u8]>,
 ) -> anyhow::Result<()> {
-    let mut window = create_window(t(SplashTextKey::WindowDependencies))?;
+    let mut window = create_window(t(SplashTextKey::WindowDependencies), embedded_icon_png)?;
     let mut buffer = vec![0u32; WIN_W * WIN_H];
     let mut last_left_down = false;
 
@@ -388,6 +402,7 @@ fn show_runtime_progress_window(
     mut buffer: Vec<u32>,
     game_name: &str,
     hero_background: Option<Arc<HeroBackground>>,
+    icon_png: Option<Arc<Vec<u8>>>,
 ) -> anyhow::Result<ChildRunOutcome> {
     let (tx, rx) = mpsc::channel::<ChildProcessEvent>();
     spawn_play_child(tx)?;
@@ -455,6 +470,7 @@ fn show_runtime_progress_window(
     Ok(ChildRunOutcome {
         game_name: game_name.to_string(),
         hero_background,
+        icon_png,
     })
 }
 
@@ -464,7 +480,10 @@ fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<Fe
     } else {
         outcome.game_name.trim()
     };
-    let mut window = create_window(title)?;
+    let mut window = create_window(
+        title,
+        outcome.icon_png.as_deref().map(|bytes| bytes.as_slice()),
+    )?;
     let mut buffer = vec![0u32; WIN_W * WIN_H];
     let mut last_left_down = false;
     let mut question = 1;
@@ -508,24 +527,16 @@ fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<Fe
 
 // ── Asset loading ─────────────────────────────────────────────────────────────
 
-fn decode_hero_background_from_config(
-    config: &GameConfig,
+fn decode_hero_background_from_asset(
+    hero_image_bytes: Option<&[u8]>,
 ) -> anyhow::Result<Option<HeroBackground>> {
-    let raw = config.splash.hero_image_data_url.trim();
-    if raw.is_empty() {
+    let bytes = if let Some(bytes) = hero_image_bytes {
+        bytes
+    } else {
         return Ok(None);
-    }
+    };
 
-    let payload = raw
-        .split_once("base64,")
-        .map(|(_, payload)| payload.trim())
-        .ok_or_else(|| anyhow!("unsupported hero image data URL format"))?;
-    let bytes = general_purpose::STANDARD
-        .decode(payload)
-        .context("failed to decode embedded hero image data URL")?;
-
-    let decoded =
-        image::load_from_memory(&bytes).context("failed to decode embedded hero image")?;
+    let decoded = image::load_from_memory(bytes).context("failed to decode embedded hero image")?;
     let resized = decoded.resize_exact(WIN_W as u32, WIN_H as u32, FilterType::Triangle);
     let rgba = resized.to_rgba8();
 
@@ -540,4 +551,39 @@ fn decode_hero_background_from_config(
     }
 
     Ok(Some(HeroBackground { pixels }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
+
+    use super::*;
+    use crate::splash::theme::{WIN_H, WIN_W};
+
+    #[test]
+    fn decodes_hero_background_from_embedded_asset() {
+        let bytes = tiny_png_bytes();
+        let background = decode_hero_background_from_asset(Some(&bytes))
+            .expect("decode should succeed")
+            .expect("hero should exist");
+
+        assert_eq!(background.pixels.len(), WIN_W * WIN_H);
+    }
+
+    #[test]
+    fn returns_none_when_hero_asset_is_missing() {
+        let background = decode_hero_background_from_asset(None).expect("decode should succeed");
+        assert!(background.is_none());
+    }
+
+    fn tiny_png_bytes() -> Vec<u8> {
+        let image = RgbaImage::from_pixel(2, 2, Rgba([255, 10, 10, 255]));
+        let mut bytes = Vec::new();
+        DynamicImage::ImageRgba8(image)
+            .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+            .expect("png encode");
+        bytes
+    }
 }

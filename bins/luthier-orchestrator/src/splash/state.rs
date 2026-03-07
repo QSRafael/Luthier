@@ -54,6 +54,7 @@ pub enum FeedbackDecision {
 pub struct ChildRunOutcome {
     pub game_name: String,
     pub hero_background: Option<Arc<HeroBackground>>,
+    pub icon_png: Option<Arc<Vec<u8>>>,
 }
 
 #[derive(Debug, Clone)]
