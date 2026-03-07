@@ -72,6 +72,8 @@ jobs:
         uses: dtolnay/rust-toolchain@1.92.0
         with:
           components: clippy
+      - name: Prepare orchestrator base resource (debug)
+        run: ./apps/luthier/scripts/prepare-luthier-orchestrator-base.sh debug
       - name: Backend tauri clippy gate
         run: ./scripts/check-backend-tauri-clippy.sh
 

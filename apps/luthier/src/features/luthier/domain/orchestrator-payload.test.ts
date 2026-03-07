@@ -23,7 +23,7 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
   }
   const digestInput = new Uint8Array(bytes.byteLength)
   digestInput.set(bytes)
-  const digest = new Uint8Array(await subtle.digest('SHA-256', digestInput.buffer))
+  const digest = new Uint8Array(await subtle.digest('SHA-256', digestInput))
   return [...digest].map((v) => v.toString(16).padStart(2, '0')).join('')
 }
 
@@ -58,7 +58,7 @@ async function buildBinaryWithAssets(
   const manifestDigestInput = new Uint8Array(manifestBytes.byteLength)
   manifestDigestInput.set(manifestBytes)
   const manifestChecksum = new Uint8Array(
-    await globalThis.crypto!.subtle.digest('SHA-256', manifestDigestInput.buffer)
+    await globalThis.crypto!.subtle.digest('SHA-256', manifestDigestInput)
   )
   const lenBytes = new Uint8Array(new BigUint64Array([BigInt(manifestBytes.length)]).buffer)
 
