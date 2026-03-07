@@ -10,7 +10,9 @@ pub struct CreateExecutableInput {
     pub backup_existing: bool,
     pub make_executable: bool,
     #[serde(default)]
-    pub icon_png_data_url: Option<String>,
+    pub hero_image_bytes: Option<Vec<u8>>,
+    #[serde(default)]
+    pub icon_png_bytes: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -19,7 +21,6 @@ pub struct CreateExecutableOutput {
     pub config_size_bytes: usize,
     pub config_sha256_hex: String,
     pub resolved_base_binary_path: String,
-    pub icon_sidecar_path: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
