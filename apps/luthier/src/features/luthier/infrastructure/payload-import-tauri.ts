@@ -6,6 +6,12 @@ type ReadPayloadFileOutput = {
   payload_json: string
 }
 
+type ListDirectoryEntriesOutput = {
+  path: string
+  directories: string[]
+  files: string[]
+}
+
 export async function importConfigFromPayloadPath(path: string): Promise<GameConfig> {
   const output = await invokeCommand<ReadPayloadFileOutput>('cmd_read_payload_json_file', {
     path,
@@ -58,8 +64,14 @@ export async function pathExists(path: string): Promise<boolean> {
   if (!path.trim()) return false
 
   try {
-    const fs = await import('@tauri-apps/api/fs')
-    return await fs.exists(path)
+    const { dirPath } = splitPath(path)
+    if (!dirPath) return false
+
+    const output = await invokeCommand<ListDirectoryEntriesOutput>('cmd_list_directory_entries', {
+      path: dirPath,
+    })
+
+    return hasPathInDirectoryListing(path, output.files)
   } catch {
     return false
   }
@@ -73,6 +85,25 @@ type TauriFileDropEvent =
 function isLikelyAbsolutePath(path: string): boolean {
   const trimmed = path.trim()
   return trimmed.startsWith('/') || /^[A-Za-z]:[\\/]/.test(trimmed)
+}
+
+function splitPath(path: string): { dirPath: string; fileName: string } {
+  const trimmed = path.trim().replace(/\\/g, '/')
+  const lastSlash = trimmed.lastIndexOf('/')
+  if (lastSlash < 0) return { dirPath: '', fileName: trimmed }
+  if (lastSlash === 0) return { dirPath: '/', fileName: trimmed.slice(1) }
+  return {
+    dirPath: trimmed.slice(0, lastSlash),
+    fileName: trimmed.slice(lastSlash + 1),
+  }
+}
+
+export function hasPathInDirectoryListing(targetPath: string, listedPaths: string[]): boolean {
+  const { fileName } = splitPath(targetPath)
+  if (!fileName) return false
+
+  const targetLower = fileName.toLowerCase()
+  return listedPaths.some((path) => splitPath(path).fileName.toLowerCase() === targetLower)
 }
 
 function isTauriRuntime(): boolean {
