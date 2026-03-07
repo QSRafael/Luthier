@@ -23,8 +23,11 @@ import {
   importConfigFromOrchestratorPath,
   importConfigFromPayloadPath,
   listenTauriFileDrop,
+  pathExists,
+  pickPayloadImportPath,
 } from '../infrastructure/payload-import-tauri'
 import { sonnerNotifier } from '../infrastructure/sonner-notifier'
+import { resolveSiblingMainExecutablePath } from '../domain/imported-payload'
 import { basenamePath, formatBytes, normalizeDroppedPath } from './payload-file-path'
 import { mapPayloadImportErrorMessage } from './payload-import-error-map'
 
@@ -38,6 +41,7 @@ type PayloadFileDialogProps = {
   onConfigImported: (payload: {
     source: 'json' | 'orchestrator'
     fileName: string
+    sourcePath?: string
     config: GameConfig
   }) => void
 }
@@ -208,8 +212,18 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
     }
   }
 
-  const openNativePicker = () => {
+  const openNativePicker = async () => {
     if (busy()) return
+
+    const selectedPath = await pickPayloadImportPath(props.mode)
+    if (typeof selectedPath === 'string') {
+      handlePathSelection(selectedPath)
+      return
+    }
+    if (selectedPath === null) {
+      return
+    }
+
     fileInputRef?.click()
   }
 
@@ -222,10 +236,12 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
 
     try {
       const importedConfig = await loadConfigFromSelectedInput(currentInput, props.mode)
+      const sourcePath = await resolveImportedSourcePathForMode(currentInput, props.mode)
 
       props.onConfigImported({
         source: props.mode === 'payload_json' ? 'json' : 'orchestrator',
         fileName: currentInput.fileName,
+        sourcePath,
         config: importedConfig,
       })
 
@@ -272,7 +288,9 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
               busy() ? 'opacity-70' : 'hover:border-primary/40 hover:bg-muted/20',
               dragActive() && !busy() && 'border-primary/70 bg-primary/5'
             )}
-            onClick={openNativePicker}
+            onClick={() => {
+              void openNativePicker()
+            }}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -280,7 +298,7 @@ export function PayloadFileDialog(props: PayloadFileDialogProps) {
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
-                openNativePicker()
+                void openNativePicker()
               }
             }}
             role="button"
@@ -375,4 +393,33 @@ async function loadConfigFromSelectedInput(
     return importConfigFromPayloadPath(input.path)
   }
   return importConfigFromOrchestratorPath(input.path)
+}
+
+function resolveImportedSourcePath(input: SelectedInput): string | undefined {
+  if (input.kind === 'tauri_path') {
+    const normalizedPath = normalizeDroppedPath(input.path)
+    return normalizedPath.trim() ? normalizedPath : undefined
+  }
+
+  const withPath = input.file as File & { path?: string }
+  if (typeof withPath.path !== 'string') return undefined
+
+  const normalizedPath = normalizeDroppedPath(withPath.path)
+  return normalizedPath.trim() ? normalizedPath : undefined
+}
+
+async function resolveImportedSourcePathForMode(
+  input: SelectedInput,
+  mode: PayloadDialogMode
+): Promise<string | undefined> {
+  if (mode !== 'orchestrator_executable') return undefined
+
+  const sourcePath = resolveImportedSourcePath(input)
+  if (!sourcePath) return undefined
+
+  const siblingExecutablePath = resolveSiblingMainExecutablePath(sourcePath)
+  if (!siblingExecutablePath) return undefined
+
+  const siblingExecutableExists = await pathExists(siblingExecutablePath)
+  return siblingExecutableExists ? sourcePath : undefined
 }

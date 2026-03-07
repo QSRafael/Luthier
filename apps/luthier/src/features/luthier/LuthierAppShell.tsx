@@ -156,6 +156,7 @@ export function LuthierAppShell() {
   const applyImportedConfig = (payload: {
     source: 'json' | 'orchestrator'
     fileName: string
+    sourcePath?: string
     config: ImportedPayloadRequest['config']
   }) => {
     nextImportRequestId += 1
@@ -163,6 +164,7 @@ export function LuthierAppShell() {
       id: nextImportRequestId,
       source: payload.source,
       fileName: payload.fileName,
+      sourcePath: payload.sourcePath,
       config: payload.config,
     })
 

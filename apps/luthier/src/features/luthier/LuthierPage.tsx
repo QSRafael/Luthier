@@ -74,7 +74,12 @@ export default function LuthierPage(props: LuthierPageProps) {
     if (currentRequest.id === lastImportedRequestId) return
 
     lastImportedRequestId = currentRequest.id
-    loadImportedPayload(currentRequest.config, currentRequest.source, currentRequest.fileName)
+    loadImportedPayload(
+      currentRequest.config,
+      currentRequest.source,
+      currentRequest.fileName,
+      currentRequest.sourcePath
+    )
     setMobileSidebarOpen(false)
   })
 

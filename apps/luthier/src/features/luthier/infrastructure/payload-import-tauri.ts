@@ -1,4 +1,4 @@
-import { invokeCommand } from '../../../api/tauri'
+import { invokeCommand, pickFile } from '../../../api/tauri'
 import type { GameConfig } from '../../../models/config'
 import { parseImportedGameConfigJson } from '../domain/orchestrator-payload'
 
@@ -37,6 +37,33 @@ export async function listenTauriFileDrop(
   return appWindow.onFileDropEvent((event) => {
     onEvent(event.payload)
   })
+}
+
+export async function pickPayloadImportPath(
+  mode: 'payload_json' | 'orchestrator_executable'
+): Promise<string | null | undefined> {
+  if (!isTauriRuntime()) return undefined
+
+  const filters = mode === 'payload_json' ? [{ name: 'JSON', extensions: ['json'] }] : undefined
+
+  const selected = await pickFile({
+    multiple: false,
+    filters,
+  })
+
+  return typeof selected === 'string' ? selected : null
+}
+
+export async function pathExists(path: string): Promise<boolean> {
+  if (!isTauriRuntime()) return false
+  if (!path.trim()) return false
+
+  try {
+    const fs = await import('@tauri-apps/api/fs')
+    return await fs.exists(path)
+  } catch {
+    return false
+  }
 }
 
 type TauriFileDropEvent =

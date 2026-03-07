@@ -4,5 +4,6 @@ export type ImportedPayloadRequest = {
   id: number
   source: 'json' | 'orchestrator'
   fileName: string
+  sourcePath?: string
   config: GameConfig
 }

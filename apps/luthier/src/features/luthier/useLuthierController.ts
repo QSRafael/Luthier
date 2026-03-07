@@ -20,7 +20,11 @@ import {
 } from './controller-utils'
 import { createLuthierWinetricksActions } from './controller-winetricks-actions'
 import { hasDirtyConfig, serializeConfigSnapshot } from './domain/config-dirty'
-import { shouldRefreshImportedHeroImage } from './domain/imported-payload'
+import {
+  deriveImportedRuntimePathsFromMainExecutable,
+  resolveSiblingMainExecutablePath,
+  shouldRefreshImportedHeroImage,
+} from './domain/imported-payload'
 import { luthierBackendApi } from './infrastructure/luthier-backend-api'
 import { sonnerNotifier } from './infrastructure/sonner-notifier'
 
@@ -213,11 +217,25 @@ export function useLuthierController() {
   const loadImportedPayload = (
     importedConfig: GameConfig,
     source: 'json' | 'orchestrator',
-    fileName: string
+    fileName: string,
+    sourcePath?: string
   ) => {
     state.setConfig(importedConfig)
     markConfigAsClean(importedConfig)
     resetTransientUiState()
+
+    const siblingExecutablePath =
+      source === 'orchestrator' && sourcePath ? resolveSiblingMainExecutablePath(sourcePath) : null
+    const importedRuntimePaths = siblingExecutablePath
+      ? deriveImportedRuntimePathsFromMainExecutable(siblingExecutablePath)
+      : null
+    if (importedRuntimePaths) {
+      setGameRoot(importedRuntimePaths.gameRoot)
+      setGameRootManualOverride(importedRuntimePaths.gameRootManualOverride)
+      setExePath(importedRuntimePaths.exePath)
+    } else if (source === 'orchestrator') {
+      setGameRoot('')
+    }
 
     const sourceLabel =
       source === 'json'
