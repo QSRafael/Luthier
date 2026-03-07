@@ -7,11 +7,14 @@
 
 import type { BackendCommandPort, NotifierPort } from '../ports'
 import type { HeroImageSnapshot } from '../types'
+import { decodeDataUrlToBinary } from './data-url'
 
 type HeroImageStateSnapshot = {
   gameName: string
   heroImageUrl: string
-  heroImageDataUrl: string
+  heroImagePreviewDataUrl: string
+  heroImageAssetBytes: Uint8Array | null
+  heroImageAssetMime: string
   lastPreparedHeroImageUrl: string
   searchCacheGameName: string
   searchCacheGameId: number | null
@@ -31,7 +34,9 @@ export type HeroImageStatePort = {
   setHeroImageSearchCache: (value: HeroImageSearchCache) => void
   setHeroImageSearchIndex: (value: number) => void
   setHeroImageUrl: (value: string) => void
-  setHeroImageDataUrl: (value: string) => void
+  setHeroImagePreviewDataUrl: (value: string) => void
+  setHeroImageAssetBytes: (value: Uint8Array | null) => void
+  setHeroImageAssetMime: (value: string) => void
   setLastPreparedHeroImageUrl: (value: string) => void
   setHeroImageProcessing: (value: boolean) => void
   setHeroImageAutoSearching: (value: boolean) => void
@@ -86,7 +91,11 @@ function canSearchAnotherHeroImage(state: HeroImageStateSnapshot): boolean {
 function buildHeroImageSnapshot(state: HeroImageStateSnapshot): HeroImageSnapshot {
   return {
     hero_image_url: state.heroImageUrl,
-    hero_image_data_url: state.heroImageDataUrl,
+    hero_image_preview_data_url: state.heroImagePreviewDataUrl,
+    hero_image_asset_bytes: state.heroImageAssetBytes
+      ? new Uint8Array(state.heroImageAssetBytes)
+      : null,
+    hero_image_asset_mime: state.heroImageAssetMime,
     lastPreparedHeroImageUrl: state.lastPreparedHeroImageUrl,
     searchIndex: state.searchIndex,
   }
@@ -122,12 +131,14 @@ export function createHeroImageUseCase({
     const imageUrl = (rawUrl ?? current.heroImageUrl).trim()
 
     if (!imageUrl) {
-      state.setHeroImageDataUrl('')
+      state.setHeroImagePreviewDataUrl('')
+      state.setHeroImageAssetBytes(null)
+      state.setHeroImageAssetMime('')
       state.setLastPreparedHeroImageUrl('')
       return
     }
 
-    if (imageUrl === current.lastPreparedHeroImageUrl && current.heroImageDataUrl.trim()) {
+    if (imageUrl === current.lastPreparedHeroImageUrl && current.heroImagePreviewDataUrl.trim()) {
       return
     }
 
@@ -135,8 +146,14 @@ export function createHeroImageUseCase({
       state.setHeroImageProcessing(true)
       state.setStatusMessage(messages.processingHeroImage)
       const result = await backend.prepareHeroImage(imageUrl)
+      const decoded = decodeDataUrlToBinary(result.data_url)
+      if (!decoded) {
+        throw new Error('prepared hero image returned an invalid data URL')
+      }
       state.setHeroImageUrl(result.source_url)
-      state.setHeroImageDataUrl(result.data_url)
+      state.setHeroImagePreviewDataUrl(result.data_url)
+      state.setHeroImageAssetBytes(decoded.bytes)
+      state.setHeroImageAssetMime(decoded.mime)
       state.setLastPreparedHeroImageUrl(result.source_url)
       state.setStatusMessage(
         messages.heroImageReadySize({
@@ -145,7 +162,9 @@ export function createHeroImageUseCase({
         })
       )
     } catch (error) {
-      state.setHeroImageDataUrl('')
+      state.setHeroImagePreviewDataUrl('')
+      state.setHeroImageAssetBytes(null)
+      state.setHeroImageAssetMime('')
       state.setStatusMessage(messages.failedToPrepareHeroImageError({ error: String(error) }))
     } finally {
       state.setHeroImageProcessing(false)

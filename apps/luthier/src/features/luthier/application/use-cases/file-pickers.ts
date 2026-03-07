@@ -17,6 +17,7 @@ export type FilePickersStatePort = {
   setExePath: (value: string) => void
   setLastHashedExePath: (value: string) => void
   setIconPreviewPath: (value: string) => void
+  setIconPngBytes: (value: Uint8Array | null) => void
   setExeHash: (value: string) => void
   setGameRootManualOverride: (value: boolean) => void
   setGameRoot: (value: string) => void
@@ -106,6 +107,7 @@ export function createFilePickersUseCase({ backend, state, messages }: FilePicke
     state.setExePath(selected)
     state.setLastHashedExePath('')
     state.setIconPreviewPath('')
+    state.setIconPngBytes(null)
     state.setExeHash('')
 
     const detectedRoot = dirname(selected)

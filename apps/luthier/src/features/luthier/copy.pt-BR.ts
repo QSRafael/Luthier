@@ -80,7 +80,7 @@ export const luthierMessagesPtBR = {
   luthier_name_shown_in_splash_and_local_database: 'Nome mostrado na splash e no banco local.',
   luthier_splash_hero_image: 'Hero image da splash',
   luthier_hero_image_used_as_splash_background_downloaded_and_emb:
-    'Imagem de fundo da splash. Baixada, cortada (96:31), convertida para WebP e embutida no executável gerado.',
+    'Imagem de fundo da splash. Baixada, cortada (96:31), convertida para WebP e embutida como asset binário no container GOASv2.',
   luthier_hero_image_ratio_96_31_and_converted_to_webp:
     'Proporção alvo 96:31. Se a imagem vier diferente, ela é cortada no centro e redimensionada.',
   luthier_no_hero_image_selected: 'Nenhuma hero image selecionada.',
@@ -130,7 +130,7 @@ export const luthierMessagesPtBR = {
   luthier_game_icon_preview_for_easier_visual_identification:
     'Preview do ícone do jogo para facilitar identificação visual.',
   luthier_visual_is_ready_real_extraction_will_be_wired_to_backend:
-    'Extrai o ícone do .exe para preview e salva um PNG ao lado do binário gerado.',
+    'Extrai o ícone do .exe para preview e embute o PNG como asset binário no executável gerado.',
   luthier_no_extracted_icon: 'Sem ícone extraído',
   luthier_extract_icon: 'Extrair ícone',
   luthier_launch_arguments: 'Argumentos de launch',

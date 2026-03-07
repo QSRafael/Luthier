@@ -20,6 +20,10 @@ export function createLuthierState() {
   const [exePath, setExePath] = createSignal('')
   const [registryImportPath, setRegistryImportPath] = createSignal('')
   const [iconPreviewPath, setIconPreviewPath] = createSignal('')
+  const [iconPngBytes, setIconPngBytes] = createSignal<Uint8Array | null>(null)
+  const [heroImagePreviewDataUrl, setHeroImagePreviewDataUrl] = createSignal('')
+  const [heroImageAssetBytes, setHeroImageAssetBytes] = createSignal<Uint8Array | null>(null)
+  const [heroImageAssetMime, setHeroImageAssetMime] = createSignal('')
   const [heroImageProcessing, setHeroImageProcessing] = createSignal(false)
   const [heroImageAutoSearching, setHeroImageAutoSearching] = createSignal(false)
   const [statusMessage, setStatusMessage] = createSignal(translate(initialLocale, 'statusReady'))
@@ -68,6 +72,14 @@ export function createLuthierState() {
     setRegistryImportPath,
     iconPreviewPath,
     setIconPreviewPath,
+    iconPngBytes,
+    setIconPngBytes,
+    heroImagePreviewDataUrl,
+    setHeroImagePreviewDataUrl,
+    heroImageAssetBytes,
+    setHeroImageAssetBytes,
+    heroImageAssetMime,
+    setHeroImageAssetMime,
     heroImageProcessing,
     setHeroImageProcessing,
     heroImageAutoSearching,

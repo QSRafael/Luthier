@@ -25,7 +25,9 @@ export function createLuthierHeroActions(
       readState: () => ({
         gameName: state.config().game_name,
         heroImageUrl: state.config().splash.hero_image_url,
-        heroImageDataUrl: state.config().splash.hero_image_data_url,
+        heroImagePreviewDataUrl: state.heroImagePreviewDataUrl(),
+        heroImageAssetBytes: state.heroImageAssetBytes(),
+        heroImageAssetMime: state.heroImageAssetMime(),
         lastPreparedHeroImageUrl: state.lastPreparedHeroImageUrl(),
         searchCacheGameName: state.heroImageSearchCacheGameName(),
         searchCacheGameId: state.heroImageSearchCacheGameId(),
@@ -48,15 +50,9 @@ export function createLuthierHeroActions(
           },
         }))
       },
-      setHeroImageDataUrl: (value: string) => {
-        state.patchConfig((prev) => ({
-          ...prev,
-          splash: {
-            ...prev.splash,
-            hero_image_data_url: value,
-          },
-        }))
-      },
+      setHeroImagePreviewDataUrl: state.setHeroImagePreviewDataUrl,
+      setHeroImageAssetBytes: state.setHeroImageAssetBytes,
+      setHeroImageAssetMime: state.setHeroImageAssetMime,
       setLastPreparedHeroImageUrl: state.setLastPreparedHeroImageUrl,
       setHeroImageProcessing: state.setHeroImageProcessing,
       setHeroImageAutoSearching: state.setHeroImageAutoSearching,
@@ -67,9 +63,11 @@ export function createLuthierHeroActions(
           splash: {
             ...prev.splash,
             hero_image_url: snapshot.hero_image_url,
-            hero_image_data_url: snapshot.hero_image_data_url,
           },
         }))
+        state.setHeroImagePreviewDataUrl(snapshot.hero_image_preview_data_url)
+        state.setHeroImageAssetBytes(snapshot.hero_image_asset_bytes)
+        state.setHeroImageAssetMime(snapshot.hero_image_asset_mime)
         state.setLastPreparedHeroImageUrl(snapshot.lastPreparedHeroImageUrl)
         state.setHeroImageSearchIndex(snapshot.searchIndex)
       },

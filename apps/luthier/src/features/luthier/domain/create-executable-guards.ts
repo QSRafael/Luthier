@@ -30,6 +30,9 @@ import {
 import type { Locale } from '../../../i18n'
 import type { LuthierCopyKey } from '../copy'
 
+const HERO_IMAGE_MAX_BYTES = 8 * 1024 * 1024
+const ICON_PNG_MAX_BYTES = 1024 * 1024
+
 // Dependencies that were previously in controller utils
 function isLikelyAbsolutePath(path: string): boolean {
   const trimmed = path.trim()
@@ -63,6 +66,9 @@ export type CreateExecutableGuardsContext = {
   locale: Locale
   exePath: string
   gameRoot: string
+  heroImageAssetBytes?: Uint8Array | null
+  heroImageAssetMime?: string
+  iconPngBytes?: Uint8Array | null
   /**
    * Translate function mapping a LuthierCopyKey to a localized string.
    */
@@ -80,6 +86,9 @@ export function getCreateExecutableValidationErrors(ctx: CreateExecutableGuardsC
   const gamescope = cfg.environment.gamescope
   const currentLocale = ctx.locale
   const ct = ctx.ct
+  const heroImageAssetBytes = ctx.heroImageAssetBytes ?? null
+  const heroImageAssetMime = (ctx.heroImageAssetMime ?? '').trim().toLowerCase()
+  const iconPngBytes = ctx.iconPngBytes ?? null
 
   const prefixed = (prefixPt: string, prefixEn: string, message: string) =>
     currentLocale === 'pt-BR' ? `${prefixPt}: ${message}` : `${prefixEn}: ${message}`
@@ -112,6 +121,41 @@ export function getCreateExecutableValidationErrors(ctx: CreateExecutableGuardsC
       currentLocale === 'pt-BR'
         ? 'Hash SHA-256 inválido ou ausente. Selecione um executável válido e aguarde o cálculo.'
         : 'SHA-256 hash is missing or invalid. Select a valid executable and wait for hashing.'
+    )
+  }
+
+  if (heroImageAssetBytes && heroImageAssetBytes.byteLength > HERO_IMAGE_MAX_BYTES) {
+    errors.push(
+      currentLocale === 'pt-BR'
+        ? `A hero image excede o limite de ${HERO_IMAGE_MAX_BYTES} bytes.`
+        : `Hero image exceeds the ${HERO_IMAGE_MAX_BYTES}-byte limit.`
+    )
+  }
+
+  if (heroImageAssetBytes && heroImageAssetMime) {
+    const heroMimeAllowed = new Set(['image/png', 'image/jpeg', 'image/webp'])
+    if (!heroMimeAllowed.has(heroImageAssetMime)) {
+      errors.push(
+        currentLocale === 'pt-BR'
+          ? 'A hero image precisa ser PNG, JPEG ou WebP.'
+          : 'Hero image must be PNG, JPEG, or WebP.'
+      )
+    }
+  }
+
+  if (iconPngBytes && iconPngBytes.byteLength > ICON_PNG_MAX_BYTES) {
+    errors.push(
+      currentLocale === 'pt-BR'
+        ? `O ícone PNG excede o limite de ${ICON_PNG_MAX_BYTES} bytes.`
+        : `PNG icon exceeds the ${ICON_PNG_MAX_BYTES}-byte limit.`
+    )
+  }
+
+  if (iconPngBytes && !hasPngSignature(iconPngBytes)) {
+    errors.push(
+      currentLocale === 'pt-BR'
+        ? 'O ícone embutido precisa ser um PNG válido.'
+        : 'Embedded icon must be a valid PNG.'
     )
   }
 
@@ -530,6 +574,12 @@ export function getCreateExecutableValidationErrors(ctx: CreateExecutableGuardsC
   }
 
   return errors
+}
+
+function hasPngSignature(bytes: Uint8Array): boolean {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+  if (bytes.length < signature.length) return false
+  return signature.every((value, index) => bytes[index] === value)
 }
 
 /**

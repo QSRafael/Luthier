@@ -17,14 +17,18 @@ export function mapPayloadImportErrorMessage(
       return ct('luthier_import_payload_invalid_schema')
     }
 
-    if (error.code === 'trailer_not_found') {
+    if (error.code === 'container_not_found') {
       return ct('luthier_import_payload_orchestrator_not_detected')
     }
 
     if (
-      error.code === 'trailer_truncated' ||
+      error.code === 'container_truncated' ||
       error.code === 'invalid_length' ||
-      error.code === 'invalid_checksum'
+      error.code === 'invalid_checksum' ||
+      error.code === 'invalid_manifest' ||
+      error.code === 'missing_config_asset' ||
+      error.code === 'duplicate_asset_type' ||
+      error.code === 'asset_out_of_bounds'
     ) {
       return ct('luthier_import_payload_orchestrator_corrupted')
     }
@@ -37,15 +41,19 @@ export function mapPayloadImportErrorMessage(
     return fallbackByMode(mode, ct)
   }
 
-  if (hasAny(rawMessage, ['payload trailer not found'])) {
+  if (hasAny(rawMessage, ['asset container not found'])) {
     return ct('luthier_import_payload_orchestrator_not_detected')
   }
 
   if (
     hasAny(rawMessage, [
-      'payload trailer is truncated',
-      'payload length is invalid',
-      'payload integrity check failed',
+      'asset container is truncated',
+      'container or asset length is invalid',
+      'container integrity check failed',
+      'invalid asset container manifest',
+      'required embedded asset is missing',
+      'duplicate asset type in manifest',
+      'asset points outside allowed binary range',
       'invalid checksum',
     ])
   ) {

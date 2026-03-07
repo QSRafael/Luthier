@@ -197,6 +197,9 @@ export function createLuthierComputed(state: ReturnType<typeof createLuthierStat
       locale: state.locale(),
       exePath: state.exePath(),
       gameRoot: state.gameRoot(),
+      heroImageAssetBytes: state.heroImageAssetBytes(),
+      heroImageAssetMime: state.heroImageAssetMime(),
+      iconPngBytes: state.iconPngBytes(),
       ct,
     })
   )

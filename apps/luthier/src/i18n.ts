@@ -34,7 +34,8 @@ const messages: Record<Locale, Record<string, string>> = {
     strictRuntimeHelp: 'Se ativado, tenta apenas o runtime primário.',
     restoreRuntimeDefaults: 'Restaurar defaults de runtime',
     orchestratorBase: 'Luthier Orchestrator base',
-    orchestratorBaseHelp: 'Binário base pré-compilado usado para injetar a configuração embutida.',
+    orchestratorBaseHelp:
+      'Binário base pré-compilado usado para injetar o container GOASv2 (config + assets binários).',
     outputExecutable: 'Saída do executável',
     outputExecutableHelp: 'Caminho final do Luthier Orchestrator gerado.',
     testButton: 'Testar',
@@ -86,7 +87,8 @@ const messages: Record<Locale, Record<string, string>> = {
     strictRuntimeHelp: 'When enabled, only the primary runtime is tried.',
     restoreRuntimeDefaults: 'Restore runtime defaults',
     orchestratorBase: 'Luthier Orchestrator base',
-    orchestratorBaseHelp: 'Prebuilt base binary used to inject embedded configuration.',
+    orchestratorBaseHelp:
+      'Prebuilt base binary used to inject the GOASv2 container (config + binary assets).',
     outputExecutable: 'Output executable',
     outputExecutableHelp: 'Final generated Luthier Orchestrator path.',
     testButton: 'Test',
