@@ -94,6 +94,8 @@ fn run_create(base: PathBuf, config_path: PathBuf, output: PathBuf) -> anyhow::R
         base_binary_path: base,
         output_path: output,
         config,
+        hero_image_bytes: None,
+        icon_png_bytes: None,
         backup_existing: true,
         make_executable: true,
     })?;

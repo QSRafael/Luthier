@@ -1,10 +1,12 @@
+use std::path::PathBuf;
+
 use clap::{Parser, ValueEnum};
 
 #[derive(Debug, Parser)]
 #[command(name = "luthier-orchestrator")]
 #[command(about = "Luthier Orchestrator CLI")]
 #[command(
-    after_help = "Examples:\n  game --doctor\n  game --doctor --play\n  game --play\n  game --play-splash\n  game --set-mangohud on --set-gamescope off\n  game --set-mangohud off --play\n  game --show-payload\n  game --show-base64-hero-image\n  game --save-payload"
+    after_help = "Examples:\n  game --doctor\n  game --doctor --play\n  game --play\n  game --play-splash\n  game --set-mangohud on --set-gamescope off\n  game --set-mangohud off --play\n  game --show-manifest\n  game --extract-config --out ./payload.json\n  game --extract-hero-image\n  game --extract-icon"
 )]
 pub struct Cli {
     #[arg(long, help = "Run game launch pipeline without splash")]
@@ -24,22 +26,31 @@ pub struct Cli {
     pub winecfg: bool,
 
     #[arg(
-        long = "show-payload",
-        help = "Print embedded payload (hero base64 hidden by default)"
+        long = "show-manifest",
+        help = "Print embedded asset container manifest"
     )]
-    pub show_payload: bool,
+    pub show_manifest: bool,
 
     #[arg(
-        long = "show-base64-hero-image",
-        help = "Print embedded payload including splash hero base64 image"
+        long = "extract-config",
+        help = "Extract embedded config_json asset (stdout by default)"
     )]
-    pub show_hero_image_base64: bool,
+    pub extract_config: bool,
 
     #[arg(
-        long = "save-payload",
-        help = "Save embedded payload JSON to <executable-name>-payload.json in game root"
+        long = "extract-hero-image",
+        help = "Extract embedded hero_image asset"
     )]
-    pub save_payload: bool,
+    pub extract_hero_image: bool,
+
+    #[arg(long = "extract-icon", help = "Extract embedded icon_png asset")]
+    pub extract_icon: bool,
+
+    #[arg(
+        long,
+        help = "Output path for --extract-config, --extract-hero-image or --extract-icon"
+    )]
+    pub out: Option<PathBuf>,
 
     #[arg(
         long,
