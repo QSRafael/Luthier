@@ -53,7 +53,9 @@ jobs:
         run: ./scripts/check-rust-quality.sh --exclude-tauri --with-tests
 
   rust-backend-tauri-clippy:
-    runs-on: ubuntu-latest
+    # Tauri v1 / wry 0.24 chain depends on webkit2gtk-4.0 dev packages.
+    # ubuntu-latest (24.04) may not provide libwebkit2gtk-4.0-dev.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux system dependencies (Tauri/GTK)
