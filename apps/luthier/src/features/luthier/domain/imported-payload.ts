@@ -42,19 +42,27 @@ export function resolveSiblingMainExecutablePath(orchestratorPath: string): stri
 }
 
 export function deriveImportedRuntimePathsFromMainExecutable(
-  mainExecutablePath: string
+  mainExecutablePath: string,
+  relativeExePath?: string
 ): ImportedRuntimePaths | null {
   const normalizedExePath = normalizePath(mainExecutablePath)
   if (!isLikelyAbsolutePath(normalizedExePath)) return null
   if (!WINDOWS_LAUNCHER_EXTENSIONS.test(basename(normalizedExePath))) return null
 
-  const gameRoot = dirname(normalizedExePath)
-  if (!gameRoot) return null
+  const executableDir = dirname(normalizedExePath)
+  if (!executableDir) return null
+
+  const inferredGameRoot = inferGameRootFromRelativeExePath(
+    normalizedExePath,
+    executableDir,
+    relativeExePath
+  )
+  const gameRoot = inferredGameRoot ?? executableDir
 
   return {
     gameRoot,
     exePath: normalizedExePath,
-    gameRootManualOverride: false,
+    gameRootManualOverride: gameRoot !== executableDir,
   }
 }
 
@@ -103,4 +111,63 @@ function joinPath(basePath: string, fileName: string): string {
       : normalizedBase
 
   return `${baseWithoutTrailingSlash}/${normalizedFileName}`
+}
+
+function inferGameRootFromRelativeExePath(
+  normalizedExePath: string,
+  executableDir: string,
+  relativeExePath?: string
+): string | null {
+  const normalizedRelativeExePath = normalizeRelativePath(relativeExePath)
+  if (!normalizedRelativeExePath) return null
+
+  const relativeSegments = normalizedRelativeExePath.split('/').filter(Boolean)
+  if (relativeSegments.length === 0) return null
+
+  const relativeExecutableName = relativeSegments[relativeSegments.length - 1]
+  const currentExecutableName = basename(normalizedExePath)
+  if (relativeExecutableName.toLowerCase() !== currentExecutableName.toLowerCase()) {
+    return null
+  }
+
+  const relativeDir = relativeSegments.slice(0, -1).join('/')
+  if (!relativeDir) return executableDir
+
+  const suffixToStrip = `/${relativeDir}`
+  const stripped = stripSuffixIgnoreCase(executableDir, suffixToStrip)
+  return stripped ? normalizePath(stripped) : null
+}
+
+function normalizeRelativePath(raw?: string): string | null {
+  if (!raw) return null
+
+  let normalized = normalizePath(raw)
+  while (normalized.startsWith('./')) {
+    normalized = normalized.slice(2)
+  }
+
+  if (!normalized) return null
+  if (isLikelyAbsolutePath(normalized)) return null
+
+  const segments = normalized.split('/').filter(Boolean)
+  if (segments.length === 0) return null
+  if (segments.some((segment) => segment === '.' || segment === '..')) return null
+
+  return segments.join('/')
+}
+
+function stripSuffixIgnoreCase(raw: string, suffix: string): string | null {
+  const normalizedRaw = normalizePath(raw)
+  const normalizedSuffix = normalizePath(suffix)
+  if (!normalizedSuffix) return null
+
+  const rawLower = normalizedRaw.toLowerCase()
+  const suffixLower = normalizedSuffix.toLowerCase()
+  if (!rawLower.endsWith(suffixLower)) return null
+
+  const stripped = normalizedRaw.slice(0, normalizedRaw.length - normalizedSuffix.length)
+  if (!stripped) return normalizedRaw.startsWith('/') ? '/' : null
+  if (/^[A-Za-z]:$/.test(stripped)) return `${stripped}/`
+
+  return stripped
 }

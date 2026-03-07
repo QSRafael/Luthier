@@ -83,4 +83,30 @@ describe('deriveImportedRuntimePathsFromMainExecutable', () => {
       gameRootManualOverride: false,
     })
   })
+
+  it('uses relative_exe_path to infer game root above executable directory', () => {
+    expect(
+      deriveImportedRuntimePathsFromMainExecutable(
+        '/home/rafael/Games/Age of Empires III/age3y.exe',
+        './Age of Empires III/age3y.exe'
+      )
+    ).toEqual({
+      gameRoot: '/home/rafael/Games',
+      exePath: '/home/rafael/Games/Age of Empires III/age3y.exe',
+      gameRootManualOverride: true,
+    })
+  })
+
+  it('falls back to executable directory when relative_exe_path does not match executable name', () => {
+    expect(
+      deriveImportedRuntimePathsFromMainExecutable(
+        '/home/rafael/Games/Age of Empires III/age3y.exe',
+        './Age of Empires III/other.exe'
+      )
+    ).toEqual({
+      gameRoot: '/home/rafael/Games/Age of Empires III',
+      exePath: '/home/rafael/Games/Age of Empires III/age3y.exe',
+      gameRootManualOverride: false,
+    })
+  })
 })

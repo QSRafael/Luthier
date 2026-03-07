@@ -227,7 +227,10 @@ export function useLuthierController() {
     const siblingExecutablePath =
       source === 'orchestrator' && sourcePath ? resolveSiblingMainExecutablePath(sourcePath) : null
     const importedRuntimePaths = siblingExecutablePath
-      ? deriveImportedRuntimePathsFromMainExecutable(siblingExecutablePath)
+      ? deriveImportedRuntimePathsFromMainExecutable(
+          siblingExecutablePath,
+          importedConfig.relative_exe_path
+        )
       : null
     if (importedRuntimePaths) {
       setGameRoot(importedRuntimePaths.gameRoot)
