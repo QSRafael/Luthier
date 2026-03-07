@@ -3,7 +3,7 @@
 Luthier is a Linux desktop application that builds portable native launchers for Windows games.
 
 For each game, Luthier generates a Linux executable next to the game `.exe`.  
-That generated executable (internally, **Luthier Orchestrator**) carries an embedded payload with launch policy, runtime preferences, compatibility options, and setup rules.
+That generated executable (internally, **Luthier Orchestrator**) carries an embedded GOASv2 asset container with launch policy, runtime preferences, compatibility options, and setup rules.
 
 ## Product Overview
 
@@ -107,9 +107,10 @@ The generated Orchestrator supports:
 | --- | --- |
 | `--help` | Print usage and examples. |
 | `--doctor` | Run categorized requirement checks and print result. |
-| `--show-payload` | Print embedded payload (hero base64 omitted). |
-| `--show-base64-hero-image` | Print payload including splash hero base64. |
-| `--save-payload` | Save embedded payload as `<executable-name>-payload.json` in game root. |
+| `--show-manifest` | Print embedded GOASv2 manifest. |
+| `--extract-config [--out <path>]` | Extract embedded `config_json` asset (stdout by default). |
+| `--extract-hero-image [--out <path>]` | Extract embedded `hero_image` asset. |
+| `--extract-icon [--out <path>]` | Extract embedded `icon_png` asset. |
 | `--set-mangohud on/off/default` | Override optional MangoHud state. |
 | `--set-gamescope on/off/default` | Override optional Gamescope state. |
 | `--set-gamemode on/off/default` | Override optional GameMode state. |
@@ -132,7 +133,7 @@ The generated Orchestrator supports:
 When multiple flags are provided, execution is deterministic:
 
 1. `--doctor`
-2. payload output actions (`--show-payload`, `--show-base64-hero-image`, `--save-payload`)
+2. payload output/extract actions (`--show-manifest`, `--extract-config`, `--extract-hero-image`, `--extract-icon`)
 3. override mutations (`--set-*`)
 4. execution stage (`--play` or `--play-splash`, otherwise `--winecfg`)
 
@@ -145,10 +146,32 @@ game --play
 game --play-splash
 game --set-mangohud on --set-gamescope off
 game --set-mangohud off --play
-game --show-payload
-game --show-base64-hero-image
-game --save-payload
+game --show-manifest
+game --extract-config --out ./payload.json
+game --extract-hero-image
+game --extract-icon
 ```
+
+## Embedded Container Format (GOASv2)
+
+Luthier embeds launcher data using a strict typed binary container:
+
+- Required asset:
+  - `config_json`
+- Optional assets:
+  - `hero_image`
+  - `icon_png`
+
+No other asset types are accepted. This allowlist is intentional for parser security and auditability.
+
+At parse time, the orchestrator validates:
+
+- container magic/version,
+- manifest checksum,
+- per-entry checksum,
+- offset/length bounds (overflow-safe),
+- required `config_json`,
+- maximum one entry per asset type.
 
 ## Orchestrator Play Flow
 
