@@ -16,8 +16,9 @@ use luthier_orchestrator_core::observability::{new_trace_id, LogLevel};
 
 use crate::cli::Cli;
 use crate::commands::{
-    run_config_command, run_doctor_command, run_play, run_save_payload_command,
-    run_show_payload_command, run_winecfg_command,
+    run_config_command, run_doctor_command, run_extract_config_command,
+    run_extract_hero_image_command, run_extract_icon_command, run_play, run_show_manifest_command,
+    run_winecfg_command,
 };
 use crate::infrastructure::payload_loader::try_load_embedded_config;
 use crate::logging::log_event;
@@ -71,9 +72,11 @@ fn log_startup_event(trace_id: &str, cli: &Cli) {
             "play_splash": cli.play_splash,
             "doctor": cli.doctor,
             "winecfg": cli.winecfg,
-            "show_payload": cli.show_payload,
-            "show_base64_hero_image": cli.show_hero_image_base64,
-            "save_payload": cli.save_payload,
+            "show_manifest": cli.show_manifest,
+            "extract_config": cli.extract_config,
+            "extract_hero_image": cli.extract_hero_image,
+            "extract_icon": cli.extract_icon,
+            "out": cli.out.as_ref().map(|v| v.display().to_string()),
             "lang": cli.lang,
             "set_mangohud": cli.set_mangohud.as_ref().map(|v| format!("{v:?}")),
             "set_gamescope": cli.set_gamescope.as_ref().map(|v| format!("{v:?}")),
@@ -92,7 +95,12 @@ fn log_startup_event(trace_id: &str, cli: &Cli) {
 }
 
 fn should_log_startup_event(cli: &Cli) -> bool {
-    if cli.doctor || cli.show_payload || cli.show_hero_image_base64 || cli.save_payload {
+    if cli.doctor
+        || cli.show_manifest
+        || cli.extract_config
+        || cli.extract_hero_image
+        || cli.extract_icon
+    {
         return false;
     }
 
@@ -108,26 +116,38 @@ fn route_explicit_commands(trace_id: &str, cli: &Cli) -> anyhow::Result<bool> {
         run_doctor_command(trace_id).context("doctor command failed")?;
     }
 
-    if cli.show_payload {
-        run_show_payload_command(trace_id, false)
-            .context("failed to print embedded payload from current executable")?;
+    let has_extract_command = cli.extract_config || cli.extract_hero_image || cli.extract_icon;
+    if cli.out.is_some() && !has_extract_command {
+        return Err(anyhow::anyhow!("--out requires an extract command"));
     }
 
-    if cli.show_hero_image_base64 {
-        run_show_payload_command(trace_id, true)
-            .context("failed to print embedded payload with hero image base64")?;
+    if cli.show_manifest {
+        run_show_manifest_command(trace_id)
+            .context("failed to print embedded asset container manifest")?;
     }
 
-    if cli.save_payload {
-        run_save_payload_command(trace_id).context("failed to save embedded payload")?;
+    if cli.extract_config {
+        run_extract_config_command(trace_id, cli.out.as_deref())
+            .context("failed to extract embedded config asset")?;
+    }
+
+    if cli.extract_hero_image {
+        run_extract_hero_image_command(trace_id, cli.out.as_deref())
+            .context("failed to extract embedded hero image asset")?;
+    }
+
+    if cli.extract_icon {
+        run_extract_icon_command(trace_id, cli.out.as_deref())
+            .context("failed to extract embedded icon asset")?;
     }
 
     if has_config_override_flags(cli) {
         let should_print_config_output = !has_execution_stage_requested(cli)
             && !cli.doctor
-            && !cli.show_payload
-            && !cli.show_hero_image_base64
-            && !cli.save_payload;
+            && !cli.show_manifest
+            && !cli.extract_config
+            && !cli.extract_hero_image
+            && !cli.extract_icon;
         run_config_command(trace_id, cli, should_print_config_output)
             .context("failed to apply runtime override flags")?;
     }
@@ -178,9 +198,11 @@ fn has_cli_actions(cli: &Cli) -> bool {
         || cli.play_splash
         || cli.doctor
         || cli.winecfg
-        || cli.show_payload
-        || cli.show_hero_image_base64
-        || cli.save_payload
+        || cli.show_manifest
+        || cli.extract_config
+        || cli.extract_hero_image
+        || cli.extract_icon
+        || cli.out.is_some()
         || has_config_override_flags(cli)
 }
 
@@ -190,6 +212,6 @@ fn has_execution_stage_requested(cli: &Cli) -> bool {
 
 fn print_noop_hint() {
     println!(
-        "Nada para executar. Use --show-payload, --show-base64-hero-image, --save-payload, --doctor, --winecfg, --set-<feature> on|off|default, --play ou --play-splash."
+        "Nada para executar. Use --show-manifest, --extract-config, --extract-hero-image, --extract-icon, --doctor, --winecfg, --set-<feature> on|off|default, --play ou --play-splash."
     );
 }

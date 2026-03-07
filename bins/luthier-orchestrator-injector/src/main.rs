@@ -10,13 +10,19 @@ use luthier_orchestrator_core::observability::{
 
 #[derive(Debug, Parser)]
 #[command(name = "luthier-orchestrator-injector")]
-#[command(about = "Embeds GameConfig JSON into a base Luthier Orchestrator binary")]
+#[command(about = "Embeds typed assets into a base Luthier Orchestrator binary")]
 struct Cli {
     #[arg(long)]
     base: PathBuf,
 
     #[arg(long)]
     config: PathBuf,
+
+    #[arg(long)]
+    hero_image: Option<PathBuf>,
+
+    #[arg(long)]
+    icon_png: Option<PathBuf>,
 
     #[arg(long)]
     output: PathBuf,
@@ -40,6 +46,8 @@ fn main() -> anyhow::Result<()> {
         serde_json::json!({
             "base": cli.base,
             "config": cli.config,
+            "hero_image": cli.hero_image,
+            "icon_png": cli.icon_png,
             "output": cli.output,
         }),
     );
@@ -49,8 +57,15 @@ fn main() -> anyhow::Result<()> {
         make_executable: !cli.no_exec_bit,
     };
 
-    let result = inject_from_files(&cli.base, &cli.config, &cli.output, options)
-        .context("failed to inject config payload into binary")?;
+    let result = inject_from_files(
+        &cli.base,
+        &cli.config,
+        cli.hero_image.as_deref(),
+        cli.icon_png.as_deref(),
+        &cli.output,
+        options,
+    )
+    .context("failed to inject typed assets payload into binary")?;
 
     log_event(
         &trace_id,
