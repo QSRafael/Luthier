@@ -29,8 +29,6 @@ pub struct GameConfig {
 pub struct SplashConfig {
     #[serde(default)]
     pub hero_image_url: String,
-    #[serde(default)]
-    pub hero_image_data_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
