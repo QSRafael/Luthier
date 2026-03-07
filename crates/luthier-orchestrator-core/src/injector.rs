@@ -6,7 +6,7 @@ use sha2::{Digest, Sha256};
 
 use crate::config::GameConfig;
 use crate::error::OrchestratorError;
-use crate::trailer::{append_config, extract_config_json};
+use crate::trailer::{append_asset_bundle, extract_asset_bundle, AssetBundleInput};
 
 #[derive(Debug, Clone, Copy)]
 pub struct InjectOptions {
@@ -30,6 +30,14 @@ pub struct InjectionResult {
     pub config_sha256_hex: String,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct InjectPayloadParts<'a> {
+    pub base_bytes: &'a [u8],
+    pub config_json: &'a [u8],
+    pub hero_image: Option<&'a [u8]>,
+    pub icon_png: Option<&'a [u8]>,
+}
+
 pub fn inject_from_files(
     base_binary_path: &Path,
     config_json_path: &Path,
@@ -39,19 +47,33 @@ pub fn inject_from_files(
     let base_bytes = fs::read(base_binary_path)?;
     let config_bytes = fs::read(config_json_path)?;
 
-    inject_from_parts(&base_bytes, &config_bytes, output_path, options)
+    inject_from_parts(
+        InjectPayloadParts {
+            base_bytes: &base_bytes,
+            config_json: &config_bytes,
+            hero_image: None,
+            icon_png: None,
+        },
+        output_path,
+        options,
+    )
 }
 
 pub fn inject_from_parts(
-    base_bytes: &[u8],
-    config_bytes: &[u8],
+    parts: InjectPayloadParts<'_>,
     output_path: &Path,
     options: InjectOptions,
 ) -> Result<InjectionResult, OrchestratorError> {
-    // Validate schema before embedding.
-    let _: GameConfig = serde_json::from_slice(config_bytes)?;
+    let _: GameConfig = serde_json::from_slice(parts.config_json)?;
 
-    let injected = append_config(base_bytes, config_bytes);
+    let injected = append_asset_bundle(
+        parts.base_bytes,
+        AssetBundleInput {
+            config_json: parts.config_json,
+            hero_image: parts.hero_image,
+            icon_png: parts.icon_png,
+        },
+    );
 
     if options.backup_existing && output_path.exists() {
         let backup_path = backup_path_for(output_path);
@@ -64,23 +86,30 @@ pub fn inject_from_parts(
         set_executable_bit(output_path)?;
     }
 
-    // Verify immediately so the luthier app can fail early with actionable error.
-    let extracted = extract_config_from_file(output_path)?;
-    if extracted != config_bytes {
+    let extracted = extract_assets_from_file(output_path)?;
+    if extracted.config_json != parts.config_json
+        || extracted.hero_image.as_deref() != parts.hero_image
+        || extracted.icon_png.as_deref() != parts.icon_png
+    {
         return Err(OrchestratorError::VerificationFailed);
     }
 
     Ok(InjectionResult {
         output_path: output_path.to_path_buf(),
-        config_len: config_bytes.len(),
-        config_sha256_hex: sha256_hex(config_bytes),
+        config_len: parts.config_json.len(),
+        config_sha256_hex: sha256_hex(parts.config_json),
     })
 }
 
 pub fn extract_config_from_file(path: &Path) -> Result<Vec<u8>, OrchestratorError> {
+    Ok(extract_assets_from_file(path)?.config_json)
+}
+
+pub fn extract_assets_from_file(
+    path: &Path,
+) -> Result<crate::trailer::PayloadAssets, OrchestratorError> {
     let bin = fs::read(path)?;
-    let cfg = extract_config_json(&bin)?;
-    Ok(cfg.to_vec())
+    extract_asset_bundle(&bin)
 }
 
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), OrchestratorError> {
@@ -152,7 +181,6 @@ fn to_lower_hex(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
@@ -181,6 +209,32 @@ mod tests {
             extract_config_from_file(&out_path).expect("extract"),
             cfg_bytes
         );
+
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn extracts_individual_assets() {
+        let root = make_temp_dir("extract-assets");
+        let out_path = root.join("luthier-orchestrator");
+
+        let cfg_bytes = serde_json::to_vec(&sample_config()).expect("serialize config");
+        inject_from_parts(
+            InjectPayloadParts {
+                base_bytes: b"BASE",
+                config_json: &cfg_bytes,
+                hero_image: Some(b"hero"),
+                icon_png: Some(b"icon"),
+            },
+            &out_path,
+            InjectOptions::default(),
+        )
+        .expect("inject");
+
+        let extracted = extract_assets_from_file(&out_path).expect("extract assets");
+        assert_eq!(extracted.config_json, cfg_bytes);
+        assert_eq!(extracted.hero_image.as_deref(), Some(b"hero".as_slice()));
+        assert_eq!(extracted.icon_png.as_deref(), Some(b"icon".as_slice()));
 
         fs::remove_dir_all(root).expect("cleanup");
     }
@@ -222,109 +276,67 @@ mod tests {
     }
 
     fn sample_config() -> GameConfig {
-        GameConfig {
-            config_version: 1,
-            created_by: "test".to_string(),
-            game_name: "Sample Game".to_string(),
-            exe_hash: "a1b2c3".to_string(),
-            relative_exe_path: "./game.exe".to_string(),
-            launch_args: vec!["-windowed".to_string()],
-            runner: RunnerConfig {
-                proton_version: "GE-Proton9-10".to_string(),
-                auto_update: true,
-                esync: true,
-                fsync: true,
-                runtime_preference: RuntimePreference::Auto,
+        serde_json::from_value(serde_json::json!({
+            "config_version": 1,
+            "created_by": "test",
+            "game_name": "Sample",
+            "exe_hash": "abc123",
+            "relative_exe_path": "./game.exe",
+            "launch_args": [],
+            "runner": {
+                "proton_version": "GE-Proton9-10",
+                "auto_update": true,
+                "esync": true,
+                "fsync": true,
+                "runtime_preference": "Auto"
             },
-            environment: EnvConfig {
-                gamemode: FeatureState::OptionalOn,
-                gamescope: GamescopeConfig {
-                    state: FeatureState::OptionalOff,
-                    resolution: Some("1920x1080".to_string()),
-                    fsr: false,
-                    game_width: String::new(),
-                    game_height: String::new(),
-                    output_width: String::new(),
-                    output_height: String::new(),
-                    upscale_method: "fsr".to_string(),
-                    window_type: "fullscreen".to_string(),
-                    enable_limiter: false,
-                    fps_limiter: String::new(),
-                    fps_limiter_no_focus: String::new(),
-                    force_grab_cursor: false,
-                    additional_options: String::new(),
-                },
-                mangohud: FeatureState::OptionalOff,
-                prime_offload: FeatureState::OptionalOff,
-                custom_vars: HashMap::new(),
+            "environment": {
+                "gamemode": "OptionalOn",
+                "gamescope": {"state":"OptionalOff","resolution":null,"fsr":false},
+                "mangohud": "OptionalOff",
+                "prime_offload": "OptionalOff",
+                "custom_vars": {}
             },
-            compatibility: CompatibilityConfig {
-                wine_wayland: FeatureState::OptionalOff,
-                hdr: FeatureState::OptionalOff,
-                auto_dxvk_nvapi: FeatureState::OptionalOff,
-                easy_anti_cheat_runtime: FeatureState::OptionalOff,
-                battleye_runtime: FeatureState::OptionalOff,
-                staging: FeatureState::OptionalOff,
-                wrapper_commands: Vec::new(),
+            "compatibility": {
+                "wine_wayland": "OptionalOff",
+                "hdr": "OptionalOff",
+                "auto_dxvk_nvapi": "OptionalOff",
+                "easy_anti_cheat_runtime": "OptionalOff",
+                "battleye_runtime": "OptionalOff",
+                "staging": "OptionalOff",
+                "wrapper_commands": []
             },
-            winecfg: WinecfgConfig {
-                windows_version: None,
-                dll_overrides: Vec::new(),
-                auto_capture_mouse: WinecfgFeaturePolicy {
-                    state: FeatureState::OptionalOn,
-                    use_wine_default: true,
-                },
-                window_decorations: WinecfgFeaturePolicy {
-                    state: FeatureState::OptionalOn,
-                    use_wine_default: true,
-                },
-                window_manager_control: WinecfgFeaturePolicy {
-                    state: FeatureState::OptionalOn,
-                    use_wine_default: true,
-                },
-                virtual_desktop: VirtualDesktopConfig {
-                    state: WinecfgFeaturePolicy {
-                        state: FeatureState::OptionalOff,
-                        use_wine_default: true,
-                    },
-                    resolution: None,
-                },
-                screen_dpi: None,
-                desktop_integration: WinecfgFeaturePolicy {
-                    state: FeatureState::OptionalOn,
-                    use_wine_default: true,
-                },
-                mime_associations: WinecfgFeaturePolicy {
-                    state: FeatureState::OptionalOff,
-                    use_wine_default: true,
-                },
-                desktop_folders: Vec::new(),
-                drives: Vec::new(),
-                audio_driver: None,
+            "winecfg": {
+                "windows_version": null,
+                "dll_overrides": [],
+                "auto_capture_mouse": {"state":"OptionalOff","use_wine_default":false},
+                "window_decorations": {"state":"OptionalOff","use_wine_default":false},
+                "window_manager_control": {"state":"OptionalOff","use_wine_default":false},
+                "virtual_desktop": {"state":{"state":"OptionalOff","use_wine_default":false},"resolution":null},
+                "screen_dpi": null,
+                "desktop_integration": {"state":"OptionalOff","use_wine_default":false},
+                "mime_associations": {"state":"OptionalOff","use_wine_default":false},
+                "desktop_folders": [],
+                "drives": [],
+                "audio_driver": null
             },
-            dependencies: Vec::new(),
-            extra_system_dependencies: Vec::new(),
-            requirements: RequirementsConfig {
-                runtime: RuntimePolicy {
-                    strict: false,
-                    primary: RuntimeCandidate::ProtonNative,
-                    fallback_order: vec![RuntimeCandidate::Wine],
-                },
-                umu: FeatureState::OptionalOn,
-                winetricks: FeatureState::OptionalOff,
-                gamescope: FeatureState::OptionalOff,
-                gamemode: FeatureState::OptionalOn,
-                mangohud: FeatureState::OptionalOff,
-                steam_runtime: FeatureState::OptionalOff,
+            "dependencies": [],
+            "extra_system_dependencies": [],
+            "requirements": {
+                "runtime": {"strict": false, "primary": "ProtonUmu", "fallback_order": ["ProtonUmu","Wine"]},
+                "umu": "OptionalOn",
+                "winetricks": "OptionalOff",
+                "gamescope": "OptionalOff",
+                "gamemode": "OptionalOn",
+                "mangohud": "OptionalOff",
+                "steam_runtime": "OptionalOff"
             },
-            registry_keys: Vec::new(),
-            integrity_files: vec!["./data/core.dll".to_string()],
-            folder_mounts: Vec::new(),
-            splash: SplashConfig::default(),
-            scripts: ScriptsConfig {
-                pre_launch: String::new(),
-                post_launch: String::new(),
-            },
-        }
+            "registry_keys": [],
+            "integrity_files": [],
+            "folder_mounts": [],
+            "splash": {"hero_image_url":"","hero_image_data_url":""},
+            "scripts": {"pre_launch":"","post_launch":""}
+        }))
+        .expect("valid sample config")
     }
 }

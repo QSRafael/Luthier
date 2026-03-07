@@ -49,7 +49,7 @@ pub fn cycle_override_for_key(overrides: &mut RuntimeOverrides, key: &str) {
 }
 
 /// Creates and positions the splash window with the proper scale.
-pub fn create_window(title: &str) -> anyhow::Result<Window> {
+pub fn create_window(title: &str, embedded_icon_png: Option<&[u8]>) -> anyhow::Result<Window> {
     let screen = detect_screen_size().unwrap_or((1280, 720));
     let scale = choose_splash_window_scale(screen);
     let mut window = Window::new(
@@ -73,7 +73,7 @@ pub fn create_window(title: &str) -> anyhow::Result<Window> {
     // Some X11 WMs only honor position after the window is mapped once.
     window.update();
     let _ = try_center_window(&mut window, scale.factor);
-    let _ = try_set_window_icon_from_sidecar(&mut window);
+    let _ = try_set_window_icon(&mut window, embedded_icon_png);
     window.set_target_fps(FPS as usize);
     Ok(window)
 }
@@ -152,7 +152,10 @@ pub fn detect_screen_size() -> Option<(usize, usize)> {
     None
 }
 
-pub fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<()> {
+pub fn try_set_window_icon(
+    window: &mut Window,
+    embedded_icon_png: Option<&[u8]>,
+) -> anyhow::Result<()> {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = window;
@@ -163,6 +166,26 @@ pub fn try_set_window_icon_from_sidecar(window: &mut Window) -> anyhow::Result<(
     {
         if is_wayland_session_for_splash() {
             return Ok(());
+        }
+
+        let embedded_icon_png = if embedded_icon_png.is_some() {
+            embedded_icon_png.map(|v| v.to_vec())
+        } else {
+            crate::infrastructure::payload_loader::try_load_embedded_assets()
+                .ok()
+                .flatten()
+                .and_then(|assets| assets.icon_png)
+        };
+
+        if let Some(raw) = embedded_icon_png.as_deref() {
+            if let Ok(icon_buffer) = decode_png_icon_to_x11_buffer(raw) {
+                if let Ok(icon) = Icon::try_from(icon_buffer.as_slice()) {
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        window.set_icon(icon);
+                    }));
+                    return Ok(());
+                }
+            }
         }
 
         let exe = std::env::current_exe().context("failed to resolve current executable")?;

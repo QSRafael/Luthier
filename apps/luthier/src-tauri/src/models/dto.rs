@@ -10,6 +10,8 @@ pub struct CreateExecutableInput {
     pub backup_existing: bool,
     pub make_executable: bool,
     #[serde(default)]
+    pub hero_image_data_url: Option<String>,
+    #[serde(default)]
     pub icon_png_data_url: Option<String>,
 }
 

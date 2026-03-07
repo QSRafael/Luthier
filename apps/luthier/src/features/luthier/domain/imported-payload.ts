@@ -1,6 +1,5 @@
 import type { GameConfig } from '../../../models/config'
 
-const HERO_IMAGE_MASKED_HINT = 'base-64 image. use --show-base64-hero-image to see'
 const WINDOWS_LAUNCHER_EXTENSIONS = /\.(exe|bat|cmd|com)$/i
 
 export type ImportedRuntimePaths = {
@@ -20,11 +19,7 @@ export function shouldRefreshImportedHeroImage(importedConfig: GameConfig): bool
     return true
   }
 
-  if (heroImageDataUrl.startsWith('data:image/')) {
-    return false
-  }
-
-  return heroImageDataUrl.toLowerCase().startsWith(HERO_IMAGE_MASKED_HINT)
+  return heroImageDataUrl.startsWith('data:image/') ? false : true
 }
 
 export function resolveSiblingMainExecutablePath(orchestratorPath: string): string | null {

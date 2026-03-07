@@ -32,17 +32,9 @@ describe('shouldRefreshImportedHeroImage', () => {
     ).toBe(false)
   })
 
-  it('returns true when hero data url is masked placeholder', () => {
-    expect(
-      shouldRefreshImportedHeroImage(
-        makeConfig('https://img', 'base-64 image. Use --show-base64-hero-image to see')
-      )
-    ).toBe(true)
-  })
-
-  it('returns false for non-data string that is not masked placeholder', () => {
+  it('returns true for non-data string', () => {
     expect(shouldRefreshImportedHeroImage(makeConfig('https://img', 'some-random-value'))).toBe(
-      false
+      true
     )
   })
 })

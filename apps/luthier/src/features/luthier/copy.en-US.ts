@@ -79,7 +79,7 @@ export const luthierMessagesEnUS = {
   luthier_name_shown_in_splash_and_local_database: 'Name shown in splash and local database.',
   luthier_splash_hero_image: 'Splash hero image',
   luthier_hero_image_used_as_splash_background_downloaded_and_emb:
-    'Background image used by the splash. Downloaded, center-cropped (96:31), converted to WebP and embedded into the generated executable.',
+    'Background image used by the splash. Downloaded, center-cropped (96:31), converted to WebP and embedded as a typed binary asset in the generated executable.',
   luthier_hero_image_ratio_96_31_and_converted_to_webp:
     'Target aspect ratio is 96:31. Non-matching images are center-cropped and resized.',
   luthier_no_hero_image_selected: 'No hero image selected.',

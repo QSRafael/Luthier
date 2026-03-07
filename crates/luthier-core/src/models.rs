@@ -10,6 +10,8 @@ pub struct CreateOrchestratorRequest {
     pub config: GameConfig,
     pub backup_existing: bool,
     pub make_executable: bool,
+    pub hero_image_bytes: Option<Vec<u8>>,
+    pub icon_png_bytes: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

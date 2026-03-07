@@ -23,23 +23,23 @@ pub struct Cli {
     #[arg(long, help = "Run Wine configuration flow")]
     pub winecfg: bool,
 
-    #[arg(
-        long = "show-payload",
-        help = "Print embedded payload (hero base64 hidden by default)"
-    )]
-    pub show_payload: bool,
+    #[arg(long = "show-manifest", help = "Print embedded payload manifest")]
+    pub show_manifest: bool,
+
+    #[arg(long = "extract-config", help = "Extract embedded config_json asset")]
+    pub extract_config: bool,
 
     #[arg(
-        long = "show-base64-hero-image",
-        help = "Print embedded payload including splash hero base64 image"
+        long = "extract-hero-image",
+        help = "Extract embedded hero_image asset"
     )]
-    pub show_hero_image_base64: bool,
+    pub extract_hero_image: bool,
 
-    #[arg(
-        long = "save-payload",
-        help = "Save embedded payload JSON to <executable-name>-payload.json in game root"
-    )]
-    pub save_payload: bool,
+    #[arg(long = "extract-icon", help = "Extract embedded icon_png asset")]
+    pub extract_icon: bool,
+
+    #[arg(long, help = "Output file path for extraction commands")]
+    pub out: Option<String>,
 
     #[arg(
         long,

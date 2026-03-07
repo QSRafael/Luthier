@@ -114,6 +114,7 @@ export const luthierBackendApi: BackendCommandPort = {
       config_json: params.configJson,
       backup_existing: params.backupExisting,
       make_executable: params.makeExecutable,
+      hero_image_data_url: params.heroImageDataUrl,
       icon_png_data_url: params.iconPngDataUrl,
     })
   },

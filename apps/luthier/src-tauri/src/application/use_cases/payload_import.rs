@@ -223,7 +223,14 @@ mod tests {
     #[test]
     fn extracts_payload_json_from_orchestrator_binary() {
         let payload = br#"{"game_name":"Age3"}"#;
-        let injected = trailer::append_config(b"ELF-MOCK", payload);
+        let injected = trailer::append_asset_bundle(
+            b"ELF-MOCK",
+            trailer::AssetBundleInput {
+                config_json: payload,
+                hero_image: None,
+                icon_png: None,
+            },
+        );
 
         let fs = FakeFileSystem::default().with_file("/tmp/age3", injected);
         let logger = NoopLogger;

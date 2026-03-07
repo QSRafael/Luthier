@@ -3,8 +3,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context};
-use base64::{engine::general_purpose, Engine as _};
+use anyhow::Context;
 use image::imageops::FilterType;
 use luthier_orchestrator_core::doctor::{run_doctor, CheckStatus, DoctorReport};
 use luthier_orchestrator_core::GameConfig;
@@ -14,7 +13,9 @@ use crate::application::runtime_overrides::{
     apply_runtime_overrides, build_feature_view, load_runtime_overrides, save_runtime_overrides,
     RuntimeOverrides,
 };
-use crate::infrastructure::payload_loader::load_embedded_config_required;
+use crate::infrastructure::payload_loader::{
+    load_embedded_config_required, try_load_embedded_assets,
+};
 
 pub mod assets;
 pub mod child_process;
@@ -44,10 +45,12 @@ pub(crate) struct SplashWindowScale {
 
 pub fn run_splash_flow(mode: SplashLaunchMode, lang_override: Option<&str>) -> anyhow::Result<()> {
     initialize_splash_locale(lang_override);
+    let embedded_assets = try_load_embedded_assets().context("failed to load embedded assets")?;
     let mut config =
         load_embedded_config_required().context("embedded payload is required for splash mode")?;
-    let hero_background = decode_hero_background_from_config(&config)
-        .ok()
+    let hero_background = embedded_assets
+        .as_ref()
+        .and_then(|assets| decode_hero_background_from_asset(assets.hero_image.as_deref()).ok())
         .flatten()
         .map(Arc::new);
     let overrides =
@@ -190,7 +193,7 @@ fn show_prelaunch_window(
     state: &mut PrelaunchState,
     mode: SplashLaunchMode,
 ) -> anyhow::Result<PrelaunchDecision> {
-    let mut window = create_window(t(SplashTextKey::WindowTitle))?;
+    let mut window = create_window(t(SplashTextKey::WindowTitle), None)?;
     let mut buffer = vec![0u32; WIN_W * WIN_H];
     let mut last_left_down = false;
     let mut config_open = false;
@@ -330,7 +333,7 @@ fn show_doctor_block_window(
     report: &DoctorReport,
     hero_background: Option<&Arc<HeroBackground>>,
 ) -> anyhow::Result<()> {
-    let mut window = create_window(t(SplashTextKey::WindowDependencies))?;
+    let mut window = create_window(t(SplashTextKey::WindowDependencies), None)?;
     let mut buffer = vec![0u32; WIN_W * WIN_H];
     let mut last_left_down = false;
 
@@ -464,7 +467,7 @@ fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<Fe
     } else {
         outcome.game_name.trim()
     };
-    let mut window = create_window(title)?;
+    let mut window = create_window(title, None)?;
     let mut buffer = vec![0u32; WIN_W * WIN_H];
     let mut last_left_down = false;
     let mut question = 1;
@@ -508,24 +511,14 @@ fn show_post_game_feedback_window(outcome: ChildRunOutcome) -> anyhow::Result<Fe
 
 // ── Asset loading ─────────────────────────────────────────────────────────────
 
-fn decode_hero_background_from_config(
-    config: &GameConfig,
+fn decode_hero_background_from_asset(
+    hero_image: Option<&[u8]>,
 ) -> anyhow::Result<Option<HeroBackground>> {
-    let raw = config.splash.hero_image_data_url.trim();
-    if raw.is_empty() {
+    let Some(bytes) = hero_image else {
         return Ok(None);
-    }
+    };
 
-    let payload = raw
-        .split_once("base64,")
-        .map(|(_, payload)| payload.trim())
-        .ok_or_else(|| anyhow!("unsupported hero image data URL format"))?;
-    let bytes = general_purpose::STANDARD
-        .decode(payload)
-        .context("failed to decode embedded hero image data URL")?;
-
-    let decoded =
-        image::load_from_memory(&bytes).context("failed to decode embedded hero image")?;
+    let decoded = image::load_from_memory(bytes).context("failed to decode embedded hero image")?;
     let resized = decoded.resize_exact(WIN_W as u32, WIN_H as u32, FilterType::Triangle);
     let rgba = resized.to_rgba8();
 

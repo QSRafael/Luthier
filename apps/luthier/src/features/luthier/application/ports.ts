@@ -149,10 +149,9 @@ export type CreateExecutableParams = {
   backupExisting: boolean
   /** Whether to set the executable bit on the output file. */
   makeExecutable: boolean
-  /**
-   * Base-64 PNG data URL for the application icon, or `null` to skip icon
-   * embedding.
-   */
+  /** Base-64 data URL for splash hero image asset, or `null` to skip embedding. */
+  heroImageDataUrl: string | null
+  /** Base-64 PNG data URL for the application icon asset, or `null` to skip embedding. */
   iconPngDataUrl: string | null
 }
 

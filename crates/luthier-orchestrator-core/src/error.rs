@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::trailer::AssetType;
+
 #[derive(Debug, Error)]
 pub enum OrchestratorError {
     #[error("payload trailer not found")]
@@ -11,8 +13,20 @@ pub enum OrchestratorError {
     #[error("payload length is invalid")]
     InvalidLength,
 
-    #[error("payload integrity check failed")]
-    InvalidChecksum,
+    #[error("manifest contains invalid asset type tag: {0}")]
+    InvalidAssetType(u8),
+
+    #[error("manifest contains duplicate asset type: {0:?}")]
+    DuplicateAssetType(AssetType),
+
+    #[error("manifest offset/length is out of bounds")]
+    InvalidManifestBounds,
+
+    #[error("asset checksum validation failed: {0:?}")]
+    InvalidAssetChecksum(AssetType),
+
+    #[error("required asset missing: {0:?}")]
+    MissingRequiredAsset(AssetType),
 
     #[error("output path has no parent directory")]
     MissingOutputParent,

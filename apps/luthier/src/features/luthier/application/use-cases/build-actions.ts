@@ -12,6 +12,7 @@ type BuildActionsStateSnapshot = {
   gameRoot: string
   configPreview: string
   outputPath: string
+  heroImageDataUrl: string
   iconPreviewPath: string
   createExecutableBlockedReason: string
   hashingExePath: string
@@ -107,6 +108,7 @@ export function createBuildActionsUseCase({
         configJson: snapshot.configPreview,
         backupExisting: true,
         makeExecutable: true,
+        heroImageDataUrl: snapshot.heroImageDataUrl.trim() || null,
         iconPngDataUrl: snapshot.iconPreviewPath.trim() || null,
       })
       state.setResultJson(JSON.stringify(result, null, 2))

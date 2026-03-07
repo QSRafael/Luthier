@@ -26,6 +26,7 @@ export function createLuthierBuildActions(
         gameRoot: state.gameRoot(),
         configPreview: computed.configPreview(),
         outputPath: state.outputPath(),
+        heroImageDataUrl: state.config().splash.hero_image_data_url,
         iconPreviewPath: state.iconPreviewPath(),
         createExecutableBlockedReason: computed.createExecutableBlockedReason(),
         hashingExePath: state.hashingExePath(),

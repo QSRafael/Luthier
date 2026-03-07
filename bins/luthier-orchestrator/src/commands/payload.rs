@@ -1,40 +1,74 @@
 use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Context};
+use luthier_orchestrator_core::trailer::AssetType;
 
-use crate::infrastructure::payload_loader::load_embedded_config_required;
+use crate::infrastructure::payload_loader::{asset_type_name, try_load_embedded_assets};
 
-const HERO_IMAGE_MASKED_HINT: &str = "base-64 image. Use --show-base64-hero-image to see";
+pub fn run_show_manifest_command(_trace_id: &str) -> anyhow::Result<()> {
+    let assets =
+        try_load_embedded_assets()?.ok_or_else(|| anyhow!("embedded payload trailer not found"))?;
 
-pub fn run_show_payload_command(
-    _trace_id: &str,
-    include_hero_image_base64: bool,
-) -> anyhow::Result<()> {
-    let parsed = load_embedded_config_required()?;
-    let mut payload = parsed.clone();
+    let entries = assets
+        .manifest
+        .entries
+        .iter()
+        .map(|entry| {
+            serde_json::json!({
+                "type": asset_type_name(entry.asset_type),
+                "offset": entry.offset,
+                "len": entry.len,
+                "sha256": to_lower_hex(&entry.sha256),
+            })
+        })
+        .collect::<Vec<_>>();
 
-    if !include_hero_image_base64 && !payload.splash.hero_image_data_url.trim().is_empty() {
-        payload.splash.hero_image_data_url = HERO_IMAGE_MASKED_HINT.to_string();
-    }
-
-    let pretty = serde_json::to_string_pretty(&payload).context("failed to format payload")?;
-    println!("{pretty}");
-
+    println!("{}", serde_json::to_string_pretty(&entries)?);
     Ok(())
 }
 
-pub fn run_save_payload_command(_trace_id: &str) -> anyhow::Result<()> {
-    let parsed = load_embedded_config_required()?;
-    let game_root = current_game_root()?;
-    let output_path = game_root.join(payload_filename_for_current_executable()?);
+pub fn run_extract_config_command(_trace_id: &str, out: Option<&str>) -> anyhow::Result<()> {
+    extract_asset(AssetType::ConfigJson, out)
+}
 
-    let payload_bytes =
-        serde_json::to_vec_pretty(&parsed).context("failed to serialize payload for save")?;
-    fs::write(&output_path, payload_bytes)
-        .with_context(|| format!("failed to write payload file at {}", output_path.display()))?;
+pub fn run_extract_hero_image_command(_trace_id: &str, out: Option<&str>) -> anyhow::Result<()> {
+    extract_asset(AssetType::HeroImage, out)
+}
 
-    println!("{}", output_path.display());
+pub fn run_extract_icon_command(_trace_id: &str, out: Option<&str>) -> anyhow::Result<()> {
+    extract_asset(AssetType::IconPng, out)
+}
+
+fn extract_asset(asset_type: AssetType, out: Option<&str>) -> anyhow::Result<()> {
+    let assets =
+        try_load_embedded_assets()?.ok_or_else(|| anyhow!("embedded payload trailer not found"))?;
+
+    let bytes = match asset_type {
+        AssetType::ConfigJson => Some(assets.config_json),
+        AssetType::HeroImage => assets.hero_image,
+        AssetType::IconPng => assets.icon_png,
+    }
+    .ok_or_else(|| anyhow!("asset not found: {}", asset_type_name(asset_type)))?;
+
+    let output = resolve_output_path(asset_type, out)?;
+    fs::write(&output, bytes)
+        .with_context(|| format!("failed to write extracted asset at {}", output.display()))?;
+    println!("{}", output.display());
     Ok(())
+}
+
+fn resolve_output_path(asset_type: AssetType, out: Option<&str>) -> anyhow::Result<PathBuf> {
+    if let Some(value) = out {
+        return Ok(PathBuf::from(value));
+    }
+
+    let game_root = current_game_root()?;
+    let file_name = match asset_type {
+        AssetType::ConfigJson => "payload-config.json",
+        AssetType::HeroImage => "payload-hero-image.bin",
+        AssetType::IconPng => "payload-icon.png",
+    };
+    Ok(game_root.join(file_name))
 }
 
 fn current_game_root() -> anyhow::Result<PathBuf> {
@@ -48,15 +82,12 @@ fn current_game_root() -> anyhow::Result<PathBuf> {
     Ok(parent.to_path_buf())
 }
 
-fn payload_filename_for_current_executable() -> anyhow::Result<String> {
-    let exe_path = std::env::current_exe().context("failed to resolve current executable path")?;
-    let executable_name = exe_path
-        .file_stem()
-        .or_else(|| exe_path.file_name())
-        .and_then(|value| value.to_str())
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| anyhow!("failed to resolve executable name for payload file"))?;
-
-    Ok(format!("{executable_name}-payload.json"))
+fn to_lower_hex(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        out.push(HEX[(b >> 4) as usize] as char);
+        out.push(HEX[(b & 0x0f) as usize] as char);
+    }
+    out
 }

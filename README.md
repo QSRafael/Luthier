@@ -95,9 +95,20 @@ Luthier currently covers the following tabs and domains:
 
 ### 8) Review & Generate
 - Consolidated summary of active configuration.
-- Full JSON payload preview.
+- Payload manifest inspection and typed asset extraction.
 - Validation errors before generation.
 - Test action and create executable action.
+
+### Embedded payload container (v2)
+
+Luthier Orchestrator now uses a binary payload container named `GOASv2` (no legacy fallback in main paths).
+
+Allowed embedded asset types are strictly limited to:
+- `config_json` (required)
+- `hero_image` (optional)
+- `icon_png` (optional)
+
+The parser validates magic/version, manifest bounds, duplicate type entries, required config presence, and per-entry checksum integrity. Any unknown asset type is rejected to keep the format auditable and safe by default.
 
 ## Luthier Orchestrator CLI (Generated Game Executable)
 
@@ -107,9 +118,10 @@ The generated Orchestrator supports:
 | --- | --- |
 | `--help` | Print usage and examples. |
 | `--doctor` | Run categorized requirement checks and print result. |
-| `--show-payload` | Print embedded payload (hero base64 omitted). |
-| `--show-base64-hero-image` | Print payload including splash hero base64. |
-| `--save-payload` | Save embedded payload as `<executable-name>-payload.json` in game root. |
+| `--show-manifest` | Print embedded payload v2 manifest (allowlisted typed assets). |
+| `--extract-config [--out <path>]` | Extract embedded `config_json` asset. |
+| `--extract-hero-image [--out <path>]` | Extract embedded `hero_image` asset when present. |
+| `--extract-icon [--out <path>]` | Extract embedded `icon_png` asset when present. |
 | `--set-mangohud on/off/default` | Override optional MangoHud state. |
 | `--set-gamescope on/off/default` | Override optional Gamescope state. |
 | `--set-gamemode on/off/default` | Override optional GameMode state. |
@@ -132,7 +144,7 @@ The generated Orchestrator supports:
 When multiple flags are provided, execution is deterministic:
 
 1. `--doctor`
-2. payload output actions (`--show-payload`, `--show-base64-hero-image`, `--save-payload`)
+2. payload output actions (`--show-manifest`, `--extract-config`, `--extract-hero-image`, `--extract-icon`)
 3. override mutations (`--set-*`)
 4. execution stage (`--play` or `--play-splash`, otherwise `--winecfg`)
 
@@ -145,9 +157,10 @@ game --play
 game --play-splash
 game --set-mangohud on --set-gamescope off
 game --set-mangohud off --play
-game --show-payload
-game --show-base64-hero-image
-game --save-payload
+game --show-manifest
+game --extract-config
+game --extract-hero-image
+game --extract-icon
 ```
 
 ## Orchestrator Play Flow

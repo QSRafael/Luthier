@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use base64::{engine::general_purpose, Engine as _};
 use luthier_core::CreateOrchestratorRequest;
 use luthier_orchestrator_core::GameConfig;
 
@@ -45,6 +46,7 @@ impl<'a> CreateExecutableUseCase<'a> {
                 "output_path": &input.output_path,
                 "backup_existing": input.backup_existing,
                 "make_executable": input.make_executable,
+                "has_hero_image_data_url": input.hero_image_data_url.as_ref().is_some_and(|value| !value.trim().is_empty()),
                 "has_icon_png_data_url": input.icon_png_data_url.as_ref().is_some_and(|value| !value.trim().is_empty()),
                 "hints_count": base_binary_hints.len(),
             }),
@@ -66,12 +68,27 @@ impl<'a> CreateExecutableUseCase<'a> {
             }),
         );
 
+        let hero_image_bytes = parse_data_url_asset(
+            input.hero_image_data_url.as_deref(),
+            &["image/webp", "image/png", "image/jpeg"],
+            max_hero_image_bytes(),
+            "hero image",
+        )?;
+        let icon_png_bytes = parse_data_url_asset(
+            input.icon_png_data_url.as_deref(),
+            &["image/png"],
+            max_icon_png_bytes(),
+            "icon",
+        )?;
+
         let request = CreateOrchestratorRequest {
             base_binary_path: resolved_base_binary_path.clone(),
             output_path: PathBuf::from(&input.output_path),
             config,
             backup_existing: input.backup_existing,
             make_executable: input.make_executable,
+            hero_image_bytes,
+            icon_png_bytes,
         };
 
         self.luthier_core
@@ -206,6 +223,69 @@ impl<'a> CreateExecutableUseCase<'a> {
             context,
         });
     }
+}
+
+fn parse_data_url_asset(
+    value: Option<&str>,
+    allowed_mimes: &[&str],
+    max_size_bytes: usize,
+    label: &str,
+) -> BackendResult<Option<Vec<u8>>> {
+    let Some(raw) = value else {
+        return Ok(None);
+    };
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Ok(None);
+    }
+
+    let (header, payload) = raw
+        .split_once(',')
+        .ok_or_else(|| BackendError::validation(format!("{label} data URL is invalid")))?;
+
+    if !header.starts_with("data:") || !header.ends_with(";base64") {
+        return Err(BackendError::validation(format!(
+            "{label} must be provided as base64 data URL"
+        )));
+    }
+
+    let mime = &header[5..header.len() - 7];
+    if !allowed_mimes
+        .iter()
+        .any(|item| item.eq_ignore_ascii_case(mime))
+    {
+        return Err(BackendError::validation(format!(
+            "{label} mime type not allowed: {mime}"
+        )));
+    }
+
+    let bytes = general_purpose::STANDARD
+        .decode(payload.trim())
+        .map_err(|err| {
+            BackendError::validation(format!("failed to decode {label} data URL: {err}"))
+        })?;
+
+    if bytes.len() > max_size_bytes {
+        return Err(BackendError::validation(format!(
+            "{label} exceeds max size of {max_size_bytes} bytes"
+        )));
+    }
+
+    Ok(Some(bytes))
+}
+
+fn max_hero_image_bytes() -> usize {
+    std::env::var("LUTHIER_MAX_HERO_IMAGE_BYTES")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(8 * 1024 * 1024)
+}
+
+fn max_icon_png_bytes() -> usize {
+    std::env::var("LUTHIER_MAX_ICON_PNG_BYTES")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(1024 * 1024)
 }
 
 pub fn create_executable_command(

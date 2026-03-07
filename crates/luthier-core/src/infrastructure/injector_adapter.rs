@@ -33,7 +33,9 @@ impl From<OrchestratorInjectionOptions> for OrchestratorInjectOptions {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct OrchestratorInjectionRequest<'a> {
     pub base_bytes: &'a [u8],
-    pub config_bytes: &'a [u8],
+    pub config_json_bytes: &'a [u8],
+    pub hero_image_bytes: Option<&'a [u8]>,
+    pub icon_png_bytes: Option<&'a [u8]>,
     pub output_path: &'a Path,
     pub options: OrchestratorInjectionOptions,
 }
@@ -49,8 +51,12 @@ pub(crate) fn inject_orchestrator_payload(
     request: OrchestratorInjectionRequest<'_>,
 ) -> Result<OrchestratorInjectionResult, LuthierError> {
     let result = orchestrator_inject_from_parts(
-        request.base_bytes,
-        request.config_bytes,
+        luthier_orchestrator_core::injector::InjectPayloadParts {
+            base_bytes: request.base_bytes,
+            config_json: request.config_json_bytes,
+            hero_image: request.hero_image_bytes,
+            icon_png: request.icon_png_bytes,
+        },
         request.output_path,
         request.options.into(),
     )?;
