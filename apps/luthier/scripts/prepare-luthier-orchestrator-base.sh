@@ -32,20 +32,11 @@ fi
 
 mkdir -p "$RESOURCE_DIR"
 
-needs_build="1"
-if [[ -f "$SOURCE_BIN" && -f "$RESOURCE_BIN" && "$RESOURCE_BIN" -nt "$SOURCE_BIN" ]]; then
-  needs_build="0"
-fi
-
-if [[ "$needs_build" == "1" ]]; then
-  echo "[luthier] Compilando Luthier Orchestrator base ($PROFILE)..."
-  if [[ "$PROFILE" == "release" ]]; then
-    "$CARGO_BIN" build -p luthier-orchestrator --release --manifest-path "$ROOT_DIR/Cargo.toml"
-  else
-    "$CARGO_BIN" build -p luthier-orchestrator --manifest-path "$ROOT_DIR/Cargo.toml"
-  fi
+echo "[luthier] Compilando Luthier Orchestrator base ($PROFILE)..."
+if [[ "$PROFILE" == "release" ]]; then
+  "$CARGO_BIN" build -p luthier-orchestrator --release --manifest-path "$ROOT_DIR/Cargo.toml"
 else
-  echo "[luthier] Reutilizando Luthier Orchestrator base já compilado ($PROFILE)."
+  "$CARGO_BIN" build -p luthier-orchestrator --manifest-path "$ROOT_DIR/Cargo.toml"
 fi
 
 if [[ ! -f "$SOURCE_BIN" ]]; then
