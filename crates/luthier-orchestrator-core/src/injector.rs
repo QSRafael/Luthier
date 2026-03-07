@@ -4,9 +4,11 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+use crate::asset_container::{
+    append_asset_container, parse_asset_container, AssetContainerWriteInput, AssetManifest,
+};
 use crate::config::GameConfig;
 use crate::error::OrchestratorError;
-use crate::trailer::{append_config, extract_config_json};
 
 #[derive(Debug, Clone, Copy)]
 pub struct InjectOptions {
@@ -30,28 +32,64 @@ pub struct InjectionResult {
     pub config_sha256_hex: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct ExtractedAssets {
+    pub manifest: AssetManifest,
+    pub config_json: Vec<u8>,
+    pub hero_image: Option<Vec<u8>>,
+    pub icon_png: Option<Vec<u8>>,
+}
+
 pub fn inject_from_files(
     base_binary_path: &Path,
     config_json_path: &Path,
+    hero_image_path: Option<&Path>,
+    icon_png_path: Option<&Path>,
     output_path: &Path,
     options: InjectOptions,
 ) -> Result<InjectionResult, OrchestratorError> {
     let base_bytes = fs::read(base_binary_path)?;
     let config_bytes = fs::read(config_json_path)?;
+    let hero_image_bytes = if let Some(path) = hero_image_path {
+        Some(fs::read(path)?)
+    } else {
+        None
+    };
+    let icon_png_bytes = if let Some(path) = icon_png_path {
+        Some(fs::read(path)?)
+    } else {
+        None
+    };
 
-    inject_from_parts(&base_bytes, &config_bytes, output_path, options)
+    inject_from_parts(
+        &base_bytes,
+        &config_bytes,
+        hero_image_bytes.as_deref(),
+        icon_png_bytes.as_deref(),
+        output_path,
+        options,
+    )
 }
 
 pub fn inject_from_parts(
     base_bytes: &[u8],
     config_bytes: &[u8],
+    hero_image_bytes: Option<&[u8]>,
+    icon_png_bytes: Option<&[u8]>,
     output_path: &Path,
     options: InjectOptions,
 ) -> Result<InjectionResult, OrchestratorError> {
     // Validate schema before embedding.
     let _: GameConfig = serde_json::from_slice(config_bytes)?;
 
-    let injected = append_config(base_bytes, config_bytes);
+    let injected = append_asset_container(
+        base_bytes,
+        AssetContainerWriteInput {
+            config_json: config_bytes,
+            hero_image: hero_image_bytes,
+            icon_png: icon_png_bytes,
+        },
+    )?;
 
     if options.backup_existing && output_path.exists() {
         let backup_path = backup_path_for(output_path);
@@ -65,8 +103,11 @@ pub fn inject_from_parts(
     }
 
     // Verify immediately so the luthier app can fail early with actionable error.
-    let extracted = extract_config_from_file(output_path)?;
-    if extracted != config_bytes {
+    let extracted = extract_assets_from_file(output_path)?;
+    if extracted.config_json != config_bytes
+        || !option_slice_matches(extracted.hero_image.as_deref(), hero_image_bytes)
+        || !option_slice_matches(extracted.icon_png.as_deref(), icon_png_bytes)
+    {
         return Err(OrchestratorError::VerificationFailed);
     }
 
@@ -77,10 +118,41 @@ pub fn inject_from_parts(
     })
 }
 
-pub fn extract_config_from_file(path: &Path) -> Result<Vec<u8>, OrchestratorError> {
+pub fn read_manifest_from_file(path: &Path) -> Result<AssetManifest, OrchestratorError> {
     let bin = fs::read(path)?;
-    let cfg = extract_config_json(&bin)?;
-    Ok(cfg.to_vec())
+    let parsed = parse_asset_container(&bin)?;
+    Ok(parsed.manifest.clone())
+}
+
+pub fn extract_assets_from_file(path: &Path) -> Result<ExtractedAssets, OrchestratorError> {
+    let bin = fs::read(path)?;
+    let parsed = parse_asset_container(&bin)?;
+    Ok(ExtractedAssets {
+        manifest: parsed.manifest.clone(),
+        config_json: parsed.config_json().to_vec(),
+        hero_image: parsed.hero_image().map(ToOwned::to_owned),
+        icon_png: parsed.icon_png().map(ToOwned::to_owned),
+    })
+}
+
+pub fn extract_config_from_file(path: &Path) -> Result<Vec<u8>, OrchestratorError> {
+    Ok(extract_assets_from_file(path)?.config_json)
+}
+
+pub fn extract_hero_image_from_file(path: &Path) -> Result<Option<Vec<u8>>, OrchestratorError> {
+    Ok(extract_assets_from_file(path)?.hero_image)
+}
+
+pub fn extract_icon_png_from_file(path: &Path) -> Result<Option<Vec<u8>>, OrchestratorError> {
+    Ok(extract_assets_from_file(path)?.icon_png)
+}
+
+fn option_slice_matches(actual: Option<&[u8]>, expected: Option<&[u8]>) -> bool {
+    match (actual, expected) {
+        (None, None) => true,
+        (Some(a), Some(b)) => a == b,
+        _ => false,
+    }
 }
 
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), OrchestratorError> {
@@ -159,27 +231,91 @@ mod tests {
     use crate::config::*;
 
     #[test]
-    fn injects_and_extracts_roundtrip() {
-        let root = make_temp_dir("inject-roundtrip");
-
-        let base_path = root.join("base.bin");
-        let cfg_path = root.join("config.json");
+    fn injects_and_extracts_roundtrip_with_all_assets() {
+        let root = make_temp_dir("inject-roundtrip-all-assets");
         let out_path = root.join("luthier-orchestrator");
-
-        fs::write(&base_path, b"BASE-BINARY").expect("write base");
 
         let cfg = sample_config();
         let cfg_bytes = serde_json::to_vec(&cfg).expect("serialize config");
-        fs::write(&cfg_path, &cfg_bytes).expect("write config");
+        let hero = b"hero-bytes";
+        let icon = b"\x89PNG\r\n\x1a\nicon-bytes";
 
-        let result = inject_from_files(&base_path, &cfg_path, &out_path, InjectOptions::default())
-            .expect("inject config");
+        let result = inject_from_parts(
+            b"BASE-BINARY",
+            &cfg_bytes,
+            Some(hero),
+            Some(icon),
+            &out_path,
+            InjectOptions::default(),
+        )
+        .expect("inject config");
 
         assert_eq!(result.output_path, out_path);
         assert_eq!(result.config_len, cfg_bytes.len());
+
+        let extracted = extract_assets_from_file(&out_path).expect("extract");
+        assert_eq!(extracted.config_json, cfg_bytes);
+        assert_eq!(extracted.hero_image, Some(hero.to_vec()));
+        assert_eq!(extracted.icon_png, Some(icon.to_vec()));
+
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn injects_without_optional_assets() {
+        let root = make_temp_dir("inject-no-optional-assets");
+        let out_path = root.join("luthier-orchestrator");
+
+        let cfg_bytes = serde_json::to_vec(&sample_config()).expect("serialize config");
+
+        inject_from_parts(
+            b"BASE-BINARY",
+            &cfg_bytes,
+            None,
+            None,
+            &out_path,
+            InjectOptions::default(),
+        )
+        .expect("inject config");
+
+        let extracted = extract_assets_from_file(&out_path).expect("extract");
+        assert_eq!(extracted.config_json, cfg_bytes);
+        assert!(extracted.hero_image.is_none());
+        assert!(extracted.icon_png.is_none());
+
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn extracts_each_asset_individually() {
+        let root = make_temp_dir("extract-each-asset");
+        let out_path = root.join("luthier-orchestrator");
+
+        let cfg_bytes = serde_json::to_vec(&sample_config()).expect("serialize config");
+        let hero = b"hero-image";
+        let icon = b"\x89PNG\r\n\x1a\nicon";
+
+        inject_from_parts(
+            b"BASE-BINARY",
+            &cfg_bytes,
+            Some(hero),
+            Some(icon),
+            &out_path,
+            InjectOptions::default(),
+        )
+        .expect("inject config");
+
         assert_eq!(
-            extract_config_from_file(&out_path).expect("extract"),
+            extract_config_from_file(&out_path).expect("config"),
             cfg_bytes
+        );
+        assert_eq!(
+            extract_hero_image_from_file(&out_path).expect("hero"),
+            Some(hero.to_vec())
+        );
+        assert_eq!(
+            extract_icon_png_from_file(&out_path).expect("icon"),
+            Some(icon.to_vec())
         );
 
         fs::remove_dir_all(root).expect("cleanup");
@@ -201,8 +337,15 @@ mod tests {
         let cfg_bytes = serde_json::to_vec(&cfg).expect("serialize config");
         fs::write(&cfg_path, &cfg_bytes).expect("write config");
 
-        inject_from_files(&base_path, &cfg_path, &out_path, InjectOptions::default())
-            .expect("inject config");
+        inject_from_files(
+            &base_path,
+            &cfg_path,
+            None,
+            None,
+            &out_path,
+            InjectOptions::default(),
+        )
+        .expect("inject config");
 
         let backup = fs::read(&backup_path).expect("read backup");
         assert_eq!(backup, b"OLD-BINARY");
