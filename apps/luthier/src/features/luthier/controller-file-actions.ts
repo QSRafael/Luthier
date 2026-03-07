@@ -8,6 +8,7 @@ import { isLikelyAbsolutePath, replaceAt } from './controller-utils'
 import type { createLuthierState } from './controller-state'
 import type { createLuthierComputed } from './controller-computed'
 import type { BackendCommandPort } from './application/ports'
+import { decodeDataUrlToBinary } from './application/use-cases/data-url'
 import { createFilePickersUseCase } from './application/use-cases/file-pickers'
 
 export function createLuthierFileActions(
@@ -28,6 +29,7 @@ export function createLuthierFileActions(
       setExePath: state.setExePath,
       setLastHashedExePath: state.setLastHashedExePath,
       setIconPreviewPath: state.setIconPreviewPath,
+      setIconPngBytes: state.setIconPngBytes,
       setExeHash: (value: string) => {
         state.patchConfig((prev) => ({ ...prev, exe_hash: value }))
       },
@@ -73,6 +75,8 @@ export function createLuthierFileActions(
       setStatusMessage(ct('luthier_extracting_icon_from_executable'))
       const result = await backend.extractExecutableIcon(currentExe)
       state.setIconPreviewPath(result.data_url)
+      const decodedIcon = decodeDataUrlToBinary(result.data_url)
+      state.setIconPngBytes(decodedIcon?.bytes ?? null)
       setStatusMessage(
         ctf('luthier_executable_icon_extracted_size', {
           width: result.width,

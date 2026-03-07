@@ -148,7 +148,9 @@ export type StatusTone = 'info' | 'success' | 'error'
  */
 export type HeroImageSnapshot = {
   hero_image_url: string
-  hero_image_data_url: string
+  hero_image_preview_data_url: string
+  hero_image_asset_bytes: Uint8Array | null
+  hero_image_asset_mime: string
   lastPreparedHeroImageUrl: string
   searchIndex: number
 }

@@ -47,6 +47,14 @@ export function useLuthierController() {
     setRegistryImportPath,
     iconPreviewPath,
     setIconPreviewPath,
+    iconPngBytes,
+    setIconPngBytes,
+    heroImagePreviewDataUrl,
+    setHeroImagePreviewDataUrl,
+    heroImageAssetBytes,
+    setHeroImageAssetBytes,
+    heroImageAssetMime,
+    setHeroImageAssetMime,
     heroImageProcessing,
     heroImageAutoSearching,
     statusMessage,
@@ -171,6 +179,7 @@ export function useLuthierController() {
       exePath().trim().length > 0 ||
       registryImportPath().trim().length > 0 ||
       iconPreviewPath().trim().length > 0 ||
+      heroImagePreviewDataUrl().trim().length > 0 ||
       resultJson().trim().length > 0 ||
       gameRootManualOverride() ||
       gameRoot() !== './tmp' ||
@@ -193,6 +202,10 @@ export function useLuthierController() {
     setOutputPath('./tmp/luthier')
     setRegistryImportPath('')
     setIconPreviewPath('')
+    setIconPngBytes(null)
+    setHeroImagePreviewDataUrl('')
+    setHeroImageAssetBytes(null)
+    setHeroImageAssetMime('')
     setResultJson('')
 
     state.setHashingExePath('')
@@ -285,6 +298,10 @@ export function useLuthierController() {
     setRegistryImportPath,
     iconPreviewPath,
     setIconPreviewPath,
+    iconPngBytes,
+    heroImagePreviewDataUrl,
+    heroImageAssetBytes,
+    heroImageAssetMime,
     heroImageProcessing,
     heroImageAutoSearching,
     canSearchAnotherHeroImage,

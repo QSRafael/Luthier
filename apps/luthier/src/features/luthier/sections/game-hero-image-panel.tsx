@@ -9,6 +9,7 @@ import type { LuthierPageSectionProps } from '../page-shared'
 export function GameHeroImagePanel(props: LuthierPageSectionProps) {
   const {
     config,
+    heroImagePreviewDataUrl,
     ct,
     heroImageProcessing,
     heroImageAutoSearching,
@@ -24,12 +25,12 @@ export function GameHeroImagePanel(props: LuthierPageSectionProps) {
       help={ct('luthier_hero_image_used_as_splash_background_downloaded_and_emb')}
       hint={ct('luthier_hero_image_ratio_96_31_and_converted_to_webp')}
       footer={
-        config().splash.hero_image_data_url.trim() || heroImageProcessing() ? (
+        heroImagePreviewDataUrl().trim() || heroImageProcessing() ? (
           <div class="rounded-md border border-border/60 bg-muted/15 p-3">
             <div class="relative overflow-hidden rounded-md border border-border/60 bg-black">
               <div class="aspect-[96/31] w-full" />
               <Show
-                when={config().splash.hero_image_data_url.trim()}
+                when={heroImagePreviewDataUrl().trim()}
                 fallback={
                   <div class="absolute inset-0 grid place-items-center">
                     <div class="flex items-center gap-2 text-xs text-muted-foreground">
@@ -40,7 +41,7 @@ export function GameHeroImagePanel(props: LuthierPageSectionProps) {
                 }
               >
                 <img
-                  src={config().splash.hero_image_data_url}
+                  src={heroImagePreviewDataUrl()}
                   alt={ct('luthier_splash_hero_image_preview')}
                   class="absolute inset-0 h-full w-full object-contain"
                 />

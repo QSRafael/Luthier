@@ -16,9 +16,15 @@ type RuntimePaths = {
   gameRoot: string
 }
 
+type EmbeddedAssets = {
+  heroImageAssetBytes: Uint8Array | null
+  heroImageAssetMime: string
+  iconPngBytes: Uint8Array | null
+}
+
 function buildContext(
   locale: Locale = 'en-US',
-  mutate?: (config: GameConfig, runtimePaths: RuntimePaths) => void
+  mutate?: (config: GameConfig, runtimePaths: RuntimePaths, assets: EmbeddedAssets) => void
 ): CreateExecutableGuardsContext {
   const config = defaultGameConfig()
   config.game_name = 'Demo Game'
@@ -31,13 +37,22 @@ function buildContext(
     gameRoot: '/games/demo',
   }
 
-  mutate?.(config, runtimePaths)
+  const assets: EmbeddedAssets = {
+    heroImageAssetBytes: null,
+    heroImageAssetMime: '',
+    iconPngBytes: null,
+  }
+
+  mutate?.(config, runtimePaths, assets)
 
   return {
     config,
     locale,
     exePath: runtimePaths.exePath,
     gameRoot: runtimePaths.gameRoot,
+    heroImageAssetBytes: assets.heroImageAssetBytes,
+    heroImageAssetMime: assets.heroImageAssetMime,
+    iconPngBytes: assets.iconPngBytes,
     ct: (key) => luthierTranslate(locale, key),
   }
 }
@@ -191,5 +206,26 @@ describe('create executable guards', () => {
     expect(errors).toContain(
       `Drive #1 (path): ${luthierTranslate('en-US', 'luthier_validation_linux_path_expected')}`
     )
+  })
+
+  it('blocks oversized hero image asset bytes', () => {
+    const errors = validateCreateExecutableGuards(
+      buildContext('en-US', (_config, _runtime, assets) => {
+        assets.heroImageAssetBytes = new Uint8Array(8 * 1024 * 1024 + 1)
+        assets.heroImageAssetMime = 'image/webp'
+      })
+    )
+
+    expect(errors).toContain('Hero image exceeds the 8388608-byte limit.')
+  })
+
+  it('blocks embedded icon bytes when PNG signature is invalid', () => {
+    const errors = validateCreateExecutableGuards(
+      buildContext('en-US', (_config, _runtime, assets) => {
+        assets.iconPngBytes = new Uint8Array([0xff, 0xd8, 0xff])
+      })
+    )
+
+    expect(errors).toContain('Embedded icon must be a valid PNG.')
   })
 })

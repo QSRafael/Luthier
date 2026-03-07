@@ -112,7 +112,6 @@ export type GameConfig = {
   }>
   splash: {
     hero_image_url: string
-    hero_image_data_url: string
   }
   scripts: {
     pre_launch: string
@@ -213,7 +212,6 @@ export function defaultGameConfig(): GameConfig {
     folder_mounts: [],
     splash: {
       hero_image_url: '',
-      hero_image_data_url: '',
     },
     scripts: {
       pre_launch: '',

@@ -17,9 +17,9 @@ const ct = (key: LuthierCopyKey): string => {
 }
 
 describe('payload import error mapping', () => {
-  it('maps backend trailer-not-found error to friendly orchestrator message', () => {
+  it('maps backend container-not-found error to friendly orchestrator message', () => {
     const message = mapPayloadImportErrorMessage(
-      new Error('failed to extract payload from orchestrator: payload trailer not found'),
+      new Error('failed to extract payload from orchestrator: embedded asset container not found'),
       'orchestrator_executable',
       ct
     )
