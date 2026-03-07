@@ -24,7 +24,9 @@ impl Default for OrchestratorPayloadInjectionOptions {
 #[derive(Debug, Clone, Copy)]
 pub struct OrchestratorPayloadInjectionRequest<'a> {
     pub base_bytes: &'a [u8],
-    pub config_bytes: &'a [u8],
+    pub config_json_bytes: &'a [u8],
+    pub hero_image_bytes: Option<&'a [u8]>,
+    pub icon_png_bytes: Option<&'a [u8]>,
     pub output_path: &'a Path,
     pub options: OrchestratorPayloadInjectionOptions,
 }

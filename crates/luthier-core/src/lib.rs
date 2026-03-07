@@ -42,7 +42,9 @@ impl OrchestratorPayloadInjectorPort for LocalOrchestratorPayloadInjectorAdapter
         let result = infrastructure::injector_adapter::inject_orchestrator_payload(
             OrchestratorInjectionRequest {
                 base_bytes: request.base_bytes,
-                config_bytes: request.config_bytes,
+                config_json_bytes: request.config_json_bytes,
+                hero_image_bytes: request.hero_image_bytes,
+                icon_png_bytes: request.icon_png_bytes,
                 output_path: request.output_path,
                 options: OrchestratorInjectionOptions {
                     backup_existing: request.options.backup_existing,

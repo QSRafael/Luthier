@@ -8,6 +8,8 @@ pub struct CreateOrchestratorRequest {
     pub base_binary_path: PathBuf,
     pub output_path: PathBuf,
     pub config: GameConfig,
+    pub hero_image_bytes: Option<Vec<u8>>,
+    pub icon_png_bytes: Option<Vec<u8>>,
     pub backup_existing: bool,
     pub make_executable: bool,
 }

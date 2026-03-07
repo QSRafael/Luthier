@@ -1,6 +1,10 @@
 use std::path::Path;
 
-use luthier_orchestrator_core::trailer;
+use luthier_orchestrator_core::asset_container::parse_asset_container;
+#[cfg(test)]
+use luthier_orchestrator_core::asset_container::{
+    append_asset_container, AssetContainerWriteInput,
+};
 
 use crate::application::ports::{
     BackendLogEvent, BackendLogLevel, BackendLoggerPort, FileSystemPort,
@@ -66,9 +70,10 @@ impl<'a> PayloadImportUseCase<'a> {
             .read_bytes(Path::new(&input.path))
             .map_err(|err| err.with_context("failed to read orchestrator executable"))?;
 
-        let payload_bytes = trailer::extract_config_json(&executable_bytes)
+        let parsed_container = parse_asset_container(&executable_bytes)
             .map_err(BackendError::from)
             .map_err(|err| err.with_context("failed to extract payload from orchestrator"))?;
+        let payload_bytes = parsed_container.config_json();
 
         let payload_json = std::str::from_utf8(payload_bytes)
             .map_err(BackendError::from)
@@ -223,7 +228,15 @@ mod tests {
     #[test]
     fn extracts_payload_json_from_orchestrator_binary() {
         let payload = br#"{"game_name":"Age3"}"#;
-        let injected = trailer::append_config(b"ELF-MOCK", payload);
+        let injected = append_asset_container(
+            b"ELF-MOCK",
+            AssetContainerWriteInput {
+                config_json: payload,
+                hero_image: None,
+                icon_png: None,
+            },
+        )
+        .expect("container build");
 
         let fs = FakeFileSystem::default().with_file("/tmp/age3", injected);
         let logger = NoopLogger;

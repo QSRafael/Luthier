@@ -17,7 +17,9 @@ pub(crate) fn create_orchestrator_binary(
     let inject_result =
         payload_injector.inject_orchestrator_payload(OrchestratorPayloadInjectionRequest {
             base_bytes: &base_bytes,
-            config_bytes: &config_bytes,
+            config_json_bytes: &config_bytes,
+            hero_image_bytes: request.hero_image_bytes.as_deref(),
+            icon_png_bytes: request.icon_png_bytes.as_deref(),
             output_path: &request.output_path,
             options: OrchestratorPayloadInjectionOptions {
                 backup_existing: request.backup_existing,
