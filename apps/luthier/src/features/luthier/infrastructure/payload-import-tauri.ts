@@ -42,8 +42,6 @@ export async function listenTauriFileDrop(
 export async function pickPayloadImportPath(
   mode: 'payload_json' | 'orchestrator_executable'
 ): Promise<string | null | undefined> {
-  if (!isTauriRuntime()) return undefined
-
   const filters = mode === 'payload_json' ? [{ name: 'JSON', extensions: ['json'] }] : undefined
 
   const selected = await pickFile({
@@ -51,11 +49,12 @@ export async function pickPayloadImportPath(
     filters,
   })
 
-  return typeof selected === 'string' ? selected : null
+  if (typeof selected !== 'string') return null
+  if (isLikelyAbsolutePath(selected)) return selected
+  return undefined
 }
 
 export async function pathExists(path: string): Promise<boolean> {
-  if (!isTauriRuntime()) return false
   if (!path.trim()) return false
 
   try {
@@ -70,6 +69,11 @@ type TauriFileDropEvent =
   | { type: 'hover'; paths: string[] }
   | { type: 'drop'; paths: string[] }
   | { type: 'cancel' }
+
+function isLikelyAbsolutePath(path: string): boolean {
+  const trimmed = path.trim()
+  return trimmed.startsWith('/') || /^[A-Za-z]:[\\/]/.test(trimmed)
+}
 
 function isTauriRuntime(): boolean {
   if (typeof window === 'undefined') return false
