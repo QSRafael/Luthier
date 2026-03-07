@@ -50,8 +50,7 @@ pub fn cycle_override_for_key(overrides: &mut RuntimeOverrides, key: &str) {
 
 /// Creates and positions the splash window with the proper scale.
 pub fn create_window(title: &str, embedded_icon_png: Option<&[u8]>) -> anyhow::Result<Window> {
-    let screen = detect_screen_size().unwrap_or((1280, 720));
-    let scale = choose_splash_window_scale(screen);
+    let scale = choose_splash_window_scale();
     let mut window = Window::new(
         title,
         WIN_W,
@@ -63,7 +62,8 @@ pub fn create_window(title: &str, embedded_icon_png: Option<&[u8]>) -> anyhow::R
             topmost: true,
             transparency: false,
             none: false,
-            scale_mode: minifb::ScaleMode::Stretch,
+            // Keep pixel-perfect rendering if the compositor unexpectedly resizes the window.
+            scale_mode: minifb::ScaleMode::Center,
             title: false,
         },
     )
@@ -88,21 +88,11 @@ pub fn try_center_window(window: &mut Window, scale_factor: i32) -> anyhow::Resu
     Ok(())
 }
 
-/// Computes the integer scale factor that best fits the splash canvas to the screen.
-pub fn choose_splash_window_scale(screen: (usize, usize)) -> SplashWindowScale {
-    // Best practice here: keep a stable logical canvas (96:31) and scale in integer steps.
-    // This preserves layout/text metrics while making the splash proportional to the monitor.
-    let (sw, sh) = screen;
-    if sw >= 2200 && sh >= 900 {
-        SplashWindowScale {
-            minifb_scale: Scale::X2,
-            factor: 2,
-        }
-    } else {
-        SplashWindowScale {
-            minifb_scale: Scale::X1,
-            factor: 1,
-        }
+/// Uses a fixed splash scale to keep a consistent window size and avoid blurry upscaling.
+pub fn choose_splash_window_scale() -> SplashWindowScale {
+    SplashWindowScale {
+        minifb_scale: Scale::X1,
+        factor: 1,
     }
 }
 
@@ -377,6 +367,13 @@ pub struct ConfigRects {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn keeps_fixed_splash_window_scale() {
+        let scale = choose_splash_window_scale();
+        assert!(matches!(scale.minifb_scale, Scale::X1));
+        assert_eq!(scale.factor, 1);
+    }
 
     #[test]
     fn prefers_embedded_icon_over_sidecar_icon() {
