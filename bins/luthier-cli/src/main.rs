@@ -96,6 +96,8 @@ fn run_create(base: PathBuf, config_path: PathBuf, output: PathBuf) -> anyhow::R
         config,
         backup_existing: true,
         make_executable: true,
+        hero_image_bytes: None,
+        icon_png_bytes: None,
     })?;
 
     println!("{}", serde_json::to_string_pretty(&result)?);
